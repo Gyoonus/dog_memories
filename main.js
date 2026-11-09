@@ -1,4 +1,9 @@
-import * as THREE from './vendor/three.module.min.js';
+import * as THREE from 'three';
+import { EffectComposer } from './vendor/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
+import { ShaderPass } from './vendor/jsm/postprocessing/ShaderPass.js';
 
 const $ = (s) => document.querySelector(s);
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -26,6 +31,25 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const SPH = new THREE.SphereGeometry(1, 24, 18);
+const LITE = window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency || 8) <= 4;
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: LITE ? 0 : 2 }));
+const renderPass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
+composer.addPass(renderPass);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.22, 0.55, 0.92);
+const gradePass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uVig: { value: 0.32 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uVig; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec3 col = c.rgb;
+      col = mix(col, col * vec3(1.04, 1.0, 0.94), 0.6);
+      col = (col - 0.5) * 1.04 + 0.5;
+      float d = distance(vUv, vec2(0.5));
+      col *= mix(1.0, 1.0 - uVig, smoothstep(0.35, 0.85, d));
+      gl_FragColor = vec4(clamp(col, 0.0, 1.0), c.a);
+    }`,
+});
 function M(color, o = {}) { return new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0, ...o }); }
 function add(parent, geo, mat, p, r, s, cast = true) {
   const m = new THREE.Mesh(geo, mat);
@@ -172,26 +196,27 @@ const headSDF = (J) => (x, y, z) => {
   for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.045, 0.02, 0.06, 0.055, 0.05, 0.055), 0.03);
   if (J) d = smin(d, sdCap(x / 1.05, y / 0.9, z, 0, 0.011, 0.1, 0, 0.011, 0.13, 0.043), 0.03);
   else {
-    d = smin(d, sdCap(x / 1.08, y / 0.88, z, 0, 0.009, 0.095, 0, 0.009, 0.145, 0.046), 0.035);
-    for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.026, -0.024, 0.15, 0.032, 0.026, 0.04), 0.02);
+    d = smin(d, sdCap(x / 1.12, y / 0.9, z, 0, 0.01, 0.085, 0, 0.01, 0.11, 0.043), 0.04);
+    for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.024, -0.02, 0.124, 0.03, 0.027, 0.033), 0.02);
+    d = smin(d, sdE(x, y, z, 0, -0.036, 0.1, 0.03, 0.018, 0.04), 0.02);
   }
-  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.04, 0.098, 0.082, 0.03, 0.017, 0.025), 0.02);
-  for (const sx of [1, -1]) d = smax(d, -sdE(x, y, z, sx * 0.044, 0.073, J ? 0.094 : 0.098, 0.022, 0.02, 0.016), 0.008);
+  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.038, 0.094, 0.083, 0.028, 0.014, 0.022), 0.02);
+  for (const sx of [1, -1]) d = smax(d, -sdE(x, y, z, sx * 0.04, 0.066, J ? 0.096 : 0.1, 0.019, 0.016, 0.011), 0.006);
   return d;
 };
 const sdfCache = {};
 function sdfGeo(key, sdf, b0, b1, h) { if (!sdfCache[key]) sdfCache[key] = surfaceNet(sdf, b0, b1, h); return sdfCache[key].clone(); }
 // 짧은 털: 같은 메시를 법선 방향으로 몇 겹 부풀리고, 겹마다 털 가닥 사이를 구멍 냄
-function furShells(mesh, count = 6, len = 0.007) {
+function furShells(mesh, count = 6, len = 0.007, den = 1300) {
   for (let i = 1; i <= count; i++) {
     const f = i / count, mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 });
     mat.onBeforeCompile = (sh) => {
-      sh.uniforms.uShell = { value: f }; sh.uniforms.uLen = { value: len };
+      sh.uniforms.uShell = { value: f }; sh.uniforms.uLen = { value: len }; sh.uniforms.uDen = { value: den };
       sh.vertexShader = 'uniform float uShell; uniform float uLen; varying vec3 vOP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += normal * uShell * uLen; vOP = position;');
-      sh.fragmentShader = 'uniform float uShell; varying vec3 vOP;\nfloat furHash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }\n'
+      sh.fragmentShader = 'uniform float uShell; uniform float uDen; varying vec3 vOP;\nfloat furHash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }\n'
         + sh.fragmentShader
-          .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n  if (furHash(floor(vOP * 850.0)) < uShell * 0.93) discard;')
-          .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= mix(0.8, 1.05, uShell);');
+          .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n  if (furHash(floor(vOP * uDen)) < pow(uShell, 0.8) * 0.9) discard;')
+          .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= mix(0.86, 1.06, uShell);');
     };
     mat.customProgramCacheKey = () => 'fur-shell';
     const s = new THREE.Mesh(mesh.geometry, mat); s.castShadow = false; s.receiveShadow = true; mesh.add(s);
@@ -239,10 +264,10 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   };
   const headPaint = J ? (p, c) => tone(c.copy(cW).lerp(cT, ss(0.1, 0.16, p.y) * 0.4), p, 0.05) : (p, c) => {
     const n = wob(p, 60) * 0.006;
-    const muzzle = ss(0.07, 0.1, p.z + n) * ss(0.08, 0.04, p.y);
-    const lower = ss(0.01, -0.02, p.y + n) * ss(0.0, 0.05, p.z);
-    const bw = 0.011 + Math.max(0, 0.125 - p.y) * 0.32;
-    const blaze = ss(bw + 0.008, bw, Math.abs(p.x) + n) * ss(0.0, 0.04, p.z) * ss(0.178, 0.15, p.y);
+    const muzzle = ss(0.088, 0.11, p.z + n - Math.abs(p.x) * 0.35) * ss(0.06, 0.03, p.y);
+    const lower = ss(0.0, -0.028, p.y + n) * ss(0.02, 0.07, p.z);
+    const bw = 0.006 + Math.max(0, 0.085 - p.y) * 0.3;
+    const blaze = ss(bw + 0.006, bw, Math.abs(p.x) + n) * ss(0.02, 0.06, p.z) * ss(0.17, 0.14, p.y);
     mix(c, p, 0, Math.max(muzzle, lower, blaze));
   };
   const earPaint = J ? whitePaint : (p, c) => tone(c.copy(cT).lerp(cTD, clamp(-p.y / 0.17, 0, 1) * 0.75), p, 0.06);
@@ -262,29 +287,37 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
 
   // 머리
   const hp = new THREE.Group(); hp.rotation.order = 'YXZ'; hp.position.set(0, 0.13, 0.205); body.add(hp); d.hp = hp;
-  const head = new THREE.Group(); head.scale.setScalar(J ? 1.35 : 1.3); hp.add(head); d.head = head;
-  const skull = put(head, sdfGeo(J ? 'jh' : 'bh', headSDF(J), [-0.135, -0.075, -0.1], [0.135, 0.175, 0.245], 0.0045), null, null, null, headPaint);
-  put(head, sph(), [0, 0.03, J ? 0.172 : 0.192], null, [0.034, 0.024, 0.022], null, new THREE.MeshPhysicalMaterial({ color: C.nose, roughness: 0.35, clearcoat: 0.6 }));
-  if (!silhouette) for (const sx of [1, -1]) put(head, sph(12, 8), [sx * 0.011, 0.025, J ? 0.19 : 0.211], null, [0.007, 0.005, 0.004], null, M(0x050303, { roughness: 0.6 }));
-  const jaw = new THREE.Group(); jaw.position.set(0, -0.03, 0.08); head.add(jaw); d.jaw = jaw;
-  put(jaw, sph(), [0, -0.004, 0.058], null, [0.036, 0.017, 0.055], whitePaint);
-  d.tongue = put(jaw, sph(16, 10), [0, 0.006, 0.055], null, [0.025, 0.008, 0.045], null, M(0xe9808e, { roughness: 0.45 }));
+  const head = new THREE.Group(); head.scale.setScalar(J ? 1.3 : 1.25); hp.add(head); d.head = head;
+  const skull = put(head, sdfGeo(J ? 'jh' : 'bh', headSDF(J), [-0.135, -0.075, -0.1], [0.135, 0.175, 0.245], 0.0042), null, null, null, headPaint);
+  skull.userData.fur = [2, 0.0018, 2200];
+  put(head, sph(), [0, 0.03, J ? 0.148 : 0.151], null, [0.021, 0.0155, 0.015], null, new THREE.MeshPhysicalMaterial({ color: C.nose, roughness: 0.42, clearcoat: 0.5, clearcoatRoughness: 0.3 }));
+  if (!silhouette) for (const sx of [1, -1]) put(head, sph(12, 8), [sx * 0.0072, 0.026, J ? 0.16 : 0.164], [0, 0, sx * 0.4], [0.0048, 0.0032, 0.003], null, M(0x050303, { roughness: 0.6 }));
+  if (!silhouette && !J) {
+    const lipM = M(0x3a2418, { roughness: 0.7 });
+    put(head, new THREE.CapsuleGeometry(0.0014, 0.012, 4, 8), [0, 0.008, 0.1585], [-0.15, 0, 0], null, null, lipM);
+    for (const sx of [1, -1]) put(head, new THREE.TorusGeometry(0.0105, 0.0015, 6, 18, Math.PI * 0.85), [sx * 0.0102, 0.0015, 0.1555], [0.1, sx * 0.35, Math.PI + (sx > 0 ? 0.08 : 0.4)], null, null, lipM);
+  }
+  const jaw = new THREE.Group(); jaw.position.set(0, -0.03, 0.07); head.add(jaw); d.jaw = jaw;
+  put(jaw, sph(), [0, -0.004, 0.04], null, [0.027, 0.013, 0.04], whitePaint).userData.fur = [0];
+  d.tongue = put(jaw, sph(16, 10), [0, 0.006, 0.035], null, [0.02, 0.007, 0.03], null, M(0xe9808e, { roughness: 0.45 }));
   for (const sx of [1, -1]) {
-    const eg = new THREE.Group(); eg.position.set(sx * 0.044, 0.073, J ? 0.094 : 0.098); eg.rotation.set(0, sx * 0.42, 0); head.add(eg);
+    const eg = new THREE.Group(); eg.position.set(sx * 0.04, 0.066, J ? 0.097 : 0.101); eg.rotation.set(0, sx * 0.26, 0); eg.scale.setScalar(1.12); head.add(eg);
     if (!silhouette) {
-      put(eg, sph(20, 14), [0, 0, -0.002], null, [0.024, 0.021, 0.012], null, M(0x2a1a12, { roughness: 0.7 }));
-      put(eg, sph(20, 14), [0, 0, 0.002], null, [0.019, 0.0175, 0.012], null, new THREE.MeshPhysicalMaterial({ color: 0x2c180d, roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05 }));
-      put(eg, sph(16, 10), [0, 0, 0.007], null, [0.011, 0.011, 0.008], null, M(0x070404, { roughness: 0.1 }));
+      put(eg, sph(24, 16), [0, 0, -0.001], null, [0.021, 0.018, 0.011], null, M(0x3a2216, { roughness: 0.75 }));
+      put(eg, sph(24, 16), [0, 0, 0.002], null, [0.018, 0.016, 0.011], null, new THREE.MeshPhysicalMaterial({ color: 0x3b2112, roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.04 }));
+      put(eg, sph(16, 10), [0, 0, 0.0068], null, [0.0105, 0.0105, 0.0075], null, M(0x060303, { roughness: 0.1 }));
+      // 윗눈꺼풀 (부드러운 표정)
+      put(eg, new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, 0.85), [0, 0.001, 0.0005], [0.12, 0, 0], [0.022, 0.019, 0.0125], () => {}, M(C.tan, { roughness: 0.8 }));
       const w = new THREE.MeshBasicMaterial({ color: 0xffffff });
-      const h1 = new THREE.Mesh(SPH, w); h1.position.set(-0.006, 0.006, 0.0135); h1.scale.setScalar(0.0048); eg.add(h1);
-      const h2 = new THREE.Mesh(SPH, w); h2.position.set(0.005, -0.005, 0.0135); h2.scale.setScalar(0.0024); eg.add(h2);
+      const h1 = new THREE.Mesh(SPH, w); h1.position.set(-0.005, 0.004, 0.0128); h1.scale.setScalar(0.0032); eg.add(h1);
+      const h2 = new THREE.Mesh(SPH, w); h2.position.set(0.004, -0.0045, 0.0125); h2.scale.setScalar(0.0013); eg.add(h2);
     }
     d.eyes.push(eg);
   }
   for (const sx of [1, -1]) {
     const ep = new THREE.Group(); head.add(ep);
     if (J) { ep.position.set(sx * 0.056, 0.128, 0); put(ep, new THREE.ConeGeometry(0.042, 0.1, 16), [0, 0.044, 0], null, [1, 1, 0.55], earPaint); ep.rotation.z = sx * -0.22; }
-    else { ep.position.set(sx * 0.086, 0.085, -0.005); put(ep, sph(), [sx * 0.014, -0.08, 0.012], [0.12, 0, sx * 0.06], [0.017, 0.098, 0.06], earPaint); }
+    else { ep.position.set(sx * 0.088, 0.092, -0.012); put(ep, sph(), [sx * 0.012, -0.088, 0.016], [0.16, 0, sx * 0.05], [0.015, 0.108, 0.062], earPaint).userData.fur = [3, 0.0025, 1800]; }
     d.ears.push({ g: ep, side: sx, ax: 0, vx: 0, az: 0, vz: 0 });
   }
 
@@ -309,7 +342,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
     d.legs.push({ sx, front, hip, knee, ank, foot, L1, L2, L3 });
   }
 
-  if (!silhouette) for (const m of furry) furShells(m, m === d.torso ? 6 : 4, m === d.torso ? 0.007 : 0.0045);
+  if (!silhouette) for (const m of furry) { const f = m.userData.fur || (m === d.torso ? [7, 0.0055, 1300] : [3, 0.003, 1600]); if (f[0]) furShells(m, f[0], f[1], f[2]); }
   d.cur = poseFor('stand', d); d.tgt = poseFor('stand', d);
   Object.assign(d, {
     x: 0, z: 0, yaw: 0, lift: 0, liftT: 0, external: false, phase: 0, gait: 0, walkTarget: null, walkSpeed: 0.5, steer: null,
@@ -443,7 +476,7 @@ function updateDog(d, dt, t, camPos) {
   let eo = d.eyeOpen;
   if (d.blinkDur > 0) { d.blinkDur -= dt; eo = 0.1; }
   d.eyeY += (eo - d.eyeY) * (1 - Math.exp(-35 * dt));
-  for (const e of d.eyes) e.scale.y = Math.max(0.08, d.eyeY);
+  for (const e of d.eyes) e.scale.y = Math.max(0.08, d.eyeY) * e.scale.x;
 
   // 입 · 혀
   let jt = d.jawOpen;
@@ -451,8 +484,8 @@ function updateDog(d, dt, t, camPos) {
   if (d.pant) jt = Math.max(jt, 0.16 + 0.04 * Math.sin(t * 14));
   d.jaw.rotation.x += (jt - d.jaw.rotation.x) * (1 - Math.exp(-28 * dt));
   const to = Math.max(d.tongueOut, d.lick, d.pant ? 0.7 : 0);
-  d.tongue.position.set(d.lick ? Math.sin(t * 11) * 0.02 * d.lick : 0, 0.006 - 0.012 * to, 0.055 + 0.042 * to);
-  d.tongue.scale.set(0.025, 0.008, 0.045 + 0.02 * to);
+  d.tongue.position.set(d.lick ? Math.sin(t * 11) * 0.02 * d.lick : 0, 0.006 - 0.012 * to, 0.035 + 0.05 * to);
+  d.tongue.scale.set(0.02, 0.007, 0.03 + 0.022 * to);
 }
 
 // ================================================================
@@ -673,7 +706,7 @@ function buildRoom(S) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     g.setIndex([0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7, 6, 3, 0, 4, 3, 4, 7]);
-    S.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })));
+    S.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.035, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })));
     const N = 160, dp = new Float32Array(N * 3);
     for (let i = 0; i < N; i++) { const t = R() * 0.8, a = cs[0]; dp[i * 3] = X0 + 0.1 + dir.x * L * t; dp[i * 3 + 1] = 0.3 + R() * 1.9 + dir.y * L * t; dp[i * 3 + 2] = -1.6 + R() * 1.8 + dir.z * L * t; }
     const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(dp, 3));
@@ -960,6 +993,18 @@ function collide(d) {
 const pinky = buildDog({ kind: 'beagle', colors: COLORS.pinky, scale: 1, seed: 7 });
 pinky.steer = steer; pinky.collide = collide;
 roomScene.add(pinky.root);
+const contact = new THREE.Mesh(new THREE.CircleGeometry(1, 40), new THREE.MeshBasicMaterial({
+  map: canvasTex(128, 128, (x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(40,24,12,.55)'); g.addColorStop(0.6, 'rgba(40,24,12,.22)'); g.addColorStop(1, 'rgba(40,24,12,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); }),
+  transparent: true, depthWrite: false,
+}));
+contact.rotation.x = -Math.PI / 2; contact.renderOrder = 1; roomScene.add(contact);
+roomUpd.push(() => {
+  contact.position.set(pinky.x, 0.004 + pinky.lift * 0, pinky.z);
+  contact.rotation.z = -pinky.yaw;
+  const lying = ['side', 'belly', 'down'].includes(pinky.tgt.name), f = Math.max(0, 1 - pinky.lift * 3);
+  contact.scale.set(lying ? 0.3 : 0.2, lying ? 0.36 : 0.32, 1);
+  contact.material.opacity = f;
+});
 
 // ================================================================
 // 사람 손 (어깨에서 뻗어 나오는 팔 · 니트 소매)
@@ -1635,6 +1680,7 @@ window.addEventListener('keydown', (e) => {
 function resize() {
   const w = innerWidth, h = innerHeight, a = w / h;
   renderer.setSize(w, h, false);
+  composer.setPixelRatio(Math.min(window.devicePixelRatio, LITE ? 1.5 : 2)); composer.setSize(w, h);
   selCam.aspect = a; selCam.fov = a < 0.8 ? 48 : 38; selCam.updateProjectionMatrix();
   selCam.position.set(0, 1.25, a < 0.8 ? 6.0 : 5.2); selCam.lookAt(0, a < 0.8 ? 0.42 : 0.36, RING_R - 0.1);
   roomCam.aspect = a; roomCam.fov = a < 0.8 ? 64 : 50; roomCam.updateProjectionMatrix();
@@ -1644,12 +1690,22 @@ window.addEventListener('resize', resize); resize();
 // ================================================================
 // 루프
 // ================================================================
+function setupPost() {
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
+  composer.addPass(gradePass);
+}
+setupPost();
+function drawFrame(scene, cam) {
+  renderPass.scene = scene; renderPass.camera = cam;
+  composer.render();
+}
 let last = performance.now(), booted = false;
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; clock += dt;
   stepTimers();
-  if (mode === 'select') { updateSelect(dt, clock); renderer.render(selScene, selCam); stepBubbles(dt, selCam); }
-  else { updateRoom(dt, clock); renderer.render(roomScene, roomCam); stepBubbles(dt, roomCam); }
+  if (mode === 'select') { updateSelect(dt, clock); drawFrame(selScene, selCam); stepBubbles(dt, selCam); }
+  else { updateRoom(dt, clock); drawFrame(roomScene, roomCam); stepBubbles(dt, roomCam); }
   if (!booted) { booted = true; $('#boot').classList.add('gone'); }
   requestAnimationFrame(frame);
 }
