@@ -83,7 +83,7 @@ function glow(parent, color, size, p, opacity = 0.8) {
 // ================================================================
 const COLORS = {
   // 핑키: 노견이라 채도가 낮고 바랜 색. 얼굴·귀는 연한 베이지, 안장은 회색 털이 섞인 차콜, 가슴·배·다리는 크림빛 흰색
-  pinky: { base: 0xf3ede3, tan: 0xc0a07c, headTan: 0xcbab88, ear: 0xa88a6c, saddle: 0x2e2a28, grizzle: 0x6a6764, nose: 0x1c1816, collar: 'ribbon', medal: true },
+  pinky: { base: 0xece4d6, tan: 0xb8a68c, headTan: 0xbda084, ear: 0x987b60, saddle: 0x4a4642, grizzle: 0x8c867e, nose: 0x17130f, collar: 'ribbon', medal: true },
   pupu: { base: 0xf1e6d2, tan: 0xe7d0ab, saddle: 0xe7d0ab, nose: 0x6f4a46 },
   generic: { base: 0xe9e1d6, tan: 0xc99a6c, saddle: 0x4a3c34, nose: 0x1c1513 },
 };
@@ -91,10 +91,10 @@ const P = (x, y, z) => V3(x, y, z);
 // paws: 발 위치(강아지 바닥 기준). lean: 발목 아래 마디 기울기(0 = 수직, π/2 = 바닥에 눕힘). free: 1이면 다리를 곧게 뻗음
 // 비글(핑키): 어깨 관절 (±0.058, -0.03, 0.2) · 고관절 (±0.062, -0.01, -0.17) 기준. 꼬리는 낮게 수평에 가깝게 든다
 const POSES = {
-  stand: { bodyY: 0.3, bodyZ: 0, pitch: 0, roll: 0, yawOff: -0.5, gaze: 1, headPitch: 0.12, headTilt: 0, tail: -1.8, level: 1, free: 0,
-    lean: [0.15, 0.15, 0.3, 0.3], paws: [P(0.058, 0.03, 0.19), P(-0.058, 0.03, 0.19), P(0.068, 0.03, -0.2), P(-0.068, 0.03, -0.2)] },
-  sit: { bodyY: 0.195, bodyZ: -0.06, pitch: -0.7, roll: 0, yawOff: -0.6, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.4, level: 1, free: 0,
-    lean: [0.12, 0.12, 1.5, 1.5], paws: [P(0.058, 0.03, 0.09), P(-0.058, 0.03, 0.09), P(0.095, 0.03, -0.05), P(-0.095, 0.03, -0.05)] },
+  stand: { bodyY: 0.3, bodyZ: 0, pitch: 0, roll: 0, yawOff: -0.5, gaze: 1, headPitch: 0.12, headTilt: 0, tail: -1.5, level: 1, free: 0,
+    lean: [0.2, 0.2, 0.3, 0.3], paws: [P(0.058, 0.03, 0.19), P(-0.058, 0.03, 0.19), P(0.068, 0.03, -0.2), P(-0.068, 0.03, -0.2)] },
+  sit: { bodyY: 0.185, bodyZ: -0.1, pitch: -0.5, roll: 0, yawOff: -0.6, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.25, level: 1, free: 0,
+    lean: [0.12, 0.12, 1.3, 1.3], paws: [P(0.056, 0.03, 0.12), P(-0.056, 0.03, 0.12), P(0.088, 0.03, 0.03), P(-0.088, 0.03, 0.03)] },
   down: { bodyY: 0.14, bodyZ: -0.02, pitch: 0.02, roll: 0, yawOff: -0.7, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.6, level: 1, free: 0,
     lean: [1.5, 1.5, 1.2, 1.2], paws: [P(0.06, 0.03, 0.37), P(-0.06, 0.03, 0.37), P(0.085, 0.03, -0.0), P(-0.085, 0.03, -0.0)] },
   side: { bodyY: 0.125, bodyZ: 0, pitch: 0, roll: 1.45, yawOff: -1.15, gaze: 0.6, headPitch: 0.15, headTilt: 0.2, tail: -1.5, level: 0, free: 0.85,
