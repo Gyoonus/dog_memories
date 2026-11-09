@@ -209,16 +209,16 @@ const sdRB = (x, y, z, cx, cy, cz, hx, hy, hz, r) => { // 모서리 둥근 상�
 const ZS = 0.85;
 // 비글 몸통: 길고 깊은 가슴의 네모진 틀. 등선은 거의 수평, 가슴·어깨가 가장 넓고, 갈비 뒤에서 배가 살짝 올라붙으며(tuck-up), 머리 앞에 목이 보인다
 const beagleBodySDF = (x, y, z) => {
-  let d = sdRB(x, y, z, 0, 0.0, 0.02, 0.095, 0.105, 0.19, 0.07); // 몸통 틀: 폭 0.19 · 높이 0.21 · z -0.17..0.21 (짧고 네모진 틀)
-  d = smin(d, sdE(x, y, z, 0, -0.018, 0.12, 0.108, 0.12, 0.125), 0.05); // 갈비·가슴: 가장 깊고 넓다 (폭 0.216 · 바닥 -0.138 = 팔꿈치 높이, 몸 높이의 57%)
-  d = smin(d, sdCap(x, y, z, 0, -0.09, 0.2, 0, -0.08, 0.05, 0.055), 0.05); // 앞다리 사이로 내려오는 가슴(brisket)
-  d = smin(d, sdE(x, y, z, 0, -0.005, 0.23, 0.065, 0.075, 0.04), 0.04); // 앞가슴(prosternum)
-  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.074, -0.01, 0.16, 0.056, 0.1, 0.08), 0.04); // 어깨·위팔 덩어리: 몸에서 가장 넓은 곳(0.26) — 땅딸막한 가슴
-  d = smin(d, sdE(x, y, z, 0, -0.005, -0.15, 0.105, 0.1, 0.085), 0.045); // 골반·엉덩이: 가슴보다 조금 좁다
+  let d = sdRB(x, y, z, 0, 0.0, 0.02, 0.085, 0.1, 0.19, 0.065); // 몸통 틀: 폭 0.17 · 높이 0.21 · z -0.17..0.21 (짧고 네모진 틀)
+  d = smin(d, sdE(x, y, z, 0, -0.018, 0.12, 0.09, 0.108, 0.12), 0.05); // 갈비·가슴: 깊지만 폭은 좁게 (폭 0.18 · 바닥 -0.138 = 팔꿈치 높이, 몸 높이의 57%)
+  d = smin(d, sdCap(x, y, z, 0, -0.085, 0.19, 0, -0.075, 0.05, 0.045), 0.05); // 앞다리 사이로 내려오는 가슴(brisket)
+  d = smin(d, sdE(x, y, z, 0, -0.005, 0.22, 0.052, 0.062, 0.035), 0.04); // 앞가슴(prosternum): 작게 — 불룩한 가슴 공이 되지 않게
+  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.056, -0.015, 0.16, 0.04, 0.085, 0.07), 0.04); // 어깨·위팔 덩어리: 작게(폭 0.19) — 근육질 가슴이 되지 않게
+  d = smin(d, sdE(x, y, z, 0, -0.005, -0.15, 0.095, 0.095, 0.085), 0.045); // 골반·엉덩이: 가슴과 비슷한 폭
   for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.07, -0.04, -0.155, 0.05, 0.085, 0.075), 0.04); // 허벅지 뿌리
   d = smin(d, sdE(x, y, z, 0, -0.05, -0.15, 0.1, 0.06, 0.08), 0.05); // 엉덩이 아래(앉으면 바닥에 닿는 넓은 자리)
-  d = smin(d, sdCap(x, y, z, 0, 0.025, 0.07, 0, 0.115, 0.165, 0.078), 0.05); // 목: 짧고 굵게, 기갑에서 45°로 올라간다 (기갑에 혹이 생기지 않게 몸 속에서 시작)
-  d = smin(d, sdCap(x, y, z, 0, 0.115, 0.165, 0, 0.14, 0.185, 0.065), 0.04); // 목 윗부분: 머리 밑으로 들어간다
+  d = smin(d, sdCap(x, y, z, 0, 0.025, 0.07, 0, 0.125, 0.165, 0.066), 0.05); // 목: 짧게, 너무 굵지 않게, 기갑에서 45°로 올라간다 (기갑에 혹이 생기지 않게 몸 속에서 시작)
+  d = smin(d, sdCap(x, y, z, 0, 0.125, 0.165, 0, 0.15, 0.185, 0.056), 0.04); // 목 윗부분: 머리 밑으로 들어간다
   d = smin(d, sdE(x, y, z, 0, 0.065, -0.215, 0.03, 0.03, 0.04), 0.035); // 꼬리 뿌리
   return smax(d, -sdE(x, y, z, 0, -0.22, -0.08, 0.3, 0.09, 0.1), 0.05); // 배가 뒤로 가며 아주 살짝만 올라붙음 (노견의 두둑한 배, 거의 수평인 아랫선)
 };
@@ -515,8 +515,8 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   }
 
   // 머리: 목이 45°로 올라간 끝, 등선보다 위에 얹힌다
-  const hp = new THREE.Group(); hp.rotation.order = 'YXZ'; hp.position.set(0, J ? 0.13 : 0.115, J ? 0.205 : 0.195); body.add(hp); d.hp = hp;
-  const head = new THREE.Group(); head.scale.setScalar(J ? 1.3 : 1.25); hp.add(head); d.head = head; // 비글: 머리(귀 포함)가 가슴보다 넓게 보이도록 크게
+  const hp = new THREE.Group(); hp.rotation.order = 'YXZ'; hp.position.set(0, J ? 0.13 : 0.13, J ? 0.205 : 0.2); body.add(hp); d.hp = hp;
+  const head = new THREE.Group(); head.scale.setScalar(J ? 1.3 : 1.42); hp.add(head); d.head = head; // 비글: 머리를 크게(귀여움) — 귀 포함 머리 폭이 가슴보다 확실히 넓게
   const skull = put(head, sdfGeo(J ? 'jh' : 'bh', headSDF(J), J ? [-0.135, -0.08, -0.13] : [-0.075, -0.055, -0.095], J ? [0.135, 0.175, 0.25] : [0.075, 0.13, 0.165], J ? 0.004 : 0.0025), null, null, null, headPaint);
   if (J) skull.userData.fur = [2, 0.0015, 1600];
   const noseM = new THREE.MeshPhysicalMaterial({ color: C.nose, roughness: J ? 0.3 : 0.5, clearcoat: J ? 0.6 : 0.3, clearcoatRoughness: J ? 0.25 : 0.35 }); // 비글: 살짝 촉촉한 가죽 코
@@ -583,8 +583,8 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
       put(foot, sph(), [0, -0.004, 0.016], null, [0.04, 0.026, 0.05], whitePaint);
     } else {
       // 굵고 거의 가늘어지지 않는 원통 마디 + 관절마다 공 하나 (공 반지름 = 원통 끝 반지름이라 링 솔기가 없다)
-      hip.position.set(sx * (front ? 0.062 : 0.066), front ? -0.03 : -0.01, z); // 고관절은 골반 높이에 두어 앉을 때 무릎이 앞으로 나오고 허벅지가 정강이를 덮는다
-      const r1 = front ? 0.046 : 0.052, r2 = 0.045, r3 = front ? 0.04 : 0.039, r4 = 0.037; // 짧고 굵은 다리
+      hip.position.set(sx * (front ? 0.05 : 0.062), front ? -0.03 : -0.01, z); // 고관절은 골반 높이에 두어 앉을 때 무릎이 앞으로 나오고 허벅지가 정강이를 덮는다
+      const r1 = front ? 0.04 : 0.052, r2 = front ? 0.042 : 0.045, r3 = front ? 0.04 : 0.039, r4 = 0.037; // 짧고 굵은 다리 (앞다리 윗부분은 좁아진 가슴 안에 묻히게 가늘게)
       const bodySpace = (p, c) => bodyPaint(_pb.copy(p).add(hip.position), c, 1); // 위팔·허벅지는 몸통 무늬를 그대로 이어받는다 (배 흰색은 끄고 황갈로 — 위팔은 팔꿈치까지 황갈)
       const seg = (key, L, ra, rb) => sdfGeo(key, legSegSDF(L, ra, rb), [-ra - 0.003, -L - rb - 0.003, -ra - 0.003], [ra + 0.003, ra + 0.003, ra + 0.003], 0.003);
       const fk = front ? 'f' : 'h';
