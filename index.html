@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>다섯 강아지의 추억</title>
+  <meta name="description" content="강아지를 골라 추억의 장소로 들어가는 3D 공간. 첫 장소는 핑키와 함께하는 푸맘네 집." />
+  <meta name="theme-color" content="#16100c" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="stage"><canvas id="c" aria-label="강아지와 추억의 장소 3D 화면"></canvas></div>
+<div class="vignette"></div>
+<div id="bubbles"></div>
+
+<section id="selectUI" class="ui" aria-label="강아지 고르기">
+  <header class="sel-head">
+    <p class="eyebrow">추억의 장소로</p>
+    <h1>누구를 만나러 갈까</h1>
+  </header>
+  <div class="sel-bottom">
+    <div class="sel-card glass">
+      <div class="who"><span class="name" id="selName">핑키</span><span class="place" id="selPlace">푸맘네 집</span></div>
+      <button id="goBtn" class="go" type="button">만나러 가기</button>
+    </div>
+    <div class="chips" id="chips" role="tablist" aria-label="강아지 목록"></div>
+  </div>
+  <button class="arrow left glass" id="prevBtn" type="button" aria-label="이전 강아지">‹</button>
+  <button class="arrow right glass" id="nextBtn" type="button" aria-label="다음 강아지">›</button>
+</section>
+
+<section id="roomUI" class="ui" aria-label="추억의 장소" hidden>
+  <header class="room-head">
+    <button id="backBtn" class="back glass" type="button">‹ 친구들</button>
+    <div class="title"><span class="name">핑키</span><span class="place">푸맘네 집 · 이태원동</span></div>
+  </header>
+  <div class="room-bottom">
+    <p class="hint" id="hint">화면을 끌어서 둘러보세요</p>
+    <nav class="actions glass" id="actions" aria-label="핑키에게 하기">
+      <button type="button" data-cmd="sit"><span class="ic" aria-hidden="true">🐾</span>앉아</button>
+      <button type="button" data-cmd="down"><span class="ic" aria-hidden="true">🛋️</span>엎드려</button>
+      <button type="button" data-cmd="roll"><span class="ic" aria-hidden="true">🫠</span>드러눕기</button>
+      <button type="button" data-cmd="treat"><span class="ic" aria-hidden="true">🦴</span>간식 먹기</button>
+      <button type="button" data-cmd="sniff"><span class="ic" aria-hidden="true">👃</span>냄새 맡기</button>
+    </nav>
+  </div>
+</section>
+
+<div id="toast" class="glass" role="status"></div>
+<div id="fade"></div>
+<div id="boot">불을 켜는 중…</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

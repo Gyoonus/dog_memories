@@ -1,0 +1,125 @@
+/* Layout: full-bleed WebGL stage, UI floats in glass bands pinned to the top and bottom edges. One warm-night look. */
+:root {
+  --night: #16100c;
+  --ember: #f3b466;
+  --blush: #f0a2ad;
+  --cream: #f8eddd;
+  --muted: #c4ae97;
+  --glass: rgba(30, 21, 16, .7);
+  --line: rgba(248, 237, 221, .15);
+  --ink: #2a190d;
+  --display: "Gowun Batang", "Nanum Myeongjo", serif;
+  --body: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--night); color: var(--cream); font-family: var(--body);
+  overflow: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; }
+button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+#stage { position: fixed; inset: 0; }
+#c { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#c:active { cursor: grabbing; }
+.vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 42%, transparent 52%, rgba(10, 6, 4, .58) 100%); }
+
+.ui {
+  position: fixed; inset: 0; pointer-events: none;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.ui button, .ui .glass { pointer-events: auto; }
+.glass {
+  background: var(--glass); border: 1px solid var(--line);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+
+/* ---------- 강아지 고르기 ---------- */
+.sel-head { max-width: 30rem; }
+.eyebrow { margin: 0 0 6px; font-size: 12px; letter-spacing: .2em; color: var(--blush); }
+h1 {
+  margin: 0; font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4.4vw, 40px);
+  line-height: 1.2; text-wrap: balance; text-shadow: 0 2px 18px rgba(0, 0, 0, .55);
+}
+.sel-bottom { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.sel-card {
+  display: flex; align-items: center; gap: 18px; border-radius: 24px;
+  padding: 12px 12px 12px 22px; width: min(100%, 25rem);
+}
+.who { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.who .name { font-family: var(--display); font-size: 30px; font-weight: 700; line-height: 1.1; }
+.who .place { font-size: 13px; color: var(--muted); }
+.go {
+  appearance: none; border: 0; border-radius: 999px; padding: 14px 20px; font-weight: 700; font-size: 15px;
+  background: var(--ember); color: var(--ink); cursor: pointer; white-space: nowrap; transition: transform .1s;
+}
+.go:active { transform: scale(.96); }
+.go:disabled { background: rgba(248, 237, 221, .1); color: var(--muted); cursor: default; }
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.chip {
+  appearance: none; border-radius: 999px; padding: 7px 14px; font-size: 14px; cursor: pointer;
+  border: 1px solid var(--line); background: rgba(30, 21, 16, .5); color: var(--muted);
+}
+.chip[aria-selected="true"] { color: var(--cream); border-color: var(--ember); background: rgba(243, 180, 102, .14); }
+.chip small { margin-left: 4px; font-size: 11px; opacity: .7; }
+.arrow {
+  position: fixed; top: 46%; width: 44px; height: 44px; border-radius: 50%;
+  font-size: 22px; line-height: 1; cursor: pointer; display: grid; place-items: center;
+}
+.arrow.left { left: max(16px, env(safe-area-inset-left, 0px)); }
+.arrow.right { right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* ---------- 추억의 장소 ---------- */
+.room-head { display: flex; align-items: center; gap: 14px; }
+.back { appearance: none; border-radius: 999px; padding: 9px 14px; font-size: 14px; cursor: pointer; white-space: nowrap; }
+.title { display: flex; flex-direction: column; text-shadow: 0 2px 12px rgba(0, 0, 0, .6); }
+.title .name { font-family: var(--display); font-weight: 700; font-size: 24px; line-height: 1.15; }
+.title .place { font-size: 12.5px; color: var(--muted); }
+.room-bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.hint { margin: 0; font-size: 12.5px; color: var(--muted); text-shadow: 0 1px 8px rgba(0, 0, 0, .7); transition: opacity .8s; }
+.hint.gone { opacity: 0; }
+.actions {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
+  width: min(100%, 34rem); border-radius: 24px; padding: 6px;
+}
+.actions button {
+  appearance: none; border: 0; border-radius: 18px; background: transparent; cursor: pointer; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 2px 8px;
+  font-size: 14px; font-weight: 700; white-space: nowrap; transition: background .2s, transform .1s;
+}
+.actions button .ic { font-size: 20px; line-height: 1; }
+.actions button:hover { background: rgba(248, 237, 221, .07); }
+.actions button:active { transform: scale(.95); }
+.actions button.on { background: var(--ember); color: var(--ink); }
+@media (max-width: 400px) { .actions button { font-size: 12.5px; } .actions button .ic { font-size: 18px; } }
+
+#bubbles { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.bubble {
+  position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform, opacity;
+  font-family: var(--display); font-weight: 700; font-size: 21px; color: var(--cream);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .6), 0 0 18px rgba(243, 180, 102, .4);
+}
+.bubble.soft {
+  font-family: var(--body); font-weight: 400; font-size: 15px; padding: 7px 13px; border-radius: 16px;
+  background: var(--glass); border: 1px solid var(--line); text-shadow: none;
+}
+#toast {
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 92px); transform: translate(-50%, -8px);
+  padding: 9px 16px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none;
+  transition: opacity .3s, transform .3s; white-space: nowrap; max-width: calc(100% - 32px);
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#fade { position: fixed; inset: 0; background: #0b0705; opacity: 0; pointer-events: none; transition: opacity .55s ease; }
+#fade.on { opacity: 1; pointer-events: auto; }
+#boot {
+  position: fixed; inset: 0; display: grid; place-items: center; background: var(--night);
+  font-family: var(--display); font-size: 18px; color: var(--muted); transition: opacity .7s;
+}
+#boot.gone { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { #fade, #boot, #toast, .hint { transition: none; } }
