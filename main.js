@@ -326,7 +326,7 @@ const sdRoundCone = (x, y, z, L, r1, r2) => { // a = 원점(반지름 r1), b = (
 };
 const legSegSDF = (L, r1, r2) => (x, y, z) => sdRoundCone(x, y, z, L, r1, r2);
 // 꼬리: 뿌리가 굵고 끝까지 붓처럼 두툼하게 이어지며 끝으로 가며 완만히 위로 휘는 한 덩어리 (낮게 수평에 가깝게 든다)
-const TAIL_P = [[0, 0, 0, 0.036], [0, 0.05, 0.002, 0.033], [0, 0.1, 0.008, 0.03], [0, 0.15, 0.019, 0.028], [0, 0.2, 0.035, 0.029], [0, 0.23, 0.05, 0.023]];
+const TAIL_P = [[0, 0, 0, 0.034], [0, 0.055, 0, 0.031], [0, 0.11, 0.008, 0.028], [0, 0.16, 0.026, 0.024], [0, 0.2, 0.052, 0.02], [0, 0.23, 0.085, 0.016]]; // 뿌리에서 끝까지 고르게 가늘어지고 끝으로 가며 완만한 칼 모양 곡선
 const tailAxisZ = (y) => { // 꼬리 중심선의 z (등쪽·배쪽 구분용)
   for (let i = 0; i < TAIL_P.length - 1; i++) if (y <= TAIL_P[i + 1][1]) return lerp(TAIL_P[i][2], TAIL_P[i + 1][2], clamp((y - TAIL_P[i][1]) / (TAIL_P[i + 1][1] - TAIL_P[i][1]), 0, 1));
   return TAIL_P[TAIL_P.length - 1][2];
@@ -562,7 +562,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   // 꼬리
   const tp = new THREE.Group(); tp.position.set(0, J ? 0.07 : 0.065, J ? -0.196 : -0.225); body.add(tp); d.tail = tp;
   if (J) put(tp, new THREE.TorusGeometry(0.055, 0.03, 10, 20, Math.PI * 1.5), [0, 0.06, 0], [0, Math.PI / 2, 0.5], null, tailPaint).userData.fur = [3, 0.006, 400];
-  else put(tp, sdfGeo('bt', tailSDF, [-0.045, -0.045, -0.05], [0.045, 0.26, 0.1], 0.003), null, null, null, tailPaint);
+  else put(tp, sdfGeo('bt', tailSDF, [-0.045, -0.045, -0.05], [0.045, 0.26, 0.12], 0.003), null, null, null, tailPaint);
 
   // 다리: 앞다리 = 위팔 · 아래팔 · 발허리 (팔꿈치는 뒤로, 손목은 들 때 뒤로 접힘)
   //       뒷다리 = 허벅지 · 정강이 · 뒷발허리 (무릎은 앞으로, 뒤꿈치는 뒤로)
