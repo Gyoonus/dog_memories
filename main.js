@@ -55,32 +55,37 @@ function glow(parent, color, size, p, opacity = 0.8) {
 }
 
 // ================================================================
-// 강아지 (2등신 · 큰 머리)
+// 강아지 (아기 비글 비율 · 다리 관절 3개 · 털 무늬는 정점 색)
 // ================================================================
 const COLORS = {
-  pinky: { base: 0xf4ede3, tan: 0xd3a477, saddle: 0x5a473b, ear: 0xc9976a, nose: 0x1c1513, rim: 0x6a442f, collar: 0xe88fa1, blush: 0xff9aa8 },
-  pupu: { base: 0xf1e6d2, tan: 0xe7d0ab, saddle: 0xe7d0ab, ear: 0xe0c49a, nose: 0x6f4a46, rim: 0x3a2a22 },
-  generic: { base: 0xe9e1d6, tan: 0xc99a6c, saddle: 0x4a3c34, ear: 0xc39066, nose: 0x1c1513, rim: 0x55382a },
+  pinky: { base: 0xf7f2eb, tan: 0xcf955a, saddle: 0x4d3f36, nose: 0x1b1412, collar: 0xe88fa1 },
+  pupu: { base: 0xf1e6d2, tan: 0xe7d0ab, saddle: 0xe7d0ab, nose: 0x6f4a46 },
+  generic: { base: 0xe9e1d6, tan: 0xc99a6c, saddle: 0x4a3c34, nose: 0x1c1513 },
 };
 const P = (x, y, z) => V3(x, y, z);
+// paws: 발 위치(강아지 바닥 기준). lean: 발목 아래 마디 기울기(0 = 수직, π/2 = 바닥에 눕힘). free: 1이면 다리를 곧게 뻗음
 const POSES = {
-  stand: { bodyY: 0.3, bodyZ: 0, pitch: 0, roll: 0, yawOff: -0.5, gaze: 1, headPitch: 0, headTilt: 0, tail: -0.35, level: 1,
-    paws: [P(0.07, 0.03, 0.165), P(-0.07, 0.03, 0.165), P(0.075, 0.03, -0.14), P(-0.075, 0.03, -0.14)] },
-  sit: { bodyY: 0.215, bodyZ: -0.03, pitch: -0.62, roll: 0, yawOff: -0.6, gaze: 1, headPitch: 0, headTilt: 0, tail: -0.97, level: 1,
-    paws: [P(0.065, 0.03, 0.12), P(-0.065, 0.03, 0.12), P(0.1, 0.03, 0.06), P(-0.1, 0.03, 0.06)] },
-  down: { bodyY: 0.135, bodyZ: -0.02, pitch: 0.02, roll: 0, yawOff: -0.7, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.4, level: 1,
-    paws: [P(0.075, 0.03, 0.36), P(-0.075, 0.03, 0.36), P(0.12, 0.03, 0.0), P(-0.12, 0.03, 0.0)] },
-  side: { bodyY: 0.13, bodyZ: 0, pitch: 0, roll: 1.45, yawOff: -1.15, gaze: 0.6, headPitch: 0.15, headTilt: 0.2, tail: -1.5, level: 0,
-    paws: [P(0.36, 0.12, 0.2), P(0.33, 0.16, 0.12), P(0.36, 0.12, -0.15), P(0.33, 0.16, -0.22)] },
-  belly: { bodyY: 0.14, bodyZ: 0, pitch: 0, roll: 2.45, yawOff: -1.15, gaze: 0.75, headPitch: -0.2, headTilt: -0.55, tail: -1.4, level: 0,
-    paws: [P(0.2, 0.36, 0.22), P(0.12, 0.38, 0.12), P(0.22, 0.33, -0.12), P(0.14, 0.36, -0.2)] },
+  stand: { bodyY: 0.305, bodyZ: 0, pitch: 0, roll: 0, yawOff: -0.5, gaze: 1, headPitch: 0, headTilt: 0, tail: -0.35, level: 1, free: 0,
+    lean: [0.2, 0.2, 0.3, 0.3], paws: [P(0.07, 0.03, 0.145), P(-0.07, 0.03, 0.145), P(0.075, 0.03, -0.12), P(-0.075, 0.03, -0.12)] },
+  sit: { bodyY: 0.175, bodyZ: -0.03, pitch: -0.85, roll: 0, yawOff: -0.6, gaze: 1, headPitch: 0, headTilt: 0, tail: -0.72, level: 1, free: 0,
+    lean: [0.15, 0.15, 1.5, 1.5], paws: [P(0.065, 0.03, 0.11), P(-0.065, 0.03, 0.11), P(0.095, 0.03, 0.06), P(-0.095, 0.03, 0.06)] },
+  down: { bodyY: 0.13, bodyZ: -0.02, pitch: 0.02, roll: 0, yawOff: -0.7, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.4, level: 1, free: 0,
+    lean: [1.5, 1.5, 1.5, 1.5], paws: [P(0.075, 0.03, 0.3), P(-0.075, 0.03, 0.3), P(0.11, 0.03, 0.0), P(-0.11, 0.03, 0.0)] },
+  side: { bodyY: 0.125, bodyZ: 0, pitch: 0, roll: 1.45, yawOff: -1.15, gaze: 0.6, headPitch: 0.15, headTilt: 0.2, tail: -1.5, level: 0, free: 0.85,
+    lean: [0.3, 0.3, 0.3, 0.3], paws: [P(0.36, 0.12, 0.17), P(0.33, 0.16, 0.1), P(0.36, 0.12, -0.13), P(0.33, 0.16, -0.19)] },
+  belly: { bodyY: 0.135, bodyZ: 0, pitch: 0, roll: 2.45, yawOff: -1.15, gaze: 0.75, headPitch: -0.2, headTilt: -0.55, tail: -1.4, level: 0, free: 0.7,
+    lean: [0.6, 0.6, 0.4, 0.4], paws: [P(0.2, 0.34, 0.19), P(0.12, 0.36, 0.1), P(0.22, 0.31, -0.1), P(0.14, 0.34, -0.17)] },
+  eat: { bodyY: 0.255, bodyZ: 0, pitch: 0.3, roll: 0, yawOff: 0, gaze: 0, headPitch: 1.1, headTilt: 0, tail: -0.3, level: 1, free: 0,
+    lean: [0.35, 0.35, 0.3, 0.3], paws: [P(0.07, 0.03, 0.18), P(-0.07, 0.03, 0.18), P(0.075, 0.03, -0.12), P(-0.075, 0.03, -0.12)] },
+  held: { bodyY: 0.2, bodyZ: 0, pitch: -1.15, roll: 0, yawOff: 0, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.9, level: 0, free: 1,
+    lean: [0.1, 0.1, 0.15, 0.15], paws: [P(0.09, 0.15, 0.17), P(-0.09, 0.15, 0.17), P(0.08, -0.15, 0.02), P(-0.08, -0.15, 0.02)] },
 };
-const POSE_KEYS = ['bodyY', 'bodyZ', 'pitch', 'roll', 'yawOff', 'gaze', 'headPitch', 'headTilt', 'tail', 'level'];
+const POSE_KEYS = ['bodyY', 'bodyZ', 'pitch', 'roll', 'yawOff', 'gaze', 'headPitch', 'headTilt', 'tail', 'level', 'free'];
 
 function poseFor(name, d) {
   const p = POSES[name];
-  const o = { ...p, name, paws: p.paws.map((v) => v.clone()) };
-  if (name === 'stand') o.bodyY += d.L1 + d.L2 - 0.22;
+  const o = { ...p, name, lean: [...p.lean], paws: p.paws.map((v) => v.clone()) };
+  if (d.J && (name === 'stand' || name === 'eat')) o.bodyY += 0.035;
   return o;
 }
 function setPose(d, name, rate = 5) {
@@ -88,79 +93,226 @@ function setPose(d, name, rate = 5) {
   for (const k of POSE_KEYS) d.tgt[k] = p[k];
   d.tgt.name = name;
   p.paws.forEach((v, i) => d.tgt.paws[i].copy(v));
+  d.tgt.lean = [...p.lean];
   d.poseRate = rate;
+}
+
+const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const wob = (p, f) => Math.sin(p.x * f * 1.3 + p.z * f) * Math.sin(p.y * f * 0.9 - p.z * f * 0.7);
+const hash3 = (p) => { const s = Math.sin(p.x * 127.1 + p.y * 311.7 + p.z * 74.7) * 43758.5453; return s - Math.floor(s); };
+
+// ---------- 거리장(SDF) → 매끈한 한 덩어리 메시 (surface nets)
+const sdE = (x, y, z, cx, cy, cz, rx, ry, rz) => {
+  const px = (x - cx) / rx, py = (y - cy) / ry, pz = (z - cz) / rz;
+  const k0 = Math.sqrt(px * px + py * py + pz * pz), k1 = Math.sqrt((px / rx) ** 2 + (py / ry) ** 2 + (pz / rz) ** 2);
+  return k1 > 1e-9 ? (k0 * (k0 - 1)) / k1 : -Math.min(rx, ry, rz);
+};
+const sdCap = (x, y, z, ax, ay, az, bx, by, bz, r) => {
+  const pax = x - ax, pay = y - ay, paz = z - az, bax = bx - ax, bay = by - ay, baz = bz - az;
+  const h = clamp((pax * bax + pay * bay + paz * baz) / (bax * bax + bay * bay + baz * baz), 0, 1);
+  const dx = pax - bax * h, dy = pay - bay * h, dz = paz - baz * h;
+  return Math.sqrt(dx * dx + dy * dy + dz * dz) - r;
+};
+const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; };
+const smax = (a, b, k) => -smin(-a, -b, k);
+function surfaceNet(sdf, b0, b1, h) {
+  const nx = Math.ceil((b1[0] - b0[0]) / h) + 1, ny = Math.ceil((b1[1] - b0[1]) / h) + 1, nz = Math.ceil((b1[2] - b0[2]) / h) + 1;
+  const F = new Float32Array(nx * ny * nz), id = (i, j, k) => i + nx * (j + ny * k);
+  for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) F[id(i, j, k)] = sdf(b0[0] + i * h, b0[1] + j * h, b0[2] + k * h);
+  const cx = nx - 1, cy = ny - 1, cz = nz - 1, V = new Int32Array(cx * cy * cz).fill(-1), cid = (i, j, k) => i + cx * (j + cy * k);
+  const C = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]];
+  const E = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+  const pos = [], nor = [], v = new Float32Array(8), e = h * 0.5;
+  for (let k = 0; k < cz; k++) for (let j = 0; j < cy; j++) for (let i = 0; i < cx; i++) {
+    let neg = 0;
+    for (let c = 0; c < 8; c++) { v[c] = F[id(i + C[c][0], j + C[c][1], k + C[c][2])]; if (v[c] < 0) neg++; }
+    if (neg === 0 || neg === 8) continue;
+    let sx = 0, sy = 0, sz = 0, n = 0;
+    for (const [a, b] of E) {
+      if ((v[a] < 0) === (v[b] < 0)) continue;
+      const t = v[a] / (v[a] - v[b]);
+      sx += C[a][0] + (C[b][0] - C[a][0]) * t; sy += C[a][1] + (C[b][1] - C[a][1]) * t; sz += C[a][2] + (C[b][2] - C[a][2]) * t; n++;
+    }
+    const px = b0[0] + (i + sx / n) * h, py = b0[1] + (j + sy / n) * h, pz = b0[2] + (k + sz / n) * h;
+    V[cid(i, j, k)] = pos.length / 3; pos.push(px, py, pz);
+    const gx = sdf(px + e, py, pz) - sdf(px - e, py, pz), gy = sdf(px, py + e, pz) - sdf(px, py - e, pz), gz = sdf(px, py, pz + e) - sdf(px, py, pz - e);
+    const gl = Math.hypot(gx, gy, gz) || 1; nor.push(gx / gl, gy / gl, gz / gl);
+  }
+  const idx = [];
+  const quad = (a, b, c, d) => {
+    if (a < 0 || b < 0 || c < 0 || d < 0) return;
+    const ax = pos[a * 3], ay = pos[a * 3 + 1], az = pos[a * 3 + 2];
+    const ux = pos[b * 3] - ax, uy = pos[b * 3 + 1] - ay, uz = pos[b * 3 + 2] - az, wx = pos[c * 3] - ax, wy = pos[c * 3 + 1] - ay, wz = pos[c * 3 + 2] - az;
+    const fx = uy * wz - uz * wy, fy = uz * wx - ux * wz, fz = ux * wy - uy * wx;
+    if (fx * nor[a * 3] + fy * nor[a * 3 + 1] + fz * nor[a * 3 + 2] >= 0) idx.push(a, b, c, a, c, d); else idx.push(a, c, b, a, d, c);
+  };
+  for (let k = 1; k < cz; k++) for (let j = 1; j < cy; j++) for (let i = 1; i < cx; i++) {
+    const s0 = F[id(i, j, k)] < 0;
+    if (s0 !== F[id(i + 1, j, k)] < 0) quad(V[cid(i, j - 1, k - 1)], V[cid(i, j, k - 1)], V[cid(i, j, k)], V[cid(i, j - 1, k)]);
+    if (s0 !== F[id(i, j + 1, k)] < 0) quad(V[cid(i - 1, j, k - 1)], V[cid(i, j, k - 1)], V[cid(i, j, k)], V[cid(i - 1, j, k)]);
+    if (s0 !== F[id(i, j, k + 1)] < 0) quad(V[cid(i - 1, j - 1, k)], V[cid(i, j - 1, k)], V[cid(i, j, k)], V[cid(i - 1, j, k)]);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setIndex(idx);
+  return g;
+}
+const ZS = 0.85;
+const bodySDF = (J) => (x, y, z) => {
+  z /= ZS;
+  let d = sdCap(x / 0.92, y, z, 0, 0, -0.13, 0, 0, 0.13, J ? 0.13 : 0.125);
+  d = smin(d, sdE(x, y, z, 0, -0.012, 0.135, 0.12, 0.128, 0.118), 0.05);
+  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.058, -0.012, -0.135, 0.07, 0.1, 0.105), 0.04);
+  d = smin(d, sdCap(x, y, z, 0, 0.03, 0.15, 0, 0.11, 0.235, J ? 0.08 : 0.075), 0.05);
+  return smax(d, -sdE(x, y, z, 0, -0.19, -0.02, 0.2, 0.07, 0.11), 0.04);
+};
+const headSDF = (J) => (x, y, z) => {
+  let d = J ? sdE(x, y, z, 0, 0.055, 0.02, 0.105, 0.095, 0.1) : sdE(x, y, z, 0, 0.055, 0.02, 0.1, 0.092, 0.104);
+  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.045, 0.02, 0.06, 0.055, 0.05, 0.055), 0.03);
+  if (J) d = smin(d, sdCap(x / 1.05, y / 0.9, z, 0, 0.011, 0.1, 0, 0.011, 0.13, 0.043), 0.03);
+  else {
+    d = smin(d, sdCap(x / 1.08, y / 0.88, z, 0, 0.009, 0.095, 0, 0.009, 0.145, 0.046), 0.035);
+    for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.026, -0.024, 0.15, 0.032, 0.026, 0.04), 0.02);
+  }
+  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.04, 0.098, 0.082, 0.03, 0.017, 0.025), 0.02);
+  for (const sx of [1, -1]) d = smax(d, -sdE(x, y, z, sx * 0.044, 0.073, J ? 0.094 : 0.098, 0.022, 0.02, 0.016), 0.008);
+  return d;
+};
+const sdfCache = {};
+function sdfGeo(key, sdf, b0, b1, h) { if (!sdfCache[key]) sdfCache[key] = surfaceNet(sdf, b0, b1, h); return sdfCache[key].clone(); }
+// 짧은 털: 같은 메시를 법선 방향으로 몇 겹 부풀리고, 겹마다 털 가닥 사이를 구멍 냄
+function furShells(mesh, count = 6, len = 0.007) {
+  for (let i = 1; i <= count; i++) {
+    const f = i / count, mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 });
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uShell = { value: f }; sh.uniforms.uLen = { value: len };
+      sh.vertexShader = 'uniform float uShell; uniform float uLen; varying vec3 vOP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += normal * uShell * uLen; vOP = position;');
+      sh.fragmentShader = 'uniform float uShell; varying vec3 vOP;\nfloat furHash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }\n'
+        + sh.fragmentShader
+          .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n  if (furHash(floor(vOP * 850.0)) < uShell * 0.93) discard;')
+          .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= mix(0.8, 1.05, uShell);');
+    };
+    mat.customProgramCacheKey = () => 'fur-shell';
+    const s = new THREE.Mesh(mesh.geometry, mat); s.castShadow = false; s.receiveShadow = true; mesh.add(s);
+  }
 }
 
 function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) {
   const J = kind === 'jindo';
-  const silMat = silhouette ? new THREE.MeshStandardMaterial({ color: 0x2b201b, roughness: 0.9, emissive: 0x170f0b }) : null;
-  const mk = (c, o) => silMat || M(c, { roughness: 0.75, ...o });
   const d = { kind, J, scale, seed, meshes: [], ears: [], eyes: [], legs: [] };
+  const silMat = silhouette ? new THREE.MeshStandardMaterial({ color: 0x2b201b, roughness: 0.9, emissive: 0x170f0b }) : null;
+  const fur = silMat || new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.82, sheen: 0.7, sheenRoughness: 0.6, sheenColor: new THREE.Color(0xffe6cc) });
+  const cW = new THREE.Color(C.base), cT = new THREE.Color(C.tan), cB = new THREE.Color(C.saddle), cTD = cT.clone().multiplyScalar(0.72);
+  const tone = (c, p, amt = 0.07) => c.multiplyScalar(1 + (hash3(p) - 0.5) * amt);
+  const mix = (c, p, black, white) => tone(c.copy(cT).lerp(cB, black).lerp(cW, white), p);
+  const _pv = new THREE.Vector3(), _pc = new THREE.Color(), _pz = new THREE.Vector3();
+  const sph = (w = 32, h = 24) => new THREE.SphereGeometry(1, w, h);
+  const furry = [];
+  const put = (par, geo, p, r, s, paint, mat) => {
+    const m = new THREE.Mesh(geo, mat ? silMat || mat : fur);
+    if (p) m.position.set(p[0], p[1], p[2]);
+    if (r) m.rotation.set(r[0], r[1], r[2]);
+    if (s != null) { const v = typeof s === 'number' ? [s, s, s] : s; if (mat) m.scale.set(v[0], v[1], v[2]); else geo.scale(v[0], v[1], v[2]); }
+    m.castShadow = true; m.receiveShadow = true; par.add(m); d.meshes.push(m);
+    if (!mat) furry.push(m);
+    if (!silhouette && !mat && paint) {
+      m.updateMatrix();
+      const pos = geo.attributes.position, col = new Float32Array(pos.count * 3);
+      for (let i = 0; i < pos.count; i++) {
+        _pv.fromBufferAttribute(pos, i).applyMatrix4(m.matrix); paint(_pv, _pc);
+        col[i * 3] = _pc.r; col[i * 3 + 1] = _pc.g; col[i * 3 + 2] = _pc.b;
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    }
+    return m;
+  };
+
+  // 무늬: 몸(등 검정 안장 · 옆 황갈 · 배와 가슴 흰색), 머리(황갈 + 이마 흰 줄 + 흰 주둥이)
+  const whitePaint = (p, c) => tone(c.copy(cW), p, 0.05);
+  const bodyPaint = J ? (p, c) => tone(c.copy(cW).lerp(cT, ss(0.0, 0.12, p.y) * 0.45), p, 0.05) : (p0, c) => {
+    const p = _pz.set(p0.x, p0.y, p0.z / ZS), n = wob(p, 30) * 0.012;
+    const black = ss(0.015, 0.05, p.y + n) * ss(-0.31, -0.24, p.z) * ss(0.2, 0.12, p.z);
+    const belly = ss(-0.03, -0.075, p.y + n);
+    const chest = ss(0.1, 0.17, p.z + n) * ss(0.08, 0.0, p.y - (p.z - 0.15) * 0.6);
+    mix(c, p, black, Math.max(belly, chest));
+  };
+  const headPaint = J ? (p, c) => tone(c.copy(cW).lerp(cT, ss(0.1, 0.16, p.y) * 0.4), p, 0.05) : (p, c) => {
+    const n = wob(p, 60) * 0.006;
+    const muzzle = ss(0.07, 0.1, p.z + n) * ss(0.08, 0.04, p.y);
+    const lower = ss(0.01, -0.02, p.y + n) * ss(0.0, 0.05, p.z);
+    const bw = 0.011 + Math.max(0, 0.125 - p.y) * 0.32;
+    const blaze = ss(bw + 0.008, bw, Math.abs(p.x) + n) * ss(0.0, 0.04, p.z) * ss(0.178, 0.15, p.y);
+    mix(c, p, 0, Math.max(muzzle, lower, blaze));
+  };
+  const earPaint = J ? whitePaint : (p, c) => tone(c.copy(cT).lerp(cTD, clamp(-p.y / 0.17, 0, 1) * 0.75), p, 0.06);
+  const tailPaint = J ? whitePaint : (p, c) => mix(c, p, ss(0.08, 0.03, p.y) * 0.9, ss(0.1, 0.135, p.y));
+  const segPaint = (L, tanTop, tanBottom) => (J ? whitePaint : (p, c) => {
+    const t = clamp(-p.y / L, 0, 1);
+    tone(c.copy(cW).lerp(cT, lerp(tanTop, tanBottom, ss(0.2, 0.8, t))), p, 0.05);
+  });
+
   d.root = new THREE.Group();
   const sc = new THREE.Group(); sc.scale.setScalar(scale); d.root.add(sc);
   const body = new THREE.Group(); sc.add(body); d.body = body;
-  const put = (par, geo, mat, p, r, s) => { const m = add(par, geo, mat, p, r, s); d.meshes.push(m); return m; };
 
-  const bR = J ? 0.13 : 0.122;
-  d.torso = put(body, new THREE.CapsuleGeometry(bR, 0.28, 8, 20), mk(C.base), [0, 0, 0], [Math.PI / 2, 0, 0]);
-  put(body, new THREE.CapsuleGeometry(bR + 0.004, J ? 0.22 : 0.19, 8, 20), mk(C.saddle), [0, 0.03, -0.05], [Math.PI / 2, 0, 0]);
-  put(body, SPH, mk(C.base), [0, -0.01, 0.14], null, [0.118, 0.125, 0.118]);
-  for (const sx of [1, -1]) put(body, SPH, mk(C.base), [sx * 0.06, -0.015, -0.14], null, [0.068, 0.098, 0.105]);
-  put(body, new THREE.CapsuleGeometry(0.072, 0.06, 6, 16), mk(C.base), [0, 0.07, 0.19], [0.6, 0, 0]);
-  if (!silhouette && C.collar) put(body, new THREE.TorusGeometry(0.077, 0.014, 8, 28), M(C.collar, { roughness: 0.55 }), [0, 0.055, 0.18], [-0.97, 0, 0]);
+  // 몸통 (몸통 · 가슴 · 엉덩이 · 목을 매끈하게 이은 한 덩어리)
+  d.torso = put(body, sdfGeo(J ? 'jb' : 'bb', bodySDF(J), [-0.17, -0.17, -0.3], [0.17, 0.2, 0.33], 0.006), null, null, null, bodyPaint);
+  if (!silhouette && C.collar) put(body, new THREE.TorusGeometry(0.078, 0.013, 10, 32), [0, 0.052, 0.15], [-0.97, 0, 0], null, null, M(C.collar, { roughness: 0.5 }));
 
-  // 머리 (크게: 2등신 느낌)
-  const hp = new THREE.Group(); hp.rotation.order = 'YXZ'; hp.position.set(0, 0.13, 0.25); body.add(hp); d.hp = hp;
-  const head = new THREE.Group(); head.scale.setScalar(J ? 1.4 : 1.48); hp.add(head); d.head = head;
-  put(head, SPH, mk(C.base), [0, 0.05, 0.03], null, J ? [0.112, 0.102, 0.105] : [0.106, 0.1, 0.108]);
-  if (!J) for (const sx of [1, -1]) put(head, SPH, mk(C.tan), [sx * 0.05, 0.08, 0.012], null, [0.074, 0.072, 0.08]);
-  put(head, SPH, mk(C.base), [0, 0.005, 0.118], null, J ? [0.058, 0.05, 0.075] : [0.06, 0.052, 0.085]);
-  put(head, SPH, mk(C.nose, { roughness: 0.3 }), [0, 0.032, J ? 0.188 : 0.198], null, [0.03, 0.022, 0.022]);
-  const jaw = new THREE.Group(); jaw.position.set(0, -0.026, 0.07); head.add(jaw); d.jaw = jaw;
-  put(jaw, SPH, mk(C.base), [0, -0.006, 0.05], null, [0.044, 0.02, 0.064]);
-  d.tongue = put(jaw, SPH, mk(0xe9808e, { roughness: 0.45 }), [0, 0.006, 0.055], null, [0.025, 0.008, 0.045]);
+  // 머리
+  const hp = new THREE.Group(); hp.rotation.order = 'YXZ'; hp.position.set(0, 0.13, 0.205); body.add(hp); d.hp = hp;
+  const head = new THREE.Group(); head.scale.setScalar(J ? 1.35 : 1.3); hp.add(head); d.head = head;
+  const skull = put(head, sdfGeo(J ? 'jh' : 'bh', headSDF(J), [-0.135, -0.075, -0.1], [0.135, 0.175, 0.245], 0.0045), null, null, null, headPaint);
+  put(head, sph(), [0, 0.03, J ? 0.172 : 0.192], null, [0.034, 0.024, 0.022], null, new THREE.MeshPhysicalMaterial({ color: C.nose, roughness: 0.35, clearcoat: 0.6 }));
+  if (!silhouette) for (const sx of [1, -1]) put(head, sph(12, 8), [sx * 0.011, 0.025, J ? 0.19 : 0.211], null, [0.007, 0.005, 0.004], null, M(0x050303, { roughness: 0.6 }));
+  const jaw = new THREE.Group(); jaw.position.set(0, -0.03, 0.08); head.add(jaw); d.jaw = jaw;
+  put(jaw, sph(), [0, -0.004, 0.058], null, [0.036, 0.017, 0.055], whitePaint);
+  d.tongue = put(jaw, sph(16, 10), [0, 0.006, 0.055], null, [0.025, 0.008, 0.045], null, M(0xe9808e, { roughness: 0.45 }));
   for (const sx of [1, -1]) {
-    const eg = new THREE.Group(); eg.position.set(sx * 0.045, 0.068, J ? 0.11 : 0.117); eg.rotation.y = sx * 0.36; head.add(eg);
+    const eg = new THREE.Group(); eg.position.set(sx * 0.044, 0.073, J ? 0.094 : 0.098); eg.rotation.set(0, sx * 0.42, 0); head.add(eg);
     if (!silhouette) {
-      put(eg, SPH, M(C.rim, { roughness: 0.8 }), [0, 0, -0.004], null, [0.028, 0.026, 0.013]);
-      put(eg, SPH, M(0x0e0a08, { roughness: 0.12 }), [0, 0, 0.002], null, [0.021, 0.022, 0.013]);
-      const hl = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: 0xffffff })); hl.position.set(sx * -0.004 - 0.003, 0.009, 0.013); hl.scale.setScalar(0.0062); eg.add(hl);
-      const hl2 = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: 0xffffff })); hl2.position.set(0.006, -0.008, 0.013); hl2.scale.setScalar(0.003); eg.add(hl2);
-      if (C.blush) {
-        const b = new THREE.Mesh(new THREE.CircleGeometry(0.019, 18), new THREE.MeshBasicMaterial({ color: C.blush, transparent: true, opacity: 0.55, depthWrite: false }));
-        b.position.set(sx * 0.068, 0.028, 0.098); b.rotation.y = sx * 0.62; head.add(b);
-      }
-      if (!J) put(head, SPH, M(C.tan), [sx * 0.044, 0.1, 0.098], [0, 0, sx * -0.35], [0.021, 0.009, 0.013]);
+      put(eg, sph(20, 14), [0, 0, -0.002], null, [0.024, 0.021, 0.012], null, M(0x2a1a12, { roughness: 0.7 }));
+      put(eg, sph(20, 14), [0, 0, 0.002], null, [0.019, 0.0175, 0.012], null, new THREE.MeshPhysicalMaterial({ color: 0x2c180d, roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05 }));
+      put(eg, sph(16, 10), [0, 0, 0.007], null, [0.011, 0.011, 0.008], null, M(0x070404, { roughness: 0.1 }));
+      const w = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const h1 = new THREE.Mesh(SPH, w); h1.position.set(-0.006, 0.006, 0.0135); h1.scale.setScalar(0.0048); eg.add(h1);
+      const h2 = new THREE.Mesh(SPH, w); h2.position.set(0.005, -0.005, 0.0135); h2.scale.setScalar(0.0024); eg.add(h2);
     }
     d.eyes.push(eg);
   }
   for (const sx of [1, -1]) {
     const ep = new THREE.Group(); head.add(ep);
-    if (J) { ep.position.set(sx * 0.056, 0.128, 0); put(ep, new THREE.ConeGeometry(0.042, 0.1, 12), mk(C.ear), [0, 0.044, 0], null, [1, 1, 0.55]); ep.rotation.z = sx * -0.22; }
-    else { ep.position.set(sx * 0.09, 0.088, 0.005); put(ep, SPH, mk(C.ear), [sx * 0.012, -0.068, 0.004], null, [0.02, 0.082, 0.056]); }
+    if (J) { ep.position.set(sx * 0.056, 0.128, 0); put(ep, new THREE.ConeGeometry(0.042, 0.1, 16), [0, 0.044, 0], null, [1, 1, 0.55], earPaint); ep.rotation.z = sx * -0.22; }
+    else { ep.position.set(sx * 0.086, 0.085, -0.005); put(ep, sph(), [sx * 0.014, -0.08, 0.012], [0.12, 0, sx * 0.06], [0.017, 0.098, 0.06], earPaint); }
     d.ears.push({ g: ep, side: sx, ax: 0, vx: 0, az: 0, vz: 0 });
   }
 
   // 꼬리
-  const tp = new THREE.Group(); tp.position.set(0, 0.07, -0.24); body.add(tp); d.tail = tp;
-  if (J) put(tp, new THREE.TorusGeometry(0.055, 0.03, 10, 20, Math.PI * 1.5), mk(C.base), [0, 0.06, 0], [0, Math.PI / 2, 0.5]);
-  else { put(tp, new THREE.CapsuleGeometry(0.02, 0.12, 6, 10), mk(C.saddle), [0, 0.075, 0]); put(tp, SPH, mk(C.base), [0, 0.15, 0], null, [0.024, 0.04, 0.024]); }
+  const tp = new THREE.Group(); tp.position.set(0, 0.07, -0.196); body.add(tp); d.tail = tp;
+  if (J) put(tp, new THREE.TorusGeometry(0.055, 0.03, 10, 20, Math.PI * 1.5), [0, 0.06, 0], [0, Math.PI / 2, 0.5], null, tailPaint);
+  else { put(tp, new THREE.CapsuleGeometry(0.02, 0.12, 8, 14), [0, 0.075, 0], null, null, tailPaint); put(tp, sph(), [0, 0.15, 0], null, [0.024, 0.042, 0.024], tailPaint); }
 
-  // 다리 (짧게)
-  const L1 = J ? 0.12 : 0.11, L2 = J ? 0.12 : 0.11; d.L1 = L1; d.L2 = L2;
-  for (const [sx, z, front] of [[1, 0.155, true], [-1, 0.155, true], [1, -0.14, false], [-1, -0.14, false]]) {
+  // 다리: 앞다리 = 위팔 · 아래팔 · 발허리 (팔꿈치는 뒤로, 손목은 들 때 뒤로 접힘)
+  //       뒷다리 = 허벅지 · 정강이 · 뒷발허리 (무릎은 앞으로, 뒤꿈치는 뒤로)
+  const k = J ? 1.15 : 1;
+  for (const [sx, z, front] of [[1, 0.132, true], [-1, 0.132, true], [1, -0.119, false], [-1, -0.119, false]]) {
+    const L1 = (front ? 0.095 : 0.09) * k, L2 = 0.095 * k, L3 = (front ? 0.045 : 0.065) * k;
     const hip = new THREE.Group(); hip.position.set(sx * 0.07, -0.05, z); body.add(hip);
-    put(hip, new THREE.CapsuleGeometry(front ? 0.037 : 0.046, L1 * 0.7, 6, 12), mk(C.base), [0, -L1 / 2, 0]);
+    put(hip, new THREE.CapsuleGeometry(front ? 0.042 : 0.054, L1 * 0.7, 8, 16), [0, -L1 / 2, 0], null, null, segPaint(L1, front ? 0.7 : 1, front ? 0.1 : 0.85));
     const knee = new THREE.Group(); knee.position.set(0, -L1, 0); hip.add(knee);
-    put(knee, new THREE.CapsuleGeometry(0.031, L2 * 0.75, 6, 12), mk(C.base), [0, -L2 / 2, 0]);
+    put(knee, new THREE.CapsuleGeometry(front ? 0.035 : 0.038, L2 * 0.75, 8, 16), [0, -L2 / 2, 0], null, null, segPaint(L2, front ? 0.05 : 0.7, 0));
     const ank = new THREE.Group(); ank.position.set(0, -L2, 0); knee.add(ank);
-    put(ank, SPH, mk(C.base), [0, -0.004, 0.014], null, [0.038, 0.025, 0.05]);
-    d.legs.push({ sx, front, hip, knee, ank });
+    put(ank, new THREE.CapsuleGeometry(front ? 0.029 : 0.03, L3 * 0.7, 6, 14), [0, -L3 / 2, 0], null, null, whitePaint);
+    const foot = new THREE.Group(); foot.position.set(0, -L3, 0); ank.add(foot);
+    put(foot, sph(), [0, -0.004, 0.016], null, [0.04, 0.026, 0.05], whitePaint);
+    d.legs.push({ sx, front, hip, knee, ank, foot, L1, L2, L3 });
   }
 
+  if (!silhouette) for (const m of furry) furShells(m, m === d.torso ? 6 : 4, m === d.torso ? 0.007 : 0.0045);
   d.cur = poseFor('stand', d); d.tgt = poseFor('stand', d);
   Object.assign(d, {
-    x: 0, z: 0, yaw: 0, external: false, phase: 0, gait: 0, walkTarget: null, walkSpeed: 0.5,
+    x: 0, z: 0, yaw: 0, lift: 0, liftT: 0, external: false, phase: 0, gait: 0, walkTarget: null, walkSpeed: 0.5, steer: null,
     face: 'cam', lookFn: null, wagPhase: seed, wagAmp: 0.3, wagSpeed: 6, wagAmpT: 0.3, wagSpeedT: 6,
     jawOpen: 0, chew: false, lick: 0, tongueOut: 0, pant: false, sniff: 0, paddle: 0,
     eyeOpen: 1, eyeY: 1, blinkT: 1 + seed, blinkDur: 0, tilt: 0, tiltT: 0, hx: 0, hy: 0, hz: 0, poseRate: 5, earPerk: 0,
@@ -168,35 +320,45 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   return d;
 }
 
-const _v = V3(), _m = new THREE.Matrix4();
-function solveLeg(d, L, py, pz, level, bodyPitch) {
-  const L1 = d.L1, L2 = d.L2;
-  const base = Math.atan2(-pz, -py);
-  const dist = clamp(Math.hypot(py, pz), 0.03, L1 + L2 - 1e-4);
+const _v = V3(), _m = new THREE.Matrix4(), _paw = V3(), _hipS = V3(), _dir = V3(), _tmp = V3(), _ank = V3();
+function solveLeg(L, A, Pw, level, bodyPitch) {
+  const { L1, L2 } = L;
+  const base = Math.atan2(-A.z, -A.y);
+  const dist = clamp(Math.hypot(A.y, A.z), 0.02, L1 + L2 - 1e-4);
   const a = Math.acos(clamp((L1 * L1 + dist * dist - L2 * L2) / (2 * L1 * dist), -1, 1));
   const tu = base + (L.front ? a : -a);
   const ky = -L1 * Math.cos(tu), kz = -L1 * Math.sin(tu);
-  const ty = -dist * Math.cos(base), tz = -dist * Math.sin(base);
-  const tl = Math.atan2(-(tz - kz), -(ty - ky));
-  L.hip.rotation.x = tu; L.knee.rotation.x = tl - tu; L.ank.rotation.x = -(tl + bodyPitch) * level;
+  const ay = -dist * Math.cos(base), az = -dist * Math.sin(base);
+  const tl = Math.atan2(-(az - kz), -(ay - ky));
+  const t3 = Math.atan2(-(Pw.z - az), -(Pw.y - ay));
+  L.hip.rotation.x = tu; L.knee.rotation.x = tl - tu; L.ank.rotation.x = t3 - tl; L.foot.rotation.x = -(t3 + bodyPitch) * level;
 }
 
 function updateDog(d, dt, t, camPos) {
   const c = d.cur, g = d.tgt, k = 1 - Math.exp(-d.poseRate * dt);
   for (const key of POSE_KEYS) c[key] += (g[key] - c[key]) * k;
-  for (let i = 0; i < 4; i++) c.paws[i].lerp(g.paws[i], k);
+  for (let i = 0; i < 4; i++) { c.paws[i].lerp(g.paws[i], k); c.lean[i] += (g.lean[i] - c.lean[i]) * k; }
 
   // 걷기 · 방향
   let moving = 0;
   if (d.walkTarget) {
-    const dx = d.walkTarget.x - d.x, dz = d.walkTarget.z - d.z, dist = Math.hypot(dx, dz);
-    if (dist < 0.025) d.walkTarget = null;
+    let dx = d.walkTarget.x - d.x, dz = d.walkTarget.z - d.z, dist = Math.hypot(dx, dz);
+    if (dist < 0.03) { d.walkTarget = null; d.detour = null; }
     else {
-      const want = Math.atan2(dx, dz), diff = angDiff(d.yaw, want);
+      d.stuckT = (d.stuckT || 0) + dt;
+      if (d.stuckT > 0.8) {
+        if (d.lastD !== undefined && d.lastD - dist < 0.03 && !d.detour) { const sd = Math.random() < 0.5 ? 1 : -1; d.detour = { x: d.x - (dz / dist) * sd * 0.6, z: d.z + (dx / dist) * sd * 0.6, t: 1.4 }; }
+        d.lastD = dist; d.stuckT = 0;
+      }
+      let gx = d.walkTarget.x, gz = d.walkTarget.z;
+      if (d.detour) { d.detour.t -= dt; if (d.detour.t <= 0 || Math.hypot(d.detour.x - d.x, d.detour.z - d.z) < 0.08) d.detour = null; else { gx = d.detour.x; gz = d.detour.z; } }
+      const [sx, sz] = d.steer ? d.steer(d.x, d.z, gx, gz) : [dx / dist, dz / dist];
+      const want = Math.atan2(sx, sz), diff = angDiff(d.yaw, want);
       d.yaw += diff * (1 - Math.exp(-5 * dt));
       const sp = d.walkSpeed * Math.max(0, 1 - Math.abs(diff) / 1.3) * Math.min(1, dist / 0.18 + 0.25);
       d.x += Math.sin(d.yaw) * sp * dt; d.z += Math.cos(d.yaw) * sp * dt;
-      moving = Math.max(sp / d.walkSpeed, Math.min(1, Math.abs(diff) * 1.5));
+      if (d.collide) d.collide(d);
+      moving = Math.max(sp / Math.max(d.walkSpeed, 0.01), Math.min(1, Math.abs(diff) * 1.5));
       d.phase += Math.max(sp, 0.16) * dt * Math.PI / (2 * 0.055 * d.scale);
     }
   } else if (!d.external) {
@@ -206,18 +368,19 @@ function updateDog(d, dt, t, camPos) {
     if (want !== null) {
       const diff = angDiff(d.yaw, want);
       d.yaw += diff * (1 - Math.exp(-3.5 * dt));
-      if (Math.abs(diff) > 0.3 && g.name === 'stand') { moving = Math.min(1, Math.abs(diff)); d.phase += dt * 9; }
+      if (Math.abs(diff) > 0.3 && (g.name === 'stand' || g.name === 'eat')) { moving = Math.min(1, Math.abs(diff)); d.phase += dt * 9; }
     }
   }
   d.gait += (moving - d.gait) * (1 - Math.exp(-8 * dt));
-  if (!d.external) { d.root.position.set(d.x, 0, d.z); d.root.rotation.y = d.yaw; }
+  d.lift += (d.liftT - d.lift) * (1 - Math.exp(-4 * dt));
+  if (!d.external) { d.root.position.set(d.x, d.lift, d.z); d.root.rotation.y = d.yaw; }
 
   // 몸
   const br = Math.sin(t * (d.pant ? 7 : 2.3) + d.seed * 3) * (d.pant ? 0.006 : 0.0035);
   const bob = d.gait * Math.abs(Math.cos(d.phase)) * 0.01;
   d.body.position.set(0, c.bodyY + br + bob, c.bodyZ);
   d.body.rotation.set(c.pitch, 0, c.roll);
-  d.torso.scale.set(1 + br * 3, 1, 1 + br * 3);
+  d.torso.scale.set(1 + br * 2.5, 1 + br * 2.5, 1);
   d.root.updateMatrixWorld(true);
 
   // 머리 · 시선
@@ -237,17 +400,24 @@ function updateDog(d, dt, t, camPos) {
   const chewBob = d.chew ? Math.sin(t * 15) * 0.03 : 0;
   d.hp.rotation.set(d.hx + sniffBob + chewBob, d.hy, d.hz);
 
-  // 다리 IK
+  // 다리 IK (관절 3개)
   d.body.updateMatrix(); _m.copy(d.body.matrix).invert();
   for (let i = 0; i < 4; i++) {
-    const L = d.legs[i]; _v.copy(c.paws[i]);
+    const L = d.legs[i];
+    _paw.copy(c.paws[i]);
+    let up = 0;
     if (d.gait > 0.001) {
       const ph = d.phase + (i === 0 || i === 3 ? 0 : Math.PI);
-      _v.z += Math.sin(ph) * 0.055 * d.gait; _v.y += Math.max(0, Math.cos(ph)) * 0.04 * d.gait;
+      _paw.z += Math.sin(ph) * 0.055 * d.gait;
+      up = Math.max(0, Math.cos(ph)) * d.gait; _paw.y += up * 0.035;
     }
-    if (d.paddle > 0.001) { _v.y += Math.sin(t * 8 + i * 1.7) * 0.035 * d.paddle; _v.z += Math.cos(t * 8 + i * 1.7) * 0.03 * d.paddle; }
-    _v.applyMatrix4(_m).sub(L.hip.position);
-    solveLeg(d, L, _v.y, _v.z, c.level, c.pitch);
+    if (d.paddle > 0.001) { _paw.y += Math.sin(t * 8 + i * 1.7) * 0.035 * d.paddle; _paw.z += Math.cos(t * 8 + i * 1.7) * 0.03 * d.paddle; }
+    _hipS.copy(L.hip.position).applyMatrix4(d.body.matrix);
+    const lean = c.lean[i] + up * (L.front ? 1.5 : 0.9);
+    _dir.set(0, Math.cos(lean), -Math.sin(lean)).lerp(_tmp.copy(_hipS).sub(_paw).normalize(), c.free).normalize();
+    _ank.copy(_paw).addScaledVector(_dir, L.L3).applyMatrix4(_m).sub(L.hip.position);
+    _paw.applyMatrix4(_m).sub(L.hip.position);
+    solveLeg(L, _ank, _paw, c.level, c.pitch);
   }
 
   // 귀 (중력 따라 덜렁)
@@ -387,29 +557,38 @@ function updateSelect(dt, t) {
 // 푸맘네 집 (핑키의 추억 장소)
 // ================================================================
 const roomScene = new THREE.Scene();
-roomScene.background = new THREE.Color(0x120c09);
+roomScene.background = new THREE.Color(0xd9c8b0);
 const roomCam = new THREE.PerspectiveCamera(50, 1, 0.03, 40);
 const roomUpd = [];
 const H = 2.7, X0 = -3.2, X1 = 3.2, Z0 = -2.8, Z1 = 3.8;
 
 function buildRoom(S) {
   const R = rng(11);
-  // 바닥 (큰 포세린 타일)
+  // 바닥 (따뜻한 원목 마루)
   const floorTex = canvasTex(1024, 1024, (x, w) => {
-    const n = 4, s = w / n, r = rng(7);
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
-      const v = 178 + Math.floor(r() * 10);
-      x.fillStyle = `rgb(${v + 8},${v + 2},${v - 6})`; x.fillRect(i * s, j * s, s, s);
-      for (let k = 0; k < 500; k++) { x.fillStyle = r() < 0.5 ? 'rgba(255,250,240,.05)' : 'rgba(60,50,40,.05)'; x.fillRect(i * s + r() * s, j * s + r() * s, 2, 2); }
+    const r = rng(7), rows = 8, hgt = w / rows;
+    const tones = ['#b9783f', '#c48448', '#ad6d37', '#c98c4f', '#b47440', '#bf7f45'];
+    for (let j = 0; j < rows; j++) {
+      let xx = -((j * 397) % 512);
+      while (xx < w) {
+        const len = 380 + r() * 300;
+        x.fillStyle = tones[Math.floor(r() * tones.length)]; x.fillRect(xx, j * hgt, len, hgt);
+        for (let k = 0; k < 14; k++) {
+          x.strokeStyle = `rgba(${r() < 0.5 ? '90,45,15' : '235,180,120'},${0.08 + r() * 0.1})`; x.lineWidth = 1 + r() * 1.5;
+          const yy = j * hgt + r() * hgt; x.beginPath(); x.moveTo(xx, yy);
+          x.bezierCurveTo(xx + len * 0.3, yy + (r() - 0.5) * 10, xx + len * 0.7, yy + (r() - 0.5) * 10, xx + len, yy + (r() - 0.5) * 6); x.stroke();
+        }
+        x.fillStyle = 'rgba(60,30,12,.55)'; x.fillRect(xx, j * hgt, 2, hgt);
+        xx += len;
+      }
+      x.fillStyle = 'rgba(60,30,12,.5)'; x.fillRect(0, j * hgt, w, 2);
     }
-    x.strokeStyle = 'rgba(132,120,108,.6)'; x.lineWidth = 3;
-    for (let i = 0; i <= n; i++) { x.beginPath(); x.moveTo(i * s, 0); x.lineTo(i * s, w); x.stroke(); x.beginPath(); x.moveTo(0, i * s); x.lineTo(w, i * s); x.stroke(); }
-  }, [6.4 / 2.4, 6.6 / 2.4]);
-  add(S, new THREE.PlaneGeometry(6.4, 6.6), M(0xffffff, { map: floorTex, roughness: 0.5 }), [0, 0, 0.5], [-Math.PI / 2, 0, 0], null, false);
+  }, [6.4 / 1.6, 6.6 / 1.6]);
+  add(S, new THREE.PlaneGeometry(6.4, 6.6), M(0xffffff, { map: floorTex, roughness: 0.38 }), [0, 0, 0.5], [-Math.PI / 2, 0, 0], null, false);
 
   // 벽 · 천장
-  const wallM = M(0xefe6da, { roughness: 0.95 });
-  const wall = (w, h, p, ry) => add(S, new THREE.PlaneGeometry(w, h), wallM, p, [0, ry, 0], null, false);
+  const wallM = M(0xf2ebe1, { roughness: 0.95 });
+  const wall = (w, h, p, ry) => add(S, new THREE.PlaneGeometry(w, h), wallM, p, [0, ry, 0], null, true);
   wall(6.4, H, [0, H / 2, Z0], 0);
   wall(6.4, H, [0, H / 2, Z1], Math.PI);
   wall(6.6, H, [X1, H / 2, 0.5], -Math.PI / 2);
@@ -418,88 +597,119 @@ function buildRoom(S) {
   wall(3.5, H, [X0, H / 2, 2.05], Math.PI / 2);
   wall(2.0, 0.2, [X0, 0.1, -0.7], Math.PI / 2);
   wall(2.0, 0.45, [X0, 2.475, -0.7], Math.PI / 2);
-  add(S, new THREE.PlaneGeometry(6.4, 6.6), M(0xf3ede5, { roughness: 1 }), [0, H, 0.5], [Math.PI / 2, 0, 0], null, false);
+  add(S, new THREE.PlaneGeometry(6.4, 6.6), M(0xf6f1ea, { roughness: 1 }), [0, H, 0.5], [Math.PI / 2, 0, 0], null, true);
   const baseM = M(0xe2d8ca, { roughness: 0.9 });
   add(S, box(6.4, 0.08, 0.015), baseM, [0, 0.04, Z0 + 0.008], null, null, false);
   add(S, box(0.015, 0.08, 6.6), baseM, [X1 - 0.008, 0.04, 0.5], null, null, false);
 
   // 창문 + 블라인드
   const frameM = M(0x3b3836, { roughness: 0.6 });
-  for (const z of [-1.7, -0.7, 0.3]) add(S, box(0.06, 2.05, 0.05), frameM, [X0 + 0.02, 1.225, z], null, null, false);
-  for (const y of [0.2, 2.25]) add(S, box(0.06, 0.05, 2.0), frameM, [X0 + 0.02, y, -0.7], null, null, false);
+  for (const z of [-1.7, -0.7, 0.3]) add(S, box(0.06, 2.05, 0.05), frameM, [X0 + 0.02, 1.225, z]);
+  for (const y of [0.2, 1.45, 2.25]) add(S, box(0.06, 0.04, 2.0), frameM, [X0 + 0.02, y, -0.7]);
   add(S, box(0.22, 0.03, 2.1), M(0xe9e2d7), [X0 + 0.1, 0.2, -0.7], null, null, false);
   add(S, new THREE.PlaneGeometry(2, 2.05), new THREE.MeshStandardMaterial({ color: 0xa9bbd2, transparent: true, opacity: 0.07, roughness: 0.05, depthWrite: false }), [X0 + 0.01, 1.225, -0.7], [0, Math.PI / 2, 0], null, false);
   const slatM = M(0xddd7cd, { roughness: 0.7 });
-  for (let i = 0; i < 15; i++) add(S, box(0.05, 0.011, 1.96), slatM, [X0 + 0.08, 2.21 - i * 0.017, -0.7], null, null, false);
-  add(S, box(0.06, 0.024, 1.98), slatM, [X0 + 0.08, 1.95, -0.7], null, null, false);
+  for (let i = 0; i < 9; i++) add(S, box(0.05, 0.011, 1.96), slatM, [X0 + 0.08, 2.21 - i * 0.015, -0.7]);
+  add(S, box(0.06, 0.024, 1.98), slatM, [X0 + 0.08, 2.08, -0.7]);
 
-  // 창밖: 눈 내리는 마당 (단풍나무 · 화로 · 빨간 의자)
+  // 창밖: 햇살 드는 가을 마당 (단풍나무 · 화로 · 빨간 의자)
   const gardenTex = canvasTex(1024, 640, (x) => {
     const r = rng(21);
-    let g = x.createLinearGradient(0, 0, 0, 640); g.addColorStop(0, '#0e182c'); g.addColorStop(0.65, '#223250'); g.addColorStop(1, '#2c3a56');
+    let g = x.createLinearGradient(0, 0, 0, 470); g.addColorStop(0, '#8fbfe6'); g.addColorStop(0.7, '#d9e6ef'); g.addColorStop(1, '#f7e7cc');
     x.fillStyle = g; x.fillRect(0, 0, 1024, 640);
-    x.fillStyle = '#2a2230'; x.fillRect(0, 110, 290, 420);
-    x.fillStyle = '#232a3a'; x.fillRect(660, 70, 364, 460);
-    x.fillStyle = '#2c2434'; x.fillRect(470, 210, 190, 320);
-    const win = (wx, wy, w, h, c) => { x.fillStyle = c; x.fillRect(wx, wy, w, h); };
-    const lit = '#f3c27a', dim = '#4d4350';
-    win(50, 170, 46, 56, lit); win(130, 170, 46, 56, dim); win(210, 170, 46, 56, lit); win(50, 270, 46, 56, dim); win(130, 270, 46, 56, lit);
-    win(700, 120, 64, 44, lit); win(800, 120, 64, 44, lit); win(900, 120, 64, 44, dim); win(700, 220, 64, 44, dim); win(800, 220, 64, 44, lit);
-    win(500, 250, 36, 44, lit); win(580, 250, 36, 44, dim);
-    g = x.createLinearGradient(0, 470, 0, 640); g.addColorStop(0, '#c7d2e5'); g.addColorStop(1, '#a3b3cb');
+    g = x.createRadialGradient(80, 60, 10, 80, 60, 420); g.addColorStop(0, 'rgba(255,244,214,.95)'); g.addColorStop(0.35, 'rgba(255,226,170,.35)'); g.addColorStop(1, 'rgba(255,226,170,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 1024, 640);
+    x.fillStyle = '#b8765c'; x.fillRect(0, 130, 280, 400);
+    x.fillStyle = '#e9e3d8'; x.fillRect(660, 80, 364, 450);
+    x.fillStyle = '#c98b6c'; x.fillRect(470, 220, 190, 310);
+    x.fillStyle = 'rgba(90,110,140,.55)';
+    for (const [wx, wy, w, h] of [[40, 180, 46, 56], [130, 180, 46, 56], [210, 180, 46, 56], [40, 280, 46, 56], [130, 280, 46, 56], [700, 130, 64, 44], [800, 130, 64, 44], [900, 130, 64, 44], [700, 230, 64, 44], [800, 230, 64, 44], [900, 230, 64, 44], [500, 260, 36, 44], [580, 260, 36, 44]]) x.fillRect(wx, wy, w, h);
+    g = x.createLinearGradient(0, 470, 0, 640); g.addColorStop(0, '#8b9a63'); g.addColorStop(1, '#6f7f4c');
     x.fillStyle = g; x.fillRect(0, 460, 1024, 180);
-    // 단풍나무
-    x.strokeStyle = '#24160f'; x.lineCap = 'round';
-    x.lineWidth = 20; x.beginPath(); x.moveTo(330, 520); x.bezierCurveTo(318, 430, 352, 360, 338, 250); x.stroke();
-    x.lineWidth = 9; x.beginPath(); x.moveTo(340, 360); x.lineTo(268, 270); x.moveTo(344, 320); x.lineTo(418, 238); x.stroke();
-    const leaf = ['#6c1d1b', '#8b2a22', '#561819', '#a23b2b', '#7a2420'];
-    for (let i = 0; i < 170; i++) {
-      const a = r() * Math.PI * 2, rr = Math.sqrt(r()) * 150;
-      x.fillStyle = leaf[i % 5]; x.beginPath(); x.arc(345 + Math.cos(a) * rr * 1.35, 240 + Math.sin(a) * rr * 0.72, 10 + r() * 15, 0, 7); x.fill();
-    }
-    x.fillStyle = 'rgba(235,242,252,.85)';
-    for (let i = 0; i < 70; i++) { const a = r() * Math.PI, rr = r() * 150; x.beginPath(); x.ellipse(345 + Math.cos(a + Math.PI) * rr * 1.3, 205 - Math.sin(a) * rr * 0.55, 9, 3.5, 0, 0, 7); x.fill(); }
-    // 디딤돌
-    x.fillStyle = '#8e9ab0';
+    x.fillStyle = '#a7a08e';
     for (let i = 0; i < 6; i++) { x.beginPath(); x.ellipse(120 + i * 150, 590 - (i % 2) * 20, 46, 13, 0, 0, 7); x.fill(); }
-    // 빨간 의자 · 테이블
+    // 단풍나무 (햇빛 받은 주황 · 빨강)
+    x.strokeStyle = '#3b2518'; x.lineCap = 'round';
+    const leaf = ['#c4471f', '#e0702c', '#a9321f', '#f0953b', '#d65a24', '#f2b34a'];
+    for (const [tx, ty, sc] of [[560, 250, 1.15], [800, 300, 0.85]]) {
+      x.lineWidth = 20 * sc; x.beginPath(); x.moveTo(tx - 15, 520); x.bezierCurveTo(tx - 27, 430, tx + 7, 360, tx - 7, ty + 10); x.stroke();
+      x.lineWidth = 9 * sc; x.beginPath(); x.moveTo(tx - 5, 360); x.lineTo(tx - 77, ty + 30); x.moveTo(tx, 320); x.lineTo(tx + 73, ty - 2); x.stroke();
+      for (let i = 0; i < 260; i++) {
+        const a = r() * Math.PI * 2, rr = Math.sqrt(r()) * 160 * sc;
+        x.fillStyle = leaf[i % leaf.length]; x.globalAlpha = 0.85; x.beginPath(); x.arc(tx + Math.cos(a) * rr * 1.4, ty - 5 + Math.sin(a) * rr * 0.75, (9 + r() * 15) * sc, 0, 7); x.fill();
+      }
+    }
+    x.globalAlpha = 1;
     x.strokeStyle = '#a22d2a'; x.lineWidth = 5;
     x.beginPath(); x.moveTo(140, 530); x.lineTo(150, 470); x.lineTo(200, 470); x.lineTo(210, 530); x.moveTo(150, 470); x.lineTo(156, 430); x.lineTo(196, 430); x.stroke();
     x.beginPath(); x.moveTo(230, 535); x.lineTo(250, 455); x.moveTo(320, 535); x.lineTo(300, 455); x.moveTo(236, 455); x.lineTo(316, 455); x.stroke();
     x.fillStyle = '#7d5638'; x.fillRect(232, 448, 88, 8);
-    // 화로
-    x.fillStyle = '#16120f';
+    x.fillStyle = '#1d1a18';
     x.beginPath(); x.moveTo(612, 420); x.lineTo(668, 420); x.lineTo(690, 470); x.lineTo(684, 540); x.lineTo(596, 540); x.lineTo(590, 470); x.closePath(); x.fill();
     x.fillRect(624, 392, 32, 30); x.beginPath(); x.ellipse(640, 392, 26, 9, 0, 0, 7); x.fill();
-    g = x.createRadialGradient(640, 492, 4, 640, 492, 90); g.addColorStop(0, 'rgba(255,170,80,.95)'); g.addColorStop(0.3, 'rgba(255,120,40,.45)'); g.addColorStop(1, 'rgba(255,120,40,0)');
-    x.fillStyle = g; x.fillRect(540, 400, 200, 180);
-    x.fillStyle = '#ffb45a'; x.beginPath(); x.ellipse(640, 495, 24, 18, 0, 0, 7); x.fill();
-    x.fillStyle = 'rgba(255,240,200,.9)'; x.beginPath(); x.ellipse(640, 500, 10, 8, 0, 0, 7); x.fill();
-    // 난간
-    x.strokeStyle = '#0c0c10'; x.lineWidth = 4;
+    x.strokeStyle = '#141416'; x.lineWidth = 4;
     x.beginPath(); x.moveTo(0, 455); x.lineTo(1024, 455); x.moveTo(0, 470); x.lineTo(1024, 470); x.stroke();
     x.lineWidth = 3;
     for (let px = 8; px < 1024; px += 26) { x.beginPath(); x.moveTo(px, 455); x.lineTo(px, 520); x.stroke(); }
   });
-  add(S, new THREE.PlaneGeometry(9, 5.6), new THREE.MeshBasicMaterial({ map: gardenTex }), [-6.6, 1.7, -0.7], [0, Math.PI / 2, 0], null, false);
-  add(S, new THREE.PlaneGeometry(3.4, 9), M(0xb9c5d9, { roughness: 1 }), [-4.9, -0.03, -0.7], [-Math.PI / 2, 0, 0], null, false);
-  const moon = new THREE.DirectionalLight(0x9fb3e0, 0.5); moon.position.set(-7, 4, -1); moon.target.position.set(0, 0, -0.7); S.add(moon, moon.target);
-  // 눈송이
+  add(S, new THREE.PlaneGeometry(9, 5.6), new THREE.MeshBasicMaterial({ map: gardenTex, color: 0xb8b0a6 }), [-6.6, 1.7, -0.7], [0, Math.PI / 2, 0], null, false);
+  add(S, new THREE.PlaneGeometry(3.4, 9), M(0x8d9866, { roughness: 1 }), [-4.9, -0.03, -0.7], [-Math.PI / 2, 0, 0], null, false);
+
+  // 햇빛: 큰 창으로 낮게 들어오는 오후 해
+  const sun = new THREE.DirectionalLight(0xffd4a3, 4.2);
+  sun.position.set(-7.6, 3.7, 0.4); sun.target.position.set(0.2, 0, -0.5);
+  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.03;
+  Object.assign(sun.shadow.camera, { left: -4.5, right: 4.5, top: 4.5, bottom: -4.5, near: 1, far: 16 });
+  S.add(sun, sun.target);
+  // 빛줄기 + 그 안에 떠다니는 먼지
   {
-    const N = 260, pos = new Float32Array(N * 3);
-    for (let i = 0; i < N; i++) { pos[i * 3] = -6.3 + R() * 2.9; pos[i * 3 + 1] = R() * 3.4; pos[i * 3 + 2] = -2.6 + R() * 3.8; }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const snow = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 0.045, map: glowTex, transparent: true, opacity: 0.9, depthWrite: false }));
-    S.add(snow);
+    const dir = V3().subVectors(sun.target.position, sun.position).normalize(), L = 5.2;
+    const cs = [[X0, 0.25, -1.68], [X0, 2.2, -1.68], [X0, 2.2, 0.28], [X0, 0.25, 0.28]];
+    const pos = [], col = [];
+    for (const c of cs) pos.push(c[0], c[1], c[2]);
+    for (const c of cs) pos.push(c[0] + dir.x * L, c[1] + dir.y * L, c[2] + dir.z * L);
+    for (let i = 0; i < 4; i++) col.push(1, 0.86, 0.62);
+    for (let i = 0; i < 4; i++) col.push(0, 0, 0);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex([0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7, 6, 3, 0, 4, 3, 4, 7]);
+    S.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })));
+    const N = 160, dp = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) { const t = R() * 0.8, a = cs[0]; dp[i * 3] = X0 + 0.1 + dir.x * L * t; dp[i * 3 + 1] = 0.3 + R() * 1.9 + dir.y * L * t; dp[i * 3 + 2] = -1.6 + R() * 1.8 + dir.z * L * t; }
+    const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(dp, 3));
+    S.add(new THREE.Points(dg, new THREE.PointsMaterial({ color: 0xffe2b0, size: 0.012, map: glowTex, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending })));
     roomUpd.push((t, dt) => {
-      const a = g.attributes.position;
-      for (let i = 0; i < N; i++) {
-        let y = a.getY(i) - dt * (0.22 + (i % 7) * 0.03);
-        if (y < 0) y = 3.4;
-        a.setY(i, y); a.setZ(i, a.getZ(i) + Math.sin(t * 0.8 + i) * 0.0012);
-      }
+      const a = dg.attributes.position;
+      for (let i = 0; i < N; i++) { a.setY(i, a.getY(i) + Math.sin(t * 0.4 + i) * 0.0006); a.setX(i, a.getX(i) + Math.cos(t * 0.3 + i * 1.7) * 0.0005); }
       a.needsUpdate = true;
     });
+  }
+
+  // 화분 (창가 구석) · 걸이 화분
+  {
+    const leafShape = new THREE.Shape(); leafShape.moveTo(0, 0); leafShape.bezierCurveTo(0.09, 0.06, 0.08, 0.2, 0, 0.27); leafShape.bezierCurveTo(-0.08, 0.2, -0.09, 0.06, 0, 0);
+    const leafGeo = new THREE.ShapeGeometry(leafShape, 8);
+    const leafM = M(0x3f6b3a, { roughness: 0.6, side: THREE.DoubleSide }), leafM2 = M(0x58864a, { roughness: 0.6, side: THREE.DoubleSide });
+    const P = new THREE.Group(); P.position.set(-2.85, 0, -2.35); S.add(P);
+    add(P, cyl(0.2, 0.16, 0.36, 28), M(0xe8e1d6, { roughness: 0.7 }), [0, 0.18, 0]);
+    add(P, cyl(0.185, 0.185, 0.02, 28), M(0x4a3426, { roughness: 1 }), [0, 0.35, 0]);
+    for (let i = 0; i < 13; i++) {
+      const a = (i / 13) * Math.PI * 2 + R(), h = 0.55 + R() * 0.75, tilt = 0.35 + R() * 0.5;
+      const st = new THREE.Group(); st.position.set(0, 0.35, 0); st.rotation.set(0, a, 0); P.add(st);
+      add(st, cyl(0.006, 0.008, h, 6), M(0x4f6b33), [0, h / 2, 0], null, null);
+      const lf = add(st, leafGeo, i % 2 ? leafM : leafM2, [0, h, 0], [-tilt - 0.6, 0, 0], 1.3 + R() * 0.6);
+      lf.position.z = 0.02;
+    }
+    const HP = new THREE.Group(); HP.position.set(-2.8, H - 0.45, 0.85); S.add(HP);
+    add(HP, cyl(0.002, 0.002, 0.45, 4), M(0x8a7a66), [0, 0.225, 0]);
+    add(HP, cyl(0.13, 0.1, 0.16, 20), M(0xd9cbb5, { roughness: 0.9 }), [0, -0.05, 0]);
+    for (let v = 0; v < 9; v++) {
+      const a = (v / 9) * Math.PI * 2, len = 0.4 + R() * 0.7;
+      for (let k = 0; k < 9; k++) {
+        const t = k / 8, px = Math.cos(a) * (0.11 + t * 0.06), pz = Math.sin(a) * (0.11 + t * 0.06), py = -0.02 - t * len;
+        add(HP, leafGeo, k % 2 ? leafM : leafM2, [px, py, pz], [R() * 2, a, R() * 2], 0.35 + R() * 0.15, false);
+      }
+    }
   }
 
   // 붙박이 흰 선반 (사진 속 거실)
@@ -539,7 +749,7 @@ function buildRoom(S) {
   }
   add(S, cyl(0.05, 0.075, 0.26, 24), M(0xf3efe7, { roughness: 0.4 }), [bay(2) + 0.25, 1.065 + 0.13, SZ]);
   const shade = add(S, new THREE.CylinderGeometry(0.1, 0.15, 0.18, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0xfff1dc, emissive: 0xffb766, emissiveIntensity: 1.3, side: THREE.DoubleSide }), [bay(2) + 0.25, 1.065 + 0.36, SZ], null, null, false);
-  const lamp = new THREE.PointLight(0xffb769, 3.5, 7, 2); lamp.position.copy(shade.position); S.add(lamp);
+  const lamp = new THREE.PointLight(0xffb769, 1.4, 7, 2); lamp.position.copy(shade.position); S.add(lamp);
   glow(S, 0xffc27a, 0.9, [shade.position.x, shade.position.y, shade.position.z + 0.05], 0.35);
   bowl(0.1, 0.05, 0x1f1d1c, [bay(2) - 0.25, 1.065, SZ]);
   // 윗칸: 그릇들
@@ -592,7 +802,7 @@ function buildRoom(S) {
   roomUpd.push((t) => {
     twinkle.forEach((m, k) => { const v = 0.65 + 0.35 * Math.sin(t * 2.2 + k * 2.1); m.color.setRGB(1 * v + 0.25, 0.83 * v + 0.12, 0.54 * v); });
     twinkleGlow.forEach((o) => { o.s.material.opacity = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 2.2 + o.k * 2.1)); });
-    treeLight.intensity = 4.6 + Math.sin(t * 2.2) * 0.5 + Math.sin(t * 5.3) * 0.2;
+    treeLight.intensity = 2.4 + Math.sin(t * 2.2) * 0.3 + Math.sin(t * 5.3) * 0.15;
     starGlow.material.opacity = 0.45 + 0.1 * Math.sin(t * 1.7);
   });
 
@@ -635,7 +845,7 @@ function buildRoom(S) {
   // 펜던트 조명 (식탁 위 구 조명)
   add(S, cyl(0.004, 0.004, 0.66, 6), M(0x222222), [-1.55, H - 0.33, -0.5], null, null, false);
   add(S, SPH, new THREE.MeshStandardMaterial({ color: 0xfff3e0, emissive: 0xffd29a, emissiveIntensity: 1.6 }), [-1.55, 1.92, -0.5], null, 0.13, false);
-  const pend = new THREE.PointLight(0xffc98a, 4, 7, 2); pend.position.set(-1.55, 1.85, -0.5); S.add(pend);
+  const pend = new THREE.PointLight(0xffc98a, 1.6, 7, 2); pend.position.set(-1.55, 1.85, -0.5); S.add(pend);
   glow(S, 0xffd29a, 0.8, [-1.55, 1.92, -0.5], 0.3);
 
   // 하얀 라운드 체어 2개
@@ -692,42 +902,209 @@ function buildRoom(S) {
   }
 
   // 조명
-  S.add(new THREE.HemisphereLight(0xfff0dc, 0x6b4c3a, 0.75));
-  const spot = new THREE.SpotLight(0xffd8ae, 24, 9, 0.95, 0.85, 2);
+  S.add(new THREE.HemisphereLight(0xe4ecff, 0x8a6648, 0.45));
+  const spot = new THREE.SpotLight(0xffe2c0, 9, 9, 0.95, 0.9, 2);
   spot.position.set(0.3, H - 0.05, 1.5); spot.target.position.set(0.1, 0, 0.75);
   spot.castShadow = true; spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -0.0004; spot.shadow.normalBias = 0.02;
   spot.shadow.camera.near = 0.3; spot.shadow.camera.far = 7;
   S.add(spot, spot.target);
 }
 buildRoom(roomScene);
+{
+  const pm = new THREE.PMREMGenerator(renderer), holder = new THREE.Group(), kids = [...roomScene.children];
+  kids.forEach((k) => holder.add(k)); holder.position.set(-0.1, -1.1, -0.4); roomScene.add(holder); holder.updateMatrixWorld(true);
+  roomScene.environment = pm.fromScene(roomScene, 0.04).texture;
+  kids.forEach((k) => roomScene.add(k)); roomScene.remove(holder); pm.dispose();
+}
 
-// 핑키
+// ================================================================
+// 핑키 · 집 안에서 다니는 길
+// ================================================================
 const HOME = { x: 0.1, z: 0.85 };
+const BOWL = V3(2.15, 0.006, 1.0), EAT = { x: 1.83, z: 0.875 };
+const SPOTS = {
+  cushion: { x: 0.72, z: -1.6 },
+  gifts: { x: 1.45, z: -0.75, fx: 1.75, fz: -1.15 },
+  window: { x: -2.5, z: -0.6, fx: -3.6, fz: -0.6 },
+  table: { x: -0.72, z: 0.15, fx: -1.3, fz: -0.3 },
+};
+const OBST = [
+  { x: -1.02, z: -0.44, r: 0.07 }, { x: -1.92, z: -0.11, r: 0.07 }, { x: -1.18, z: -0.89, r: 0.07 }, { x: -2.08, z: -0.56, r: 0.07 },
+  { x: -2.35, z: 0.35, r: 0.36 }, { x: -0.8, z: -1.4, r: 0.36 }, { x: -2.65, z: -1.35, r: 0.28 }, { x: 2.3, z: -1.75, r: 0.95 },
+  { x: -2.85, z: -2.35, r: 0.3 },
+];
+function steer(x, z, tx, tz) {
+  let dx = tx - x, dz = tz - z; const dist = Math.hypot(dx, dz) || 1; dx /= dist; dz /= dist;
+  let ax = 0, az = 0;
+  for (const o of OBST) {
+    const ox = o.x - x, oz = o.z - z, proj = ox * dx + oz * dz;
+    if (proj <= 0 || proj > dist + o.r) continue;
+    const px = ox - dx * proj, pz = oz - dz * proj, pd = Math.hypot(px, pz), R = o.r + 0.2;
+    if (pd >= R) continue;
+    const near = clamp(1 - (Math.hypot(ox, oz) - R) / 0.7, 0, 1);
+    let sx = -px, sz = -pz; if (pd < 1e-3) { sx = -dz; sz = dx; }
+    const sl = Math.hypot(sx, sz), w = ((R - pd) / R) * near * 2.2;
+    ax += (sx / sl) * w; az += (sz / sl) * w;
+  }
+  const rx = dx + ax, rz = dz + az, rl = Math.hypot(rx, rz) || 1;
+  return [rx / rl, rz / rl];
+}
+function collide(d) {
+  for (const o of OBST) {
+    const dx = d.x - o.x, dz = d.z - o.z, l = Math.hypot(dx, dz), R = o.r + 0.12;
+    if (l < R && l > 1e-4) { d.x = o.x + (dx / l) * R; d.z = o.z + (dz / l) * R; }
+  }
+  d.x = clamp(d.x, -2.85, d.z > -0.6 && d.z < 2.1 ? 2.35 : 2.85);
+  d.z = clamp(d.z, -2.25, 2.6);
+}
 const pinky = buildDog({ kind: 'beagle', colors: COLORS.pinky, scale: 1, seed: 7 });
+pinky.steer = steer; pinky.collide = collide;
 roomScene.add(pinky.root);
 
-// 사람 손 + 간식
-function buildHand() {
-  const g = new THREE.Group();
-  const skin = M(0xeab89b, { roughness: 0.6 });
-  add(g, SPH, skin, [0, 0, 0], null, [0.048, 0.017, 0.058]);
-  for (let i = 0; i < 4; i++) add(g, new THREE.CapsuleGeometry(0.0095, 0.04, 4, 8), skin, [-0.03 + i * 0.02, 0.006, 0.075 - Math.abs(i - 1.5) * 0.006], [Math.PI / 2 - 0.25, 0, 0]);
-  add(g, new THREE.CapsuleGeometry(0.011, 0.035, 4, 8), skin, [0.056, 0.01, 0.015], [Math.PI / 2, 0, -0.9]);
-  add(g, new THREE.CapsuleGeometry(0.032, 0.12, 6, 12), skin, [0, 0, -0.1], [Math.PI / 2, 0, 0]);
-  add(g, cyl(0.05, 0.054, 0.34, 18), M(0x9e3b36, { roughness: 1 }), [0, 0, -0.32], [Math.PI / 2, 0, 0]);
-  add(g, new THREE.TorusGeometry(0.05, 0.012, 8, 20), M(0xefe6d6, { roughness: 1 }), [0, 0, -0.155]);
-  return g;
+// ================================================================
+// 사람 손 (어깨에서 뻗어 나오는 팔 · 니트 소매)
+// ================================================================
+const knitTex = canvasTex(64, 64, (x, w) => {
+  x.fillStyle = '#a3433b'; x.fillRect(0, 0, w, w);
+  for (let i = 0; i < 8; i++) { x.fillStyle = i % 2 ? 'rgba(0,0,0,.13)' : 'rgba(255,255,255,.06)'; x.fillRect(i * 8, 0, 8, w); }
+  for (let j = 0; j < 16; j++) { x.fillStyle = 'rgba(0,0,0,.05)'; x.fillRect(0, j * 4, w, 1); }
+}, [10, 14]);
+const cuffTex = canvasTex(64, 64, (x, w) => {
+  x.fillStyle = '#efe6d6'; x.fillRect(0, 0, w, w);
+  for (let i = 0; i < 8; i++) { x.fillStyle = i % 2 ? 'rgba(0,0,0,.1)' : 'rgba(255,255,255,.12)'; x.fillRect(i * 8, 0, 8, w); }
+}, [12, 1]);
+const skinMat = new THREE.MeshPhysicalMaterial({ color: 0xefc2a3, roughness: 0.55, sheen: 0.3, sheenColor: new THREE.Color(0xffd6c4) });
+const nailMat = M(0xf7dcd3, { roughness: 0.3 });
+function buildHand(left) {
+  const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); if (left) inner.scale.x = -1;
+  add(inner, SPH, skinMat, [0, 0, 0.005], null, [0.044, 0.016, 0.05]);
+  add(inner, SPH, skinMat, [0.022, -0.004, -0.012], null, [0.022, 0.015, 0.03]);
+  const fingers = [];
+  for (const [x, l1, l2, r] of [[0.025, 0.032, 0.026, 0.0092], [0.008, 0.035, 0.028, 0.0095], [-0.009, 0.033, 0.026, 0.009], [-0.025, 0.026, 0.021, 0.0082]]) {
+    const p1 = new THREE.Group(); p1.position.set(x, 0.002, 0.048); inner.add(p1);
+    add(p1, new THREE.CapsuleGeometry(r, l1, 4, 10), skinMat, [0, 0, l1 / 2], [Math.PI / 2, 0, 0]);
+    const p2 = new THREE.Group(); p2.position.set(0, 0, l1); p1.add(p2);
+    add(p2, new THREE.CapsuleGeometry(r * 0.92, l2, 4, 10), skinMat, [0, 0, l2 / 2], [Math.PI / 2, 0, 0]);
+    add(p2, SPH, nailMat, [0, r * 0.75, l2 * 0.85], null, [r * 0.75, r * 0.25, r * 0.9]);
+    fingers.push([p1, p2]);
+  }
+  const t1 = new THREE.Group(); t1.position.set(0.038, -0.004, -0.005); t1.rotation.set(0, 0.75, 0); inner.add(t1);
+  add(t1, new THREE.CapsuleGeometry(0.011, 0.028, 4, 10), skinMat, [0, 0, 0.014], [Math.PI / 2, 0, 0]);
+  const t2 = new THREE.Group(); t2.position.set(0, 0, 0.028); t1.add(t2);
+  add(t2, new THREE.CapsuleGeometry(0.0105, 0.02, 4, 10), skinMat, [0, 0, 0.01], [Math.PI / 2, 0, 0]);
+  add(t2, SPH, nailMat, [0, 0.008, 0.018], null, [0.008, 0.003, 0.009]);
+  add(inner, new THREE.CapsuleGeometry(0.028, 0.08, 6, 14), skinMat, [0, -0.002, -0.06], [Math.PI / 2, 0, 0], [1.25, 1, 0.75]);
+  add(inner, new THREE.CylinderGeometry(0.046, 0.044, 0.07, 24), M(0xffffff, { map: cuffTex, roughness: 1 }), [0, 0, -0.125], [Math.PI / 2, 0, 0]);
+  add(inner, new THREE.CylinderGeometry(0.045, 0.058, 1.1, 24), M(0xffffff, { map: knitTex, roughness: 1 }), [0, 0, -0.71], [Math.PI / 2, 0, 0]);
+  return {
+    g, inner,
+    setCurl(c) { for (const [p1, p2] of fingers) { p1.rotation.x = 0.15 + c * 0.9; p2.rotation.x = 0.1 + c * 1.0; } t1.rotation.x = c * 0.35; t2.rotation.x = c * 0.4; },
+  };
 }
+function makeHand(left) { const rig = buildHand(left); rig.g.visible = false; roomScene.add(rig.g); return { rig, want: null, pos: V3(), vis: false, curl: 0.2 }; }
+const handR = makeHand(false), handL = makeHand(true);
+const _hx = V3(), _hy = V3(), _hz = V3(), _hb = new THREE.Matrix4(), UP = V3(0, 1, 0);
+function shoulder(side) { return roomCam.localToWorld(V3(side * 0.2, -0.45, 0.12)); }
+function updateHand(h, side, dt) {
+  const sh = h.want && h.want.shoulder ? roomCam.localToWorld(V3(...h.want.shoulder)) : shoulder(side);
+  let up = UP;
+  if (h.want) {
+    if (!h.vis) { h.vis = true; h.pos.copy(sh); h.rig.g.visible = true; }
+    h.pos.lerp(h.want.pos(), 1 - Math.exp(-(h.want.rate || 7) * dt));
+    h.curl += ((h.want.curl ?? 0.2) - h.curl) * (1 - Math.exp(-8 * dt));
+    if (h.want.up) up = h.want.up();
+  } else if (h.vis) {
+    h.pos.lerp(sh, 1 - Math.exp(-5 * dt));
+    if (h.pos.distanceTo(sh) < 0.06) { h.vis = false; h.rig.g.visible = false; }
+  }
+  if (!h.vis) return;
+  _hz.copy(h.pos).sub(sh); if (_hz.lengthSq() < 1e-6) _hz.set(0, 0, -1); _hz.normalize();
+  _hy.copy(up).addScaledVector(_hz, -up.dot(_hz)); if (_hy.lengthSq() < 1e-6) _hy.set(0, 1, 0); _hy.normalize();
+  _hx.crossVectors(_hy, _hz);
+  _hb.makeBasis(_hx, _hy, _hz); h.rig.g.quaternion.setFromRotationMatrix(_hb); h.rig.g.position.copy(h.pos);
+  h.rig.setCurl(h.curl);
+}
+function hideHandsNow() { for (const h of [handR, handL]) { h.want = null; h.vis = false; h.rig.g.visible = false; } }
+const frameUp = (o) => V3(0, 1, 0).transformDirection(o.matrixWorld);
+
+// 간식 · 밥 · 부스러기
 function buildTreat() {
   const g = new THREE.Group(); const m = M(0xc98a4b, { roughness: 0.8 });
   add(g, new THREE.CapsuleGeometry(0.011, 0.045, 4, 8), m, [0, 0, 0], [0, 0, Math.PI / 2]);
   for (const sx of [1, -1]) for (const sz of [1, -1]) add(g, SPH, m, [sx * 0.032, 0, sz * 0.009], null, 0.013);
   return g;
 }
-const hand = buildHand(); hand.visible = false; roomScene.add(hand);
 const treat = buildTreat(); treat.visible = false; roomScene.add(treat);
-
-// 부스러기
+const kibbleMat = M(0x9a6034, { roughness: 0.75 });
+const moundGeo = (() => {
+  const g = new THREE.SphereGeometry(0.08, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const s = 1 + Math.sin(p.getX(i) * 140) * Math.sin(p.getZ(i) * 140) * 0.08; p.setXYZ(i, p.getX(i) * s, p.getY(i) * s, p.getZ(i) * s); }
+  g.computeVertexNormals(); return g;
+})();
+const mound = { m: add(roomScene, moundGeo, kibbleMat, [BOWL.x, 0.016, BOWL.z], null, 0.001), amount: 0 };
+function updateMound() { const s = Math.sqrt(mound.amount); mound.m.visible = s > 0.02; mound.m.scale.set(Math.max(s, 0.001), Math.max(s, 0.001) * 0.55, Math.max(s, 0.001)); }
+updateMound();
+const scoop = new THREE.Group(); scoop.visible = false;
+add(scoop, new THREE.LatheGeometry([[0, 0], [0.04, 0], [0.046, 0.05], [0.043, 0.052]].map(([a, b]) => new THREE.Vector2(a, b)), 24), M(0xc8ccd0, { metalness: 0.7, roughness: 0.3, side: THREE.DoubleSide }));
+const scoopKibble = add(scoop, moundGeo, kibbleMat, [0, 0.03, 0], null, [0.5, 0.35, 0.5]);
+const kibbles = [], kibbleGeo = new THREE.SphereGeometry(0.008, 6, 4);
+let pouring = false, pourAcc = 0;
+function stepKibble(dt) {
+  if (pouring) {
+    pourAcc += dt * 45;
+    while (pourAcc > 1) {
+      pourAcc--;
+      const m = new THREE.Mesh(kibbleGeo, kibbleMat); m.castShadow = true; scoop.getWorldPosition(m.position); m.position.y += 0.02; roomScene.add(m);
+      kibbles.push({ m, v: V3((Math.random() - 0.5) * 0.25, 0.1 + Math.random() * 0.2, (Math.random() - 0.5) * 0.25), t: 0 });
+    }
+  }
+  for (let i = kibbles.length - 1; i >= 0; i--) {
+    const k = kibbles[i]; k.t += dt; k.v.y -= 3.5 * dt; k.m.position.addScaledVector(k.v, dt);
+    const dx = k.m.position.x - BOWL.x, dz = k.m.position.z - BOWL.z, inBowl = dx * dx + dz * dz < 0.095 * 0.095;
+    if ((inBowl && k.m.position.y < 0.05) || k.m.position.y < 0.005 || k.t > 3) {
+      if (inBowl) { mound.amount = Math.min(1, mound.amount + 1 / 40); updateMound(); }
+      roomScene.remove(k.m); kibbles.splice(i, 1);
+    }
+  }
+}
+// 장난감 공 (던지면 튀고 굴러감)
+const ball = (() => {
+  const g = new THREE.Group();
+  const tex = canvasTex(128, 64, (x, w, h) => {
+    x.fillStyle = '#d3df48'; x.fillRect(0, 0, w, h);
+    x.strokeStyle = '#f4f1e4'; x.lineWidth = 5; x.beginPath();
+    for (let i = 0; i <= w; i++) { const yy = h / 2 + Math.sin((i / w) * Math.PI * 4) * h * 0.28; if (i) x.lineTo(i, yy); else x.moveTo(i, yy); }
+    x.stroke();
+  });
+  add(g, new THREE.SphereGeometry(0.034, 24, 16), M(0xffffff, { map: tex, roughness: 0.95 }));
+  g.visible = false; roomScene.add(g);
+  return { g, v: V3(), state: 'none', r: 0.034 };
+})();
+function stepBall(dt) {
+  const p = ball.g.position;
+  if (ball.state === 'fly') {
+    ball.v.y -= 9.8 * dt; p.addScaledVector(ball.v, dt);
+    if (p.y < ball.r) {
+      p.y = ball.r;
+      if (Math.abs(ball.v.y) > 0.7) { ball.v.y = -ball.v.y * 0.45; ball.v.x *= 0.75; ball.v.z *= 0.75; say('통', () => ball.g.position.clone().add(V3(0, 0.1, 0)), 'small', 0.8); }
+      else { ball.v.y = 0; ball.state = 'roll'; }
+    }
+  } else if (ball.state === 'roll') {
+    const f = Math.exp(-2.2 * dt); ball.v.x *= f; ball.v.z *= f; p.addScaledVector(ball.v, dt);
+    if (Math.hypot(ball.v.x, ball.v.z) < 0.04) ball.state = 'rest';
+  }
+  if (ball.state === 'fly' || ball.state === 'roll') {
+    if (p.x < -3.0 || p.x > 2.45) { ball.v.x *= -0.5; p.x = clamp(p.x, -3.0, 2.45); }
+    if (p.z < -2.3 || p.z > 2.7) { ball.v.z *= -0.5; p.z = clamp(p.z, -2.3, 2.7); }
+    if (p.y < 0.8) for (const o of OBST) {
+      const dx = p.x - o.x, dz = p.z - o.z, l = Math.hypot(dx, dz);
+      if (l < o.r && l > 1e-4) { const nx = dx / l, nz = dz / l, vn = ball.v.x * nx + ball.v.z * nz; if (vn < 0) { ball.v.x -= 1.6 * vn * nx; ball.v.z -= 1.6 * vn * nz; } p.x = o.x + nx * o.r; p.z = o.z + nz * o.r; }
+    }
+    ball.g.rotation.x += (ball.v.z * dt) / ball.r; ball.g.rotation.z -= (ball.v.x * dt) / ball.r;
+  }
+}
+function ballToWorld(vel) { roomScene.attach(ball.g); ball.g.scale.setScalar(1); ball.v.copy(vel || V3()); ball.state = 'fly'; }
+const THROW_SPOTS = [[-0.45, -0.8], [1.05, -0.35], [0.95, 0.25], [-1.0, 1.25], [-0.2, -1.3], [0.5, -0.9]];
 const crumbs = [];
 const crumbGeo = box(0.008, 0.008, 0.008), crumbMat = M(0xb87a40);
 function spawnCrumbs(p, n = 4) {
@@ -741,13 +1118,13 @@ function stepCrumbs(dt) {
     const c = crumbs[i]; c.age += dt;
     c.v.y -= 3.2 * dt; c.m.position.addScaledVector(c.v, dt);
     if (c.m.position.y < 0.004) { c.m.position.y = 0.004; c.v.set(0, 0, 0); }
-    if (c.age > 2.2) { c.m.scale.setScalar(Math.max(0.01, 1 - (c.age - 2.2) * 2)); }
+    if (c.age > 2.2) c.m.scale.setScalar(Math.max(0.01, 1 - (c.age - 2.2) * 2));
     if (c.age > 2.7) { roomScene.remove(c.m); crumbs.splice(i, 1); }
   }
 }
 
 // ================================================================
-// 말풍선 (킁킁 · 냠냠)
+// 말풍선 (킁킁 · 냠냠 · ♥)
 // ================================================================
 const bubbles = [], bubbleLayer = $('#bubbles'), _p = V3();
 function say(text, anchor, cls = '', life = 1.7, dx = null) {
@@ -758,6 +1135,7 @@ function say(text, anchor, cls = '', life = 1.7, dx = null) {
 const headTop = () => pinky.head.localToWorld(V3(0, 0.2, 0.06));
 const noseTip = () => pinky.head.localToWorld(V3(0, 0.05, 0.24));
 const mouthPt = () => pinky.head.localToWorld(V3(0, -0.02, 0.2));
+const heart = () => say('♥', headTop, 'heart', 1.4, (Math.random() - 0.5) * 90);
 function stepBubbles(dt, cam) {
   for (let i = bubbles.length - 1; i >= 0; i--) {
     const b = bubbles[i]; b.age += dt;
@@ -770,6 +1148,21 @@ function stepBubbles(dt, cam) {
   }
 }
 function clearBubbles() { bubbles.forEach((b) => b.el.remove()); bubbles.length = 0; }
+
+// ================================================================
+// 시점 (사람 눈 · 손만 나옴 · 다가가서 앉기)
+// ================================================================
+const CAM_POS = V3(0, 1.22, 3.0), CAM_AIM = V3(0.08, 0.4, 0.62);
+const cam = { pos: CAM_POS.clone(), aim: CAM_AIM.clone(), tPos: CAM_POS.clone(), tAim: CAM_AIM.clone(), rate: 2.5 };
+const look = { y: 0, p: 0, ty: 0, tp: 0 };
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function camTo(pos, aim, rate = 2.5) { cam.tPos.copy(pos); cam.tAim.copy(aim); cam.rate = rate; look.ty = 0; look.tp = 0; }
+function camHome() { camTo(CAM_POS, CAM_AIM, 2.2); }
+function kneelFor(spot, dist = 0.82, h = 0.72, aimY = 0.27) {
+  const dx = CAM_POS.x - spot.x, dz = CAM_POS.z - spot.z, L = Math.hypot(dx, dz) || 1;
+  return [V3(spot.x + (dx / L) * dist, h, spot.z + (dz / L) * dist), V3(spot.x, aimY, spot.z)];
+}
+const kneelAt = (dist, h, aimY) => kneelFor({ x: pinky.x, z: pinky.z }, dist, h, aimY);
 
 // ================================================================
 // 시간 · 명령 실행기
@@ -793,39 +1186,65 @@ function stepTimers() {
     if (k >= 1) { tweens.splice(i, 1); w.res(); }
   }
 }
-let active = null;
+let active = null, idleT = 5;
 const actionsEl = $('#actions');
 function setActiveBtn(name) { [...actionsEl.querySelectorAll('button')].forEach((b) => b.classList.toggle('on', b.dataset.cmd === name)); }
 function cancelActive() { if (active) { active.cancelled = true; active.cleanups.forEach((f) => f()); active = null; setActiveBtn(null); } }
-function startCommand(name, fn) {
+function resetTransient(d) {
+  Object.assign(d, { walkTarget: null, walkSpeed: 0.5, chew: false, lick: 0, tongueOut: 0, pant: false, sniff: 0, paddle: 0, lookFn: null, face: 'cam', eyeOpen: 1, tiltT: 0, jawOpen: 0, earPerk: 0, wagAmpT: 0.3, wagSpeedT: 6, liftT: 0 });
+}
+function releaseHands() { handR.want = null; handL.want = null; treat.visible = false; roomScene.add(treat); scoop.visible = false; pouring = false; }
+function startCommand(name, fn, keepCam = false) {
   cancelActive();
   const tok = { cancelled: false, cleanups: [], name };
-  active = tok; setActiveBtn(name); idleT = 6;
-  resetTransient(pinky);
-  fn(tok).then(() => { if (active === tok) { active = null; setActiveBtn(null); } })
+  active = tok; setActiveBtn(name); idleT = 5;
+  resetTransient(pinky); releaseHands();
+  if (pinky.tgt.name === 'held') setPose(pinky, 'stand', 5);
+  if (!keepCam) camHome();
+  fn(tok).then(() => { if (active === tok) { active = null; setActiveBtn(null); idleT = 4; } })
     .catch((e) => { if (e !== CANCEL) console.error(e); });
-}
-function resetTransient(d) {
-  Object.assign(d, { walkTarget: null, chew: false, lick: 0, tongueOut: 0, pant: false, sniff: 0, paddle: 0, lookFn: null, face: 'cam', eyeOpen: 1, tiltT: 0, jawOpen: 0, earPerk: 0, wagAmpT: 0.3, wagSpeedT: 6 });
 }
 async function walkTo(tok, x, z) {
   pinky.walkTarget = { x, z };
   tok.cleanups.push(() => { pinky.walkTarget = null; });
   await until(tok, () => pinky.walkTarget === null);
 }
-function faceAndWait(tok, pt, sec) { pinky.face = pt; return wait(tok, sec); }
+async function comeHere(tok, speed = 0.75) {
+  if (Math.hypot(pinky.x - HOME.x, pinky.z - HOME.z) > 0.08) {
+    setPose(pinky, 'stand', 6); pinky.walkSpeed = speed; pinky.wagAmpT = 0.6; pinky.wagSpeedT = 13;
+    await walkTo(tok, HOME.x, HOME.z);
+  }
+  pinky.face = 'cam'; pinky.walkSpeed = 0.5;
+}
+function happy(on) {
+  if (on) Object.assign(pinky, { eyeOpen: 0.28, earPerk: -0.6, wagAmpT: 0.75, wagSpeedT: 15, pant: true, tiltT: 0.2 });
+  else Object.assign(pinky, { eyeOpen: 1, earPerk: 0, wagAmpT: 0.4, wagSpeedT: 8, pant: false, tiltT: 0, paddle: 0 });
+}
+async function sniffAt(tok, spot, line) {
+  setPose(pinky, 'stand', 6); pinky.tgt.gaze = 0; pinky.tgt.headPitch = 0.6; pinky.sniff = 0.5;
+  await walkTo(tok, spot.x, spot.z);
+  pinky.face = { x: spot.fx, z: spot.fz }; await wait(tok, 0.35);
+  setPose(pinky, 'eat', 5); pinky.sniff = 1;
+  say('킁킁', noseTip); await wait(tok, 0.9);
+  say('킁킁', noseTip); await wait(tok, 0.9);
+  setPose(pinky, 'stand', 5); pinky.sniff = 0; pinky.tiltT = 0.25;
+  if (line) { say(line, headTop, 'soft', 1.9); await wait(tok, 1.5); }
+  pinky.tiltT = 0;
+}
 
 const CMDS = {
   async sit(tok) {
     setPose(pinky, 'sit', 6);
     pinky.wagAmpT = 0.4; pinky.wagSpeedT = 8; pinky.earPerk = 0.4;
     await wait(tok, 1.2); pinky.earPerk = 0;
+    await wait(tok, 2.5);
   },
   async down(tok) {
     setPose(pinky, 'down', 4);
     pinky.wagAmpT = 0.25; pinky.wagSpeedT = 5;
     await wait(tok, 1.4);
     pinky.tiltT = 0.18; await wait(tok, 1.2); pinky.tiltT = 0;
+    await wait(tok, 2.5);
   },
   async roll(tok) {
     setPose(pinky, 'side', 3.2); pinky.eyeOpen = 0.75;
@@ -839,26 +1258,126 @@ const CMDS = {
     pinky.wagAmpT = 0.25; pinky.wagSpeedT = 4;
     say('뒹굴뒹굴', headTop);
     await wait(tok, 1.6); pinky.paddle = 0;
+    await wait(tok, 3);
+  },
+  async pet(tok) {
+    await comeHere(tok, 0.7);
+    const [p, a] = kneelAt(0.72, 0.98, 0.22); camTo(p, a);
+    setPose(pinky, 'sit', 5);
+    await wait(tok, 0.8);
+    happy(true); say('좋아…', headTop, 'soft', 1.8);
+    let s = 0, lift = 0, onBack = false;
+    const upOf = () => frameUp(onBack ? pinky.body : pinky.head);
+    const pt = () => (onBack ? pinky.body.localToWorld(V3(0, 0.128, lerp(0.12, -0.16, s))) : pinky.head.localToWorld(V3(0, 0.142, lerp(0.07, -0.05, s))));
+    handR.want = { pos: () => pt().addScaledVector(upOf(), 0.02 + lift), up: upOf, curl: 0.12, rate: 12, shoulder: [0.36, -0.12, 0.05] };
+    for (let i = 0; i < 5; i++) {
+      onBack = i >= 2;
+      await tween(tok, 0.75, (k) => { s = ease(k); lift = 0; });
+      heart();
+      await tween(tok, 0.32, (k) => { lift = Math.sin(k * Math.PI) * 0.035; s = 1 - k; });
+    }
+    handR.want = null;
+    await wait(tok, 0.5); happy(false); pinky.tiltT = 0.3; say('더 해줘…', headTop, 'soft', 1.8);
+    await wait(tok, 1.6); pinky.tiltT = 0; camHome();
+  },
+  async hug(tok) {
+    await comeHere(tok, 0.75);
+    const [p, a] = kneelAt(0.95, 0.74, 0.32); camTo(p, a);
+    setPose(pinky, 'stand', 5); pinky.tgt.yawOff = 0;
+    pinky.wagAmpT = 0.65; pinky.wagSpeedT = 14; pinky.earPerk = 0.6; say('!', headTop, '', 1);
+    await wait(tok, 0.7);
+    const center = () => pinky.body.localToWorld(V3(0, -0.03, 0.115));
+    const armpit = (sx) => pinky.body.localToWorld(V3(sx * 0.115, -0.03, 0.115));
+    const outward = (sx) => armpit(sx).sub(center()).normalize();
+    handR.want = { pos: () => armpit(1), up: () => outward(1), curl: 0.55, rate: 6 };
+    handL.want = { pos: () => armpit(-1), up: () => outward(-1), curl: 0.55, rate: 6 };
+    await wait(tok, 0.9);
+    setPose(pinky, 'held', 3.5); pinky.liftT = 0.2;
+    const p0 = { x: pinky.x, z: pinky.z }, dx = roomCam.position.x - p0.x, dz = roomCam.position.z - p0.z, L = Math.hypot(dx, dz);
+    const p1 = { x: p0.x + (dx / L) * 0.33, z: p0.z + (dz / L) * 0.33 };
+    camTo(cam.tPos, V3(p1.x, 0.64, p1.z), 2.2);
+    tok.cleanups.push(() => { pinky.x = p0.x; pinky.z = p0.z; });
+    await tween(tok, 1.1, (k) => { const e = ease(k); pinky.x = lerp(p0.x, p1.x, e); pinky.z = lerp(p0.z, p1.z, e); });
+    happy(true); pinky.pant = false; pinky.tiltT = 0;
+    for (let i = 0; i < 3; i++) {
+      pinky.lick = 1; pinky.tongueOut = 0.7; say('할짝', headTop, '', 1.1, (i % 2 ? 1 : -1) * 80); heart();
+      await wait(tok, 0.55); pinky.lick = 0; pinky.tongueOut = 0; await wait(tok, 0.35);
+    }
+    say('포근해…', headTop, 'soft', 1.8); await wait(tok, 1.6);
+    await tween(tok, 1.0, (k) => { const e = ease(k); pinky.x = lerp(p1.x, p0.x, e); pinky.z = lerp(p1.z, p0.z, e); });
+    setPose(pinky, 'stand', 4); pinky.liftT = 0; happy(false);
+    camTo(cam.tPos, V3(p0.x, 0.32, p0.z), 2.2);
+    await wait(tok, 0.7); releaseHands(); await wait(tok, 0.6); camHome();
+  },
+  async play(tok) {
+    handR.rig.inner.add(ball.g); ball.g.position.set(0, -0.05, 0.03); ball.g.rotation.set(0, 0, 0); ball.g.scale.setScalar(1);
+    ball.g.visible = true; ball.state = 'held';
+    tok.cleanups.push(() => { if (ball.state === 'held' || ball.state === 'mouth') ballToWorld(); });
+    let wind = 0;
+    const hold = () => roomCam.localToWorld(V3(0.2, -0.22 + wind * 0.14, -0.5 + wind * 0.2));
+    handR.want = { pos: hold, up: () => V3(0, -1, 0), curl: 0.55, rate: 6 };
+    setPose(pinky, 'stand', 6); pinky.face = 'cam';
+    pinky.lookFn = () => ball.g.getWorldPosition(V3());
+    pinky.earPerk = 1; pinky.wagAmpT = 0.85; pinky.wagSpeedT = 18;
+    await wait(tok, 0.7); say('!', headTop, '', 1);
+    await wait(tok, 0.5);
+    await tween(tok, 0.35, (k) => { wind = ease(k); });
+    // 던지기: 핑키에서 먼 곳을 고름
+    const spots = THROW_SPOTS.filter(([x, z]) => Math.hypot(x - pinky.x, z - pinky.z) > 0.9);
+    const [tx, tz] = spots[Math.floor(Math.random() * spots.length)] || THROW_SPOTS[0];
+    const from = ball.g.getWorldPosition(V3()), T = 0.85;
+    ballToWorld(V3((tx - from.x) / T, (ball.r - from.y + 0.5 * 9.8 * T * T) / T, (tz - from.z) / T));
+    handR.want = { pos: () => roomCam.localToWorld(V3(0.12, -0.08, -0.75)), up: () => V3(0, -1, 0), curl: 0.2, rate: 14 };
+    say('왈!', headTop, '', 1);
+    await wait(tok, 0.25); handR.want = null;
+    // 쫓아가기
+    pinky.walkSpeed = 1.15; pinky.wagAmpT = 0.7;
+    tok.cleanups.push(() => { pinky.walkTarget = null; });
+    const reach = 0.3;
+    await until(tok, () => {
+      const b = ball.g.position, dx = b.x - pinky.x, dz = b.z - pinky.z, dist = Math.hypot(dx, dz) || 1;
+      pinky.walkTarget = dist > reach + 0.03 ? { x: b.x - (dx / dist) * reach, z: b.z - (dz / dist) * reach } : null;
+      return ball.state === 'rest' && dist < reach + 0.08;
+    });
+    pinky.walkTarget = null; pinky.face = { x: ball.g.position.x, z: ball.g.position.z };
+    await wait(tok, 0.3);
+    setPose(pinky, 'eat', 7); pinky.tgt.headPitch = 0.95; pinky.jawOpen = 0.35;
+    await wait(tok, 0.45);
+    pinky.jaw.attach(ball.g); ball.g.position.set(0, -0.012, 0.1); ball.state = 'mouth'; pinky.jawOpen = 0.12;
+    say('앙!', headTop, '', 1.1);
+    setPose(pinky, 'stand', 6); pinky.lookFn = null; pinky.tgt.gaze = 1;
+    await wait(tok, 0.35);
+    pinky.walkSpeed = 0.95; await walkTo(tok, HOME.x, HOME.z); pinky.walkSpeed = 0.5;
+    pinky.face = 'cam'; setPose(pinky, 'sit', 7);
+    await wait(tok, 0.7);
+    const c = roomCam.position, dir = V3(c.x - pinky.x, 0, c.z - pinky.z).normalize();
+    pinky.jawOpen = 0.3; ballToWorld(dir.multiplyScalar(0.5).add(V3(0, 0.4, 0)));
+    await wait(tok, 0.2); pinky.jawOpen = 0;
+    pinky.wagAmpT = 0.85; pinky.wagSpeedT = 18; pinky.tiltT = 0.25; say('또 던져!', headTop, 'soft', 2);
+    await wait(tok, 2.2); pinky.tiltT = 0;
   },
   async treat(tok) {
-    setPose(pinky, 'sit', 9);
-    pinky.wagAmpT = 0.75; pinky.wagSpeedT = 17; pinky.earPerk = 1;
-    say('!', headTop, '', 1.1);
-    const startW = () => roomCam.localToWorld(V3(0.26, -0.48, -0.3));
-    const near = () => { const m = mouthPt(), c = roomCam.position; const dir = V3(c.x - m.x, 0, c.z - m.z).normalize(); return m.add(dir.multiplyScalar(0.2)).add(V3(0, -0.01, 0)); };
-    const s0 = startW();
-    hand.visible = true; hand.position.copy(s0); hand.add(treat); treat.position.set(0, 0.025, 0.02); treat.rotation.set(0, 0.4, 0); treat.scale.setScalar(1); treat.visible = true;
-    const retreat = { cancelled: false };
-    tok.cleanups.push(() => { retreat.cancelled = true; hand.visible = false; treat.visible = false; roomScene.add(treat); });
+    const [p, a] = kneelFor(HOME, 0.85); camTo(p, a);
+    handR.rig.inner.add(treat); treat.position.set(0, -0.03, 0.02); treat.rotation.set(0, 0.5, 0); treat.scale.setScalar(1); treat.visible = true;
+    const show = () => roomCam.localToWorld(V3(0.1, -0.2, -0.42));
+    const near = () => { const m = mouthPt(), c = roomCam.position; const dir = V3(c.x - m.x, 0, c.z - m.z).normalize(); return m.add(dir.multiplyScalar(0.17)).add(V3(0, -0.02, 0)); };
+    let target = show;
+    handR.want = { pos: () => target(), up: () => V3(0, -1, 0), curl: 0.3, rate: 5 };
     pinky.lookFn = () => treat.getWorldPosition(V3());
-    await tween(tok, 0.9, (k) => { hand.position.lerpVectors(s0, near(), ease(k)); hand.lookAt(mouthPt()); });
-    await wait(tok, 0.7);
-    pinky.jawOpen = 0.3;
-    const n0 = hand.position.clone();
-    await tween(tok, 0.4, (k) => { hand.position.lerpVectors(n0, mouthPt().add(V3(0, -0.035, 0)), ease(k)); hand.lookAt(mouthPt()); });
-    pinky.jaw.attach(treat); treat.position.set(0, 0.0, 0.085); pinky.jawOpen = 0;
-    const h0 = hand.position.clone();
-    tween(retreat, 0.7, (k) => { hand.position.lerpVectors(h0, startW(), ease(k)); if (k >= 1) hand.visible = false; }).catch(() => {});
+    await wait(tok, 0.5);
+    pinky.earPerk = 1; pinky.wagAmpT = 0.85; pinky.wagSpeedT = 18; say('!', headTop, '', 1.1);
+    await wait(tok, 0.3);
+    if (Math.hypot(pinky.x - HOME.x, pinky.z - HOME.z) > 0.08) {
+      setPose(pinky, 'stand', 7); pinky.walkSpeed = 0.95; say('간식이다!', headTop, 'soft', 1.4);
+      await walkTo(tok, HOME.x, HOME.z); pinky.walkSpeed = 0.5;
+    }
+    pinky.face = 'cam'; setPose(pinky, 'sit', 9);
+    await wait(tok, 0.6);
+    target = near; await wait(tok, 0.9);
+    pinky.jawOpen = 0.3; handR.want.rate = 6; target = () => mouthPt().add(V3(0, -0.03, 0));
+    await wait(tok, 0.5);
+    pinky.jaw.attach(treat); treat.position.set(0, 0, 0.085); pinky.jawOpen = 0;
+    handR.want = null;
     pinky.lookFn = null; pinky.chew = true; pinky.wagSpeedT = 12; pinky.earPerk = 0.3;
     const words = ['냠', '챱', '냠냠', '챱챱', '냠', '챱챱'];
     for (let i = 0; i < words.length; i++) {
@@ -871,82 +1390,175 @@ const CMDS = {
     pinky.lick = 1; say('쩝쩝', headTop, '', 1.2, 80); await wait(tok, 0.9); pinky.lick = 0;
     pinky.tiltT = 0.32; pinky.wagAmpT = 0.45; pinky.wagSpeedT = 9; pinky.earPerk = 0.5;
     say('…하나 더?', headTop, 'soft', 2.4);
-    await wait(tok, 2.2); pinky.tiltT = 0; pinky.earPerk = 0;
+    await wait(tok, 2.2); pinky.tiltT = 0; pinky.earPerk = 0; camHome();
+  },
+  async feed(tok) {
+    camTo(V3(1.2, 1.18, 2.2), V3(2.0, 0.1, 0.9));
+    mound.amount = 0; updateMound();
+    handR.rig.inner.add(scoop); scoop.position.set(0, -0.075, 0.05); scoop.visible = true; scoopKibble.visible = true;
+    let roll = 0;
+    const above = () => BOWL.clone().add(V3(-0.04, 0.3, 0.1));
+    handR.want = { pos: above, up: () => V3(0, 1, 0).applyAxisAngle(V3().copy(handR.pos).sub(shoulder(1)).normalize(), roll), curl: 0.75, rate: 4 };
+    await wait(tok, 1.3);
+    pinky.earPerk = 1; pinky.wagAmpT = 0.8; pinky.wagSpeedT = 17; say('!', headTop, '', 1.1);
+    await tween(tok, 0.5, (k) => { roll = -1.9 * ease(k); });
+    scoopKibble.visible = false; pouring = true;
+    say('와르르', () => BOWL.clone().add(V3(0, 0.3, 0)), '', 1.4);
+    setPose(pinky, 'stand', 6); pinky.walkSpeed = 0.9; pinky.lookFn = () => BOWL;
+    const going = walkTo(tok, EAT.x, EAT.z);
+    await wait(tok, 1.0); pouring = false;
+    await tween(tok, 0.4, (k) => { roll = -1.9 * (1 - ease(k)); });
+    handR.want = null;
+    await going;
+    pinky.walkSpeed = 0.5; pinky.lookFn = null; pinky.face = { x: BOWL.x, z: BOWL.z };
+    await wait(tok, 0.4);
+    setPose(pinky, 'eat', 5); pinky.chew = true;
+    const words = ['챱챱', '와구와구', '냠냠', '챱챱', '와구와구', '냠'];
+    for (let i = 0; i < words.length; i++) {
+      say(words[i], headTop, '', 1.2, (i % 2 ? 1 : -1) * 75);
+      mound.amount = Math.max(0, mound.amount - 1 / words.length); updateMound();
+      await wait(tok, 0.55);
+    }
+    pinky.chew = false; mound.amount = 0; updateMound();
+    pinky.lick = 1; say('할짝할짝', headTop, '', 1.2, 70); await wait(tok, 0.9); pinky.lick = 0;
+    setPose(pinky, 'stand', 5); pinky.face = 'cam'; pinky.tiltT = 0.3;
+    say('…더 없어?', headTop, 'soft', 2); await wait(tok, 1.8); pinky.tiltT = 0;
+    camHome(); await walkTo(tok, HOME.x, HOME.z); pinky.face = 'cam';
   },
   async sniff(tok) {
-    setPose(pinky, 'stand', 6);
-    const nose = () => { pinky.tgt.gaze = 0; pinky.tgt.headPitch = 0.55; };
-    const up = () => { pinky.tgt.gaze = 1; pinky.tgt.headPitch = 0; };
-    tok.cleanups.push(up);
-    const stop = async (x, z, fx, fz, line, extra) => {
-      nose(); pinky.sniff = 0.5;
-      await walkTo(tok, x, z);
-      pinky.tgt.headPitch = 0.8; pinky.sniff = 1;
-      say('킁킁', noseTip); await faceAndWait(tok, { x: fx, z: fz }, 0.9);
-      say('킁킁', noseTip); await wait(tok, 0.9);
-      if (line) { up(); pinky.sniff = 0; pinky.tiltT = 0.25; say(line, headTop, 'soft', 1.9); await wait(tok, 1.5); pinky.tiltT = 0; }
-      if (extra) await extra();
-    };
     pinky.wagAmpT = 0.45; pinky.wagSpeedT = 10;
-    await stop(1.25, -0.55, 1.75, -1.15, '선물 냄새…');
-    await stop(1.82, 0.85, 2.15, 1.0, '밥그릇 비었네…');
-    await stop(-0.72, 0.15, -1.3, -0.3, '여기 뭐 떨어진 거 없나');
-    up(); pinky.sniff = 0;
+    await sniffAt(tok, SPOTS.gifts, '선물 냄새…');
+    await sniffAt(tok, { x: EAT.x, z: EAT.z, fx: BOWL.x, fz: BOWL.z }, '밥그릇 비었네…');
+    await sniffAt(tok, SPOTS.table, '뭐 떨어진 거 없나');
+    pinky.tgt.gaze = 1; pinky.tgt.headPitch = 0;
     await walkTo(tok, HOME.x, HOME.z);
     pinky.face = 'cam'; pinky.wagAmpT = 0.4; pinky.wagSpeedT = 8;
     await wait(tok, 0.8);
   },
+  async touch(tok) {
+    const [p, a] = kneelAt(0.78, 0.95, 0.22); camTo(p, a, 2.2);
+    happy(true); if (['side', 'belly'].includes(pinky.tgt.name)) pinky.paddle = 0.5;
+    say('좋아…', headTop, 'soft', 1.6);
+    handR.want = { pos: () => touch.pt.clone().addScaledVector(touch.n, 0.02), up: () => touch.n, curl: 0.12, rate: 16, shoulder: [0.34, -0.15, 0.05] };
+    await until(tok, () => !touch.active);
+    handR.want = null; pinky.paddle = 0;
+    await wait(tok, 0.6); happy(false); pinky.tiltT = 0.3; say('더 해줘…', headTop, 'soft', 1.8);
+    await wait(tok, 1.6); pinky.tiltT = 0; camHome();
+  },
 };
+
+// 혼자 있을 때: 집 안을 돌아다니기
+async function roam(tok) {
+  const acts = [
+    async () => { // 방석에서 낮잠
+      setPose(pinky, 'stand', 5); pinky.walkSpeed = 0.38;
+      await walkTo(tok, SPOTS.cushion.x, SPOTS.cushion.z);
+      pinky.face = { x: 0.2, z: 0.4 }; pinky.liftT = 0.08; await wait(tok, 0.5);
+      setPose(pinky, 'down', 3); await wait(tok, 1.4);
+      pinky.eyeOpen = 0.08; pinky.wagAmpT = 0.05;
+      for (let i = 0; i < 3; i++) { say('쿨…', headTop, '', 2); await wait(tok, 2.6 + Math.random()); }
+      pinky.eyeOpen = 1; pinky.wagAmpT = 0.3; await wait(tok, 0.8);
+      setPose(pinky, 'stand', 4); await wait(tok, 0.6); pinky.liftT = 0;
+    },
+    async () => { pinky.walkSpeed = 0.4; await sniffAt(tok, SPOTS.gifts, '선물 냄새…'); },
+    async () => {
+      pinky.walkSpeed = 0.4; await sniffAt(tok, { x: EAT.x, z: EAT.z, fx: BOWL.x, fz: BOWL.z }, '밥그릇 비었네…');
+      pinky.face = 'cam'; await wait(tok, 0.6); say('밥 줘…', headTop, 'soft', 1.8); await wait(tok, 1.6);
+    },
+    async () => { // 창밖 구경
+      setPose(pinky, 'stand', 5); pinky.walkSpeed = 0.38;
+      await walkTo(tok, SPOTS.window.x, SPOTS.window.z);
+      pinky.face = { x: SPOTS.window.fx, z: SPOTS.window.fz }; await wait(tok, 0.6);
+      setPose(pinky, 'sit', 5); pinky.lookFn = () => V3(-4.6, 1.0, -0.6);
+      await wait(tok, 3 + Math.random() * 2);
+      say('눈 온다…', headTop, 'soft', 1.9); await wait(tok, 2.2);
+      pinky.lookFn = null; setPose(pinky, 'stand', 5); await wait(tok, 0.5);
+    },
+    async () => { pinky.walkSpeed = 0.4; await sniffAt(tok, SPOTS.table, '뭐 떨어진 거 없나'); },
+    async () => { // 나한테 와서 쳐다보기
+      setPose(pinky, 'stand', 5); pinky.walkSpeed = 0.5;
+      await walkTo(tok, HOME.x, HOME.z);
+      pinky.face = 'cam'; setPose(pinky, 'sit', 5); pinky.wagAmpT = 0.55; pinky.wagSpeedT = 11;
+      await wait(tok, 0.8); pinky.tiltT = 0.28; say('간식 있어?', headTop, 'soft', 1.8);
+      await wait(tok, 1.6); pinky.tiltT = 0; await wait(tok, 1.5);
+    },
+    async () => { // 러그 위 어슬렁
+      setPose(pinky, 'stand', 5); pinky.walkSpeed = 0.35;
+      await walkTo(tok, -0.6 + Math.random() * 1.4, 0.2 + Math.random() * 1.0);
+      pinky.face = 'cam'; await wait(tok, 2 + Math.random() * 2);
+    },
+  ];
+  let last = -1;
+  for (;;) {
+    let i; do { i = Math.floor(Math.random() * acts.length); } while (i === last);
+    last = i;
+    pinky.face = 'cam'; pinky.lookFn = null; pinky.sniff = 0; pinky.tgt.gaze = 1; pinky.tgt.headPitch = 0;
+    await acts[i]();
+    await wait(tok, 1 + Math.random() * 2);
+  }
+}
+
 actionsEl.addEventListener('click', (e) => {
   const b = e.target.closest('button[data-cmd]'); if (!b) return;
   const name = b.dataset.cmd; startCommand(name, CMDS[name]);
 });
 
-// 가만히 있을 때: 고개 갸웃
-let idleT = 4;
-function idleLife(dt) {
-  if (active) return;
-  idleT -= dt;
-  if (idleT <= 0) {
-    idleT = 4 + Math.random() * 4;
-    pinky.tiltT = (Math.random() < 0.5 ? -1 : 1) * (0.2 + Math.random() * 0.15);
-    pinky.earPerk = 0.3;
-    setTimeout(() => { if (!active) { pinky.tiltT = 0; pinky.earPerk = 0; } }, 1300);
-  }
+// ================================================================
+// 만지기 (핑키를 누르고 문지르면 쓰다듬기)
+// ================================================================
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), _nm = new THREE.Matrix3();
+const touch = { active: false, x: 0, y: 0, pt: V3(), n: V3(0, 1, 0), last: V3(), moved: 0, heartT: 0 };
+function pickPinky(x, y) {
+  ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, roomCam);
+  return ray.intersectObjects(pinky.meshes, false)[0] || null;
+}
+function setTouchHit(hit) {
+  touch.pt.copy(hit.point);
+  touch.n.copy(hit.face.normal).applyNormalMatrix(_nm.getNormalMatrix(hit.object.matrixWorld)).normalize();
+}
+function stepTouch(dt) {
+  if (!touch.active) return;
+  const hit = pickPinky(touch.x, touch.y);
+  if (hit) { setTouchHit(hit); touch.moved += touch.pt.distanceTo(touch.last); touch.last.copy(touch.pt); }
+  touch.heartT -= dt;
+  if (touch.moved > 0.12 || touch.heartT <= 0) { touch.moved = 0; touch.heartT = 1.1; heart(); }
 }
 
 // ================================================================
-// 시점 (사람 눈 · 손만 나옴)
+// 방 들어가기 · 매 프레임
 // ================================================================
-const CAM_POS = V3(0, 1.22, 3.0), CAM_AIM = V3(0.08, 0.4, 0.62);
-const baseYaw = Math.atan2(-(CAM_AIM.x - CAM_POS.x), -(CAM_AIM.z - CAM_POS.z));
-const basePitch = Math.atan2(CAM_AIM.y - CAM_POS.y, Math.hypot(CAM_AIM.x - CAM_POS.x, CAM_AIM.z - CAM_POS.z));
-const look = { y: 0, p: 0, ty: 0, tp: 0 };
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
 function resetRoom() {
-  cancelActive(); clearBubbles();
-  Object.assign(pinky, { x: HOME.x, z: HOME.z, yaw: 0 });
+  cancelActive(); clearBubbles(); hideHandsNow();
+  Object.assign(pinky, { x: HOME.x, z: HOME.z, yaw: 0, lift: 0 });
   resetTransient(pinky);
   setPose(pinky, 'stand', 50);
   const st = poseFor('stand', pinky);
   for (const k of POSE_KEYS) pinky.cur[k] = st[k];
-  st.paws.forEach((v, i) => pinky.cur.paws[i].copy(v));
+  st.paws.forEach((v, i) => pinky.cur.paws[i].copy(v)); pinky.cur.lean = [...st.lean];
+  mound.amount = 0; updateMound();
+  roomScene.attach(ball.g); ball.g.visible = false; ball.state = 'none';
+  cam.pos.copy(CAM_POS); cam.aim.copy(CAM_AIM); camHome();
   look.y = look.ty = look.p = look.tp = 0;
+  idleT = 6;
   pinky.wagAmpT = 0.7; pinky.wagSpeedT = 15; pinky.earPerk = 0.6;
   setTimeout(() => { if (!active) { pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6; pinky.earPerk = 0; } }, 2600);
 }
 function updateRoom(dt, t) {
-  const k = 1 - Math.exp(-8 * dt);
-  look.y += (look.ty - look.y) * k; look.p += (look.tp - look.p) * k;
-  roomCam.position.copy(CAM_POS);
-  if (!reduceMotion) roomCam.position.y += Math.sin(t * 0.7) * 0.005;
-  roomCam.rotation.set(basePitch + look.p, baseYaw + look.y, 0, 'YXZ');
+  const k = 1 - Math.exp(-cam.rate * dt);
+  cam.pos.lerp(cam.tPos, k); cam.aim.lerp(cam.tAim, k);
+  const lk = 1 - Math.exp(-8 * dt);
+  look.y += (look.ty - look.y) * lk; look.p += (look.tp - look.p) * lk;
+  const dx = cam.aim.x - cam.pos.x, dy = cam.aim.y - cam.pos.y, dz = cam.aim.z - cam.pos.z;
+  roomCam.position.copy(cam.pos);
+  if (!reduceMotion) roomCam.position.y += Math.sin(t * 0.7) * 0.004;
+  roomCam.rotation.set(Math.atan2(dy, Math.hypot(dx, dz)) + look.p, Math.atan2(-dx, -dz) + look.y, 0, 'YXZ');
   roomCam.updateMatrixWorld(true);
   roomUpd.forEach((f) => f(t, dt));
-  idleLife(dt);
+  stepTouch(dt);
+  if (!active) { idleT -= dt; if (idleT <= 0) startCommand('roam', roam, true); }
   updateDog(pinky, dt, t, roomCam.position);
-  stepCrumbs(dt);
+  updateHand(handR, 1, dt); updateHand(handL, -1, dt);
+  stepCrumbs(dt); stepKibble(dt); stepBall(dt);
 }
 
 // ================================================================
@@ -962,8 +1574,8 @@ function goRoom() {
   fade(() => { mode = 'room'; $('#selectUI').hidden = true; $('#roomUI').hidden = false; resetRoom(); $('#backBtn').focus({ preventScroll: true }); });
 }
 function goSelect() {
-  cancelActive(); clearBubbles();
-  fade(() => { mode = 'select'; $('#roomUI').hidden = true; $('#selectUI').hidden = false; });
+  cancelActive(); clearBubbles(); touch.active = false;
+  fade(() => { mode = 'select'; hideHandsNow(); $('#roomUI').hidden = true; $('#selectUI').hidden = false; });
 }
 $('#backBtn').addEventListener('click', goSelect);
 
@@ -971,10 +1583,23 @@ let toastTimer = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200); }
 
 const canvas = $('#c');
-const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let drag = null;
-canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: 0 }; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointerdown', (e) => {
+  canvas.setPointerCapture(e.pointerId);
+  if (mode === 'room') {
+    const hit = pickPinky(e.clientX, e.clientY);
+    if (hit) {
+      Object.assign(touch, { active: true, x: e.clientX, y: e.clientY, moved: 0, heartT: 0.4 });
+      setTouchHit(hit); touch.last.copy(touch.pt);
+      $('#hint').classList.add('gone');
+      startCommand('touch', CMDS.touch);
+      return;
+    }
+  }
+  drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: 0 };
+});
 canvas.addEventListener('pointermove', (e) => {
+  if (touch.active) { touch.x = e.clientX; touch.y = e.clientY; return; }
   if (!drag) return;
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
   drag.moved += Math.abs(dx) + Math.abs(dy);
@@ -985,6 +1610,7 @@ canvas.addEventListener('pointermove', (e) => {
   }
 });
 canvas.addEventListener('pointerup', (e) => {
+  if (touch.active) { touch.active = false; return; }
   if (!drag) return;
   const dx = e.clientX - drag.x0, moved = drag.moved; drag = null;
   if (mode !== 'select') return;
@@ -998,7 +1624,7 @@ canvas.addEventListener('pointerup', (e) => {
   if (i === sel) { if (DOGS[i].ready) goRoom(); else toast(`${DOGS[i].name}의 ${DOGS[i].place === '장소 정하는 중' ? '추억 장소' : DOGS[i].place}는 준비 중이에요`); }
   else select(i);
 });
-canvas.addEventListener('pointercancel', () => { drag = null; });
+canvas.addEventListener('pointercancel', () => { drag = null; touch.active = false; });
 window.addEventListener('keydown', (e) => {
   if (mode !== 'select') { if (e.key === 'Escape') goSelect(); return; }
   if (e.key === 'ArrowLeft') select(sel - 1, -1);
@@ -1028,3 +1654,6 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+// 로컬에서만 쓰는 점검용 핸들
+if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCommand, CMDS, look, cam, ball, goRoom, goSelect, roomCam };
