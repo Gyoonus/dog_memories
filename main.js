@@ -83,7 +83,7 @@ function glow(parent, color, size, p, opacity = 0.8) {
 // ================================================================
 const COLORS = {
   // 핑키: 노견이라 채도가 낮고 바랜 색. 얼굴·귀는 연한 베이지, 안장은 회색 털이 섞인 차콜, 가슴·배·다리는 크림빛 흰색
-  pinky: { base: 0xece4d6, tan: 0xb8a68c, headTan: 0x98795a, ear: 0x7f6347, saddle: 0x2e2a26, grizzle: 0x6b6259, nose: 0x17130f, collar: 'ribbon', medal: true },
+  pinky: { base: 0xece4d6, tan: 0xb39474, headTan: 0xb0967a, ear: 0xa08a6c, saddle: 0x24201d, grizzle: 0x4a443e, nose: 0x1a1715, collar: 'ribbon', medal: true },
   pupu: { base: 0xf1e6d2, tan: 0xe7d0ab, saddle: 0xe7d0ab, nose: 0x6f4a46 },
   generic: { base: 0xe9e1d6, tan: 0xc99a6c, saddle: 0x4a3c34, nose: 0x1c1513 },
 };
@@ -371,7 +371,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   const d = { kind, J, scale, seed, meshes: [], ears: [], eyes: [], legs: [] };
   const silMat = silhouette ? new THREE.MeshStandardMaterial({ color: 0x2b201b, roughness: 0.9, emissive: 0x170f0b }) : null;
   // 짧고 촘촘한 털: 거친 무광 바탕 + 몸 축을 따라 길게 늘어진 털결 노이즈(차콜 속에 낱낱의 회색 털) + 실루엣 가장자리만 보송하게 밝아지는 솜털(프레넬, 어두운 털에서는 약하게)
-  const fur = silMat || new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: J ? 0.9 : 0.95, sheen: J ? 0.35 : 0.15, sheenRoughness: 0.85, sheenColor: new THREE.Color(J ? 0xfff4e8 : 0xf2e8da) });
+  const fur = silMat || new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: J ? 0.9 : 0.95, sheen: J ? 0.35 : 0.06, sheenRoughness: 0.85, sheenColor: new THREE.Color(J ? 0xfff4e8 : 0xf2e8da) });
   if (!silMat) {
     fur.onBeforeCompile = (sh) => {
       sh.vertexShader = 'varying vec3 vOP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vOP = position;');
@@ -379,7 +379,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
         + 'float vn3(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(mix(fh3(i), fh3(i + vec3(1,0,0)), f.x), mix(fh3(i + vec3(0,1,0)), fh3(i + vec3(1,1,0)), f.x), f.y), mix(mix(fh3(i + vec3(0,0,1)), fh3(i + vec3(1,0,1)), f.x), mix(fh3(i + vec3(0,1,1)), fh3(i + vec3(1,1,1)), f.x), f.y), f.z); }\n'
         + sh.fragmentShader
           .replace('#include <color_fragment>', '#include <color_fragment>\n  { vec3 q = vec3(vOP.x * 260.0, vOP.y * 260.0, vOP.z * 34.0); float s = vn3(q) * 0.6 + vn3(q * 2.1) * 0.3 + vn3(q * 4.3) * 0.1; float lum = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));\n'
-            + (J ? '    diffuseColor.rgb *= mix(0.94, 1.05, s); }' : '    diffuseColor.rgb *= mix(0.9, 1.08, s); float g = vn3(vec3(vOP.x * 900.0, vOP.y * 900.0, vOP.z * 45.0)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.2, 0.19, 0.18), smoothstep(0.68, 0.84, g) * 0.35 * (1.0 - smoothstep(0.05, 0.15, lum))); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(lum), 0.2); }'))
+            + (J ? '    diffuseColor.rgb *= mix(0.94, 1.05, s); }' : '    diffuseColor.rgb *= mix(0.9, 1.08, s); float g = vn3(vec3(vOP.x * 700.0, vOP.y * 700.0, vOP.z * 60.0)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.075, 0.07, 0.065), smoothstep(0.72, 0.86, g) * 0.3 * (1.0 - smoothstep(0.04, 0.10, lum))); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(lum), 0.08); }'))
           .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  { float fz = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 3.0); float lm = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.1 + 0.02, fz * 0.3 * smoothstep(0.02, 0.25, lm)); }');
     };
     fur.customProgramCacheKey = () => (J ? 'fur-fuzz-j' : 'fur-fuzz-b');
@@ -416,13 +416,13 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   // leg=1 이면 배 흰색을 끄고(뒷다리 허벅지는 황갈로 남는다) 안장·황갈 무늬만 이어받는다
   const bodyPaint = J ? (p, c) => tone(c.copy(cW).lerp(cT, ss(0.0, 0.12, p.y) * 0.45), p, 0.05) : (p, c, leg = 0) => {
     const ax = Math.abs(p.x);
-    const n = wob(_pg.set(p.x * 3, p.y * 3, p.z * 0.6), 30) * 0.02 + wob(p, 38) * 0.006 + (hash3(_pg.set(p.x * 60, p.y * 60, p.z * 60)) - 0.5) * 0.008; // 몸 축을 따라 길게 늘어진 결 + 낱낱의 털
-    const lineY = -0.02 - 0.015 * ss(-0.08, -0.2, p.z) + 0.07 * ss(0.1, 0.22, p.z) + 0.02 * ss(0.05, 0.14, p.z); // 안장 아래 경계: 옆구리 중간 높이(몸 높이의 55~60%), 엉덩이·꼬리 뿌리까지 내려오고 목에서는 등 위 띠만 남게 올라감
+    const n = wob(_pg.set(p.x * 3, p.y * 3, p.z * 0.6), 30) * 0.035 + wob(p, 38) * 0.006 + (hash3(_pg.set(p.x * 60, p.y * 60, p.z * 60)) - 0.5) * 0.014; // 몸 축을 따라 길게 늘어진 결 + 낱낱의 털
+    const lineY = -0.02 - 0.015 * ss(-0.08, -0.2, p.z) + 0.035 * ss(0.1, 0.22, p.z) + 0.01 * ss(0.05, 0.14, p.z); // 안장 아래 경계: 옆구리 중간 높이(몸 높이의 55~60%), 엉덩이·꼬리 뿌리까지 내려오고 기갑·어깨뼈 위까지 이어진다
     const shoulder = ss(0.11, 0.2, p.z) * ss(0.035, 0.07, ax) * ss(0.09, 0.0, p.y); // 어깨·위팔 덩어리: 회색이 섞인 황갈
-    const black = ss(lineY - 0.03, lineY + 0.045, p.y + n) * ss(0.27, 0.17, p.z - (p.y - 0.12) * 0.6) * ss(-0.31, -0.24, p.z) * (1 - 0.5 * shoulder);
+    const black = ss(lineY - 0.012, lineY + 0.022, p.y + n) * ss(0.27, 0.17, p.z - (p.y - 0.12) * 0.6) * ss(-0.31, -0.24, p.z) * (1 - 0.25 * shoulder); // 좁고 털결대로 들쭉날쭉한 경계
     const belly = leg ? 0 : ss(-0.075, -0.12, p.y + n);
     const chest = ss(0.12, 0.2, p.z + n) * ss(0.13, 0.05, p.y - (p.z - 0.2) * 0.5 + n) * ss(0.085, 0.04, ax + n); // 흰 가슴 턱받이: 목 앞에서 가슴 가운데까지, 양옆 어깨·위팔은 황갈
-    const grizzle = clamp(0.08 + 0.25 * (0.5 + 0.5 * wob(_pg.set(p.x * 4, p.y * 4, p.z), 40)) + 0.1 * ss(0.12, 0.22, p.z) + 0.25 * ss(lineY + 0.06, lineY, p.y) + 0.4 * shoulder, 0, 0.5); // 차콜에 회색·황갈 털이 섞임. 기갑·어깨와 안장 아래 가장자리는 더 회색
+    const grizzle = clamp(0.03 + 0.18 * (0.5 + 0.5 * wob(_pg.set(p.x * 4, p.y * 4, p.z), 40)) + 0.08 * ss(0.12, 0.22, p.z) + 0.2 * ss(lineY + 0.05, lineY, p.y) + 0.15 * shoulder, 0, 0.3); // 차콜에 회색·황갈 털이 조금 섞임(위 조명에서도 차콜로 남게). 기갑·어깨와 안장 아래 가장자리는 더 회색
     _sad.copy(cB).lerp(cG, grizzle);
     const neck = ss(0.1, 0.2, p.z) * ss(0.0, 0.08, p.y); // 목 옆: 머리 베이지로 이어진다
     c.copy(cT).lerp(cH, neck * 0.9).lerp(cTick, 0.15 * ss(lineY, lineY - 0.04, p.y + n)); // 안장 바로 아래 띠는 조금 진한 황갈(ticking)
@@ -493,7 +493,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   d.torso = put(body, sdfGeo(J ? 'jb' : 'bb', bodySDF(J), J ? [-0.17, -0.17, -0.3] : [-0.15, -0.17, -0.27], J ? [0.17, 0.2, 0.33] : [0.15, 0.25, 0.3], 0.006), null, null, null, bodyPaint);
   if (J) d.torso.userData.fur = [2, 0.002, 1600];
   if (!silhouette && C.collar) {
-    const sdfB = bodySDF(J), ring = J ? collarRing(sdfB, V3(0, 0.068, 0.148), V3(0, 0.72, 0.69).normalize(), 0.011) : collarRing(sdfB, V3(0, 0.118, 0.165), V3(0, 0.8, 0.6).normalize(), 0.012); // 목 위쪽, 뒤는 귀 뿌리 밑에 숨고 앞은 목젖 아래
+    const sdfB = bodySDF(J), ring = J ? collarRing(sdfB, V3(0, 0.068, 0.148), V3(0, 0.72, 0.69).normalize(), 0.011) : collarRing(sdfB, V3(0, 0.085, 0.14), V3(0, 0.7, 0.714).normalize(), 0.016); // 목 아래쪽(턱에서 손 한 뼘 아래), 느슨하게 가슴 위로 V자로 늘어진다
     if (C.collar === 'ribbon') {
       // 빨강·흰·남색 줄무늬 리본(바랜 색): 몸 표면을 따라가는 얇은 띠
       const ribbonTex = canvasTex(8, 64, (x, w, h) => {
@@ -509,8 +509,8 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
       const bronzeHi = new THREE.MeshPhysicalMaterial({ color: 0x5a4836, metalness: 0.55, roughness: 0.55 });
       put(md, new THREE.TorusGeometry(0.006, 0.0017, 6, 14), [0, -0.004, 0.002], [0, Math.PI / 2, 0], null, null, bronze);
       put(md, new THREE.TorusGeometry(0.0045, 0.0014, 6, 12), [0, -0.012, 0.003], null, null, null, bronzeHi);
-      put(md, new THREE.CylinderGeometry(0.026, 0.026, 0.004, 32), [0, -0.04, 0.004], [Math.PI / 2, 0, 0], null, null, bronze);
-      put(md, new THREE.TorusGeometry(0.0225, 0.0016, 6, 32), [0, -0.04, 0.0065], null, null, null, bronzeHi);
+      put(md, new THREE.CylinderGeometry(0.03, 0.03, 0.004, 32), [0, -0.05, 0.004], [Math.PI / 2, 0, 0], null, null, bronze);
+      put(md, new THREE.TorusGeometry(0.0265, 0.0016, 6, 32), [0, -0.05, 0.0065], null, null, null, bronzeHi);
     }
   }
 
@@ -584,12 +584,12 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
       // 굵고 거의 가늘어지지 않는 원통 마디 + 관절마다 공 하나 (공 반지름 = 원통 끝 반지름이라 링 솔기가 없다)
       hip.position.set(sx * (front ? 0.062 : 0.066), front ? -0.03 : -0.01, z); // 고관절은 골반 높이에 두어 앉을 때 무릎이 앞으로 나오고 허벅지가 정강이를 덮는다
       const r1 = front ? 0.046 : 0.052, r2 = 0.045, r3 = front ? 0.04 : 0.039, r4 = 0.037; // 짧고 굵은 다리
-      const bodySpace = (p, c) => bodyPaint(_pb.copy(p).add(hip.position), c, front ? 0 : 1); // 위팔·허벅지는 몸통 무늬를 그대로 이어받는다 (허벅지는 배 흰색 없이 황갈)
+      const bodySpace = (p, c) => bodyPaint(_pb.copy(p).add(hip.position), c, 1); // 위팔·허벅지는 몸통 무늬를 그대로 이어받는다 (배 흰색은 끄고 황갈로 — 위팔은 팔꿈치까지 황갈)
       const seg = (key, L, ra, rb) => sdfGeo(key, legSegSDF(L, ra, rb), [-ra - 0.003, -L - rb - 0.003, -ra - 0.003], [ra + 0.003, ra + 0.003, ra + 0.003], 0.003);
       const fk = front ? 'f' : 'h';
       if (front) put(hip, seg('bl1f', L1, r1, r2), null, null, null, bodySpace);
       else put(hip, sdfGeo('bl1h', (x, y, z) => smin(sdRoundCone(x, y, z, L1, r1, r2), sdE(x, y, z, 0, -L1 * 0.42, 0.012, 0.04, 0.085, 0.075), 0.03), [-0.055, -L1 - r2 - 0.003, -0.075], [0.055, r1 + 0.003, 0.095], 0.003), null, null, null, bodySpace); // 허벅지: 다리와 한 덩어리로 움직이는 '바지' (서면 둥근 허벅지, 앉으면 정강이를 덮는다)
-      const lower = front ? legPaint(hip.position.y - L1, -0.07, -0.15) : legPaint(hip.position.y - L1, -0.11, -0.22); // 앞다리는 팔꿈치부터 흰색, 뒷다리는 무릎 아래에서 흰 양말로
+      const lower = front ? legPaint(hip.position.y - L1, -0.11, -0.17) : legPaint(hip.position.y - L1, -0.11, -0.22); // 앞다리는 팔꿈치부터 흰색, 뒷다리는 무릎 아래에서 흰 양말로
       put(knee, seg('bl2' + fk, L2, r2, r3), null, null, null, lower);
       put(ank, seg('bl3' + fk, L3, r3, r4), null, null, null, pawPaint);
       put(foot, sph(), [0, 0, 0], null, r4 * 0.9, pawPaint);
@@ -674,10 +674,11 @@ function updateDog(d, dt, t, camPos) {
   if (d.medal) {
     // 메달은 아래로 늘어지되, 판 중심이 가슴 속에 파묻히면(앉기처럼 몸이 뒤로 기울 때) 가슴에 눕도록 앞으로 기울인다
     const md = d.medal; let rx = -c.pitch * 0.95 + Math.sin(d.phase * 2) * 0.12 * d.gait + Math.sin(t * 1.3) * 0.03;
-    const dr = d.J ? 0.03 : 0.062, dz = d.J ? 0.006 : 0.004, nIt = d.J ? 12 : 6, step = d.J ? 0.09 : 0.06; // 판 아래 가장자리가 몸에 파묻힐 때만 조금씩 눕힌다
+    const dr = d.J ? 0.03 : 0.076, dz = d.J ? 0.006 : 0.004, nIt = d.J ? 12 : 30, step = d.J ? 0.09 : 0.06; // 판 아래 가장자리·판 중심이 몸에 파묻히면 가슴에 눕도록 앞으로 눕힌다 (앉기처럼 몸이 많이 기울어도 메달이 가슴 속으로 사라지지 않게)
     if (d.medalSDF) for (let i = 0; i < nIt; i++) {
       const y = md.position.y - dr * Math.cos(rx) - dz * Math.sin(rx), z = md.position.z - dr * Math.sin(rx) + dz * Math.cos(rx);
-      if (d.medalSDF(md.position.x, y, z) > 0.007) break;
+      const dm = d.J ? 0 : 0.05, ym = md.position.y - dm * Math.cos(rx) - dz * Math.sin(rx), zm = md.position.z - dm * Math.sin(rx) + dz * Math.cos(rx);
+      if (d.medalSDF(md.position.x, y, z) > 0.007 && (d.J || d.medalSDF(md.position.x, ym, zm) > 0.006)) break;
       rx -= step;
     }
     md.rotation.set(rx, 0, -c.roll * 0.9 + Math.sin(d.phase) * 0.1 * d.gait);
