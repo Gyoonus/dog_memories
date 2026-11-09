@@ -82,7 +82,7 @@ function glow(parent, color, size, p, opacity = 0.8) {
 // 강아지 (아기 비글 비율 · 다리 관절 3개 · 털 무늬는 정점 색)
 // ================================================================
 const COLORS = {
-  pinky: { base: 0xf7f2eb, tan: 0xcf955a, saddle: 0x4d3f36, nose: 0x1b1412, collar: 0xe88fa1 },
+  pinky: { base: 0xf3ece1, tan: 0xc9a274, headTan: 0xd3b78c, ear: 0xc4a076, saddle: 0x3b3532, nose: 0x1b1412, collar: 'ribbon', medal: true },
   pupu: { base: 0xf1e6d2, tan: 0xe7d0ab, saddle: 0xe7d0ab, nose: 0x6f4a46 },
   generic: { base: 0xe9e1d6, tan: 0xc99a6c, saddle: 0x4a3c34, nose: 0x1c1513 },
 };
@@ -185,23 +185,50 @@ function surfaceNet(sdf, b0, b1, h) {
 const ZS = 0.85;
 const bodySDF = (J) => (x, y, z) => {
   z /= ZS;
-  let d = sdCap(x / 0.92, y, z, 0, 0, -0.13, 0, 0, 0.13, J ? 0.13 : 0.125);
+  let d = sdCap(x / (J ? 0.92 : 0.95), y, z, 0, 0, -0.13, 0, 0, 0.13, J ? 0.13 : 0.125);
   d = smin(d, sdE(x, y, z, 0, -0.012, 0.135, 0.12, 0.128, 0.118), 0.05);
   for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.058, -0.012, -0.135, 0.07, 0.1, 0.105), 0.04);
   d = smin(d, sdCap(x, y, z, 0, 0.03, 0.15, 0, 0.11, 0.235, J ? 0.08 : 0.075), 0.05);
-  return smax(d, -sdE(x, y, z, 0, -0.19, -0.02, 0.2, 0.07, 0.11), 0.04);
+  if (!J) for (const sx of [1, -1]) d = smax(d, -sdE(x, y, z, sx * 0.17, -0.02, -0.07, 0.065, 0.11, 0.1), 0.04); // 허리 살짝 들어감
+  return smax(d, -sdE(x, y, z, 0, -0.19, J ? -0.02 : -0.05, 0.2, 0.07, J ? 0.11 : 0.13), 0.04);
 };
+// 비글 머리: 넓고 둥근 두개골 · 통통한 볼 · 네모진 주둥이 · 윗입술 · 눈두덩 · 눈구멍
 const headSDF = (J) => (x, y, z) => {
-  let d = J ? sdE(x, y, z, 0, 0.055, 0.02, 0.105, 0.095, 0.1) : sdE(x, y, z, 0, 0.055, 0.02, 0.1, 0.092, 0.104);
-  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.045, 0.02, 0.06, 0.055, 0.05, 0.055), 0.03);
-  if (J) d = smin(d, sdCap(x / 1.05, y / 0.9, z, 0, 0.011, 0.1, 0, 0.011, 0.13, 0.043), 0.03);
-  else {
-    d = smin(d, sdCap(x / 1.12, y / 0.9, z, 0, 0.01, 0.085, 0, 0.01, 0.11, 0.043), 0.04);
-    for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.024, -0.02, 0.124, 0.03, 0.027, 0.033), 0.02);
-    d = smin(d, sdE(x, y, z, 0, -0.036, 0.1, 0.03, 0.018, 0.04), 0.02);
+  if (J) {
+    let d = sdE(x, y, z, 0, 0.055, 0.02, 0.105, 0.095, 0.1);
+    for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.045, 0.02, 0.06, 0.055, 0.05, 0.055), 0.03);
+    d = smin(d, sdCap(x / 1.05, y / 0.9, z, 0, 0.011, 0.1, 0, 0.011, 0.13, 0.043), 0.03);
+    for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.038, 0.094, 0.083, 0.028, 0.014, 0.022), 0.02);
+    for (const sx of [1, -1]) d = smax(d, -sdE(x, y, z, sx * 0.04, 0.066, 0.096, 0.019, 0.016, 0.011), 0.006);
+    return d;
   }
-  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.038, 0.094, 0.083, 0.028, 0.014, 0.022), 0.02);
-  for (const sx of [1, -1]) d = smax(d, -sdE(x, y, z, sx * 0.04, 0.066, J ? 0.096 : 0.1, 0.019, 0.016, 0.011), 0.006);
+  let d = sdE(x, y, z, 0, 0.065, 0.0, 0.094, 0.088, 0.096);
+  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.046, 0.012, 0.035, 0.05, 0.05, 0.058), 0.035);
+  d = smin(d, sdCap(x / 1.08, y, z, 0, 0.004, 0.07, 0, 0.0, 0.12, 0.036), 0.035);
+  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.02, -0.014, 0.118, 0.026, 0.02, 0.036), 0.018);
+  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.04, 0.094, 0.07, 0.028, 0.011, 0.022), 0.02);
+  for (const sx of [1, -1]) d = smax(d, -sdE(x, y, z, sx * 0.04, 0.068, 0.096, 0.02, 0.017, 0.012), 0.006);
+  return d;
+};
+// 비글 귀: 볼을 감싸는 원통면에 붙인 두툼한 귓볼 (위는 좁고 아래로 갈수록 넓고 두꺼움, 아래로 내려가며 살짝 앞으로)
+const EAR_L = 0.16;
+const earSDF = (sx) => (x0, y, z) => {
+  const x = x0 * sx;
+  const R = 0.108, dx = x + 0.095, dz = z - 0.02;
+  const ang = Math.atan2(dz, dx), r = Math.hypot(dx, dz);
+  const t = clamp(-y / EAR_L, 0, 1);
+  const w = ang * R - 0.004 - 0.028 * t;
+  const hw = lerp(0.03, 0.047, ss(0, 0.6, t)), th = lerp(0.004, 0.007, t);
+  const n = r - R - lerp(-0.014, th + 0.001, ss(0, 0.3, t));
+  const rr = 0.026, qx = Math.abs(w) - (hw - rr), qy = Math.abs(y + EAR_L / 2) - (EAR_L / 2 - rr);
+  const d2 = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rr;
+  const dn = Math.abs(n) - th;
+  return Math.hypot(Math.max(d2, 0), Math.max(dn, 0)) + Math.min(Math.max(d2, dn), 0) - 0.003;
+};
+// 발: 둥근 발바닥 덩어리 + 발가락 네 개
+const footSDF = (x, y, z) => {
+  let d = sdE(x, y, z, 0, -0.004, 0.006, 0.036, 0.024, 0.036);
+  for (let i = 0; i < 4; i++) { const tx = (i - 1.5) * 0.019; d = smin(d, sdE(x, y, z, tx, -0.016, 0.034 + (Math.abs(i - 1.5) < 1 ? 0.004 : 0), 0.011, 0.014, 0.016), 0.008); }
   return d;
 };
 const sdfCache = {};
@@ -229,9 +256,10 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   const silMat = silhouette ? new THREE.MeshStandardMaterial({ color: 0x2b201b, roughness: 0.9, emissive: 0x170f0b }) : null;
   const fur = silMat || new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.82, sheen: 0.7, sheenRoughness: 0.6, sheenColor: new THREE.Color(0xffe6cc) });
   const cW = new THREE.Color(C.base), cT = new THREE.Color(C.tan), cB = new THREE.Color(C.saddle), cTD = cT.clone().multiplyScalar(0.72);
+  const cH = new THREE.Color(C.headTan ?? C.tan), cE = new THREE.Color(C.ear ?? C.tan), cG = cB.clone().lerp(cW, 0.45);
   const tone = (c, p, amt = 0.07) => c.multiplyScalar(1 + (hash3(p) - 0.5) * amt);
   const mix = (c, p, black, white) => tone(c.copy(cT).lerp(cB, black).lerp(cW, white), p);
-  const _pv = new THREE.Vector3(), _pc = new THREE.Color(), _pz = new THREE.Vector3();
+  const _pv = new THREE.Vector3(), _pc = new THREE.Color(), _pz = new THREE.Vector3(), _pg = new THREE.Vector3();
   const sph = (w = 32, h = 24) => new THREE.SphereGeometry(1, w, h);
   const furry = [];
   const put = (par, geo, p, r, s, paint, mat) => {
@@ -257,20 +285,30 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   const whitePaint = (p, c) => tone(c.copy(cW), p, 0.05);
   const bodyPaint = J ? (p, c) => tone(c.copy(cW).lerp(cT, ss(0.0, 0.12, p.y) * 0.45), p, 0.05) : (p0, c) => {
     const p = _pz.set(p0.x, p0.y, p0.z / ZS), n = wob(p, 30) * 0.012;
-    const black = ss(0.015, 0.05, p.y + n) * ss(-0.31, -0.24, p.z) * ss(0.2, 0.12, p.z);
+    const black = ss(0.0, 0.045, p.y + n) * ss(-0.32, -0.25, p.z) * ss(0.25, 0.15, p.z);
+    if (black > 0.02) { tone(c.copy(cT).lerp(cB.clone().lerp(cG, hash3(_pg.set(p.x * 3.1, p.y * 2.7, p.z * 1.9)) * 0.2), black), p); const w0 = Math.max(ss(-0.03, -0.075, p.y + n), ss(0.1, 0.17, p.z + n) * ss(0.08, 0.0, p.y - (p.z - 0.15) * 0.6)); if (w0 > 0.001) c.lerp(cW, w0); return; }
     const belly = ss(-0.03, -0.075, p.y + n);
     const chest = ss(0.1, 0.17, p.z + n) * ss(0.08, 0.0, p.y - (p.z - 0.15) * 0.6);
     mix(c, p, black, Math.max(belly, chest));
   };
+  const cRim = new THREE.Color(0x2a1a12);
   const headPaint = J ? (p, c) => tone(c.copy(cW).lerp(cT, ss(0.1, 0.16, p.y) * 0.4), p, 0.05) : (p, c) => {
-    const n = wob(p, 60) * 0.006;
-    const muzzle = ss(0.088, 0.11, p.z + n - Math.abs(p.x) * 0.35) * ss(0.06, 0.03, p.y);
-    const lower = ss(0.0, -0.028, p.y + n) * ss(0.02, 0.07, p.z);
-    const bw = 0.006 + Math.max(0, 0.085 - p.y) * 0.3;
-    const blaze = ss(bw + 0.006, bw, Math.abs(p.x) + n) * ss(0.02, 0.06, p.z) * ss(0.17, 0.14, p.y);
-    mix(c, p, 0, Math.max(muzzle, lower, blaze));
+    const n = wob(p, 60) * 0.006, ax = Math.abs(p.x);
+    // 흰 주둥이: 코에서 입꼬리까지, 눈 아래는 황갈로 남김
+    const muzzle = ss(0.088, 0.108, p.z + n + 0.004 - ax * 0.45 + (0.05 - p.y) * 0.3) * ss(0.075, 0.045, p.y);
+    // 아래턱 · 목 흰색
+    const lower = ss(0.0, -0.03, p.y + n) * ss(-0.02, 0.03, p.z);
+    // 이마 흰 줄: 위는 가늘고 눈 사이에서 넓어져 주둥이로 이어짐
+    const bw = 0.005 + Math.max(0, 0.09 - p.y) * 0.4;
+    const blaze = ss(bw + 0.006, bw, ax + n) * ss(0.0, 0.05, p.z) * ss(0.16, 0.13, p.y);
+    tone(c.copy(cH).lerp(cW, Math.max(muzzle, lower, blaze)), p);
+    // 눈가 어두운 테 + 안쪽 눈물 자국
+    const ed = Math.hypot((ax - 0.04) * 1.0, (p.y - 0.068) * 1.1, (p.z - 0.096) * 1.3);
+    const ring = ss(0.033, 0.025, ed);
+    const tear = ss(0.011, 0.003, Math.abs(ax - 0.028 - (0.058 - p.y) * 0.25)) * ss(0.062, 0.045, p.y) * ss(0.02, 0.04, p.y) * ss(0.085, 0.1, p.z);
+    c.lerp(cRim, Math.max(ring * 0.75, tear * 0.35));
   };
-  const earPaint = J ? whitePaint : (p, c) => tone(c.copy(cT).lerp(cTD, clamp(-p.y / 0.17, 0, 1) * 0.75), p, 0.06);
+  const earPaint = J ? whitePaint : (p, c) => tone(c.copy(cE).multiplyScalar(0.9 + clamp((0.09 - p.y) / EAR_L, 0, 1) * 0.14), p, 0.06);
   const tailPaint = J ? whitePaint : (p, c) => mix(c, p, ss(0.08, 0.03, p.y) * 0.9, ss(0.1, 0.135, p.y));
   const segPaint = (L, tanTop, tanBottom) => (J ? whitePaint : (p, c) => {
     const t = clamp(-p.y / L, 0, 1);
@@ -283,48 +321,82 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
 
   // 몸통 (몸통 · 가슴 · 엉덩이 · 목을 매끈하게 이은 한 덩어리)
   d.torso = put(body, sdfGeo(J ? 'jb' : 'bb', bodySDF(J), [-0.17, -0.17, -0.3], [0.17, 0.2, 0.33], 0.006), null, null, null, bodyPaint);
-  if (!silhouette && C.collar) put(body, new THREE.TorusGeometry(0.078, 0.013, 10, 32), [0, 0.052, 0.15], [-0.97, 0, 0], null, null, M(C.collar, { roughness: 0.5 }));
+  if (!silhouette && C.collar) {
+    const ribbon = C.collar === 'ribbon' ? M(0xffffff, { roughness: 0.7, map: canvasTex(16, 64, (x, w, h) => {
+      const bands = ['#9e2b2b', '#9e2b2b', '#efe8dc', '#2c3a5c', '#2c3a5c', '#efe8dc', '#9e2b2b', '#9e2b2b'];
+      bands.forEach((b, i) => { x.fillStyle = b; x.fillRect(0, (i * h) / bands.length, w, h / bands.length + 1); });
+    }) }) : M(C.collar, { roughness: 0.5 });
+    put(body, new THREE.TorusGeometry(0.09, 0.011, 12, 48), [0, 0.06, 0.163], [-0.83, 0, 0], [1, 1, 1.7], null, ribbon);
+    if (C.medal) {
+      const md = new THREE.Group(); md.position.set(0, -0.002, 0.24); body.add(md); d.medal = md;
+      const bronze = new THREE.MeshPhysicalMaterial({ color: 0x5a4a3a, metalness: 0.75, roughness: 0.38, clearcoat: 0.3 });
+      put(md, new THREE.TorusGeometry(0.006, 0.0018, 6, 14), [0, -0.002, 0], [0, Math.PI / 2, 0], null, null, bronze);
+      put(md, new THREE.CylinderGeometry(0.024, 0.024, 0.004, 32), [0, -0.031, 0.004], [Math.PI / 2, 0, 0], null, null, bronze);
+      put(md, new THREE.TorusGeometry(0.02, 0.0016, 6, 32), [0, -0.031, 0.0065], null, null, null, bronze);
+    }
+  }
 
   // 머리
   const hp = new THREE.Group(); hp.rotation.order = 'YXZ'; hp.position.set(0, 0.13, 0.205); body.add(hp); d.hp = hp;
-  const head = new THREE.Group(); head.scale.setScalar(J ? 1.3 : 1.25); hp.add(head); d.head = head;
+  const head = new THREE.Group(); head.scale.setScalar(J ? 1.3 : 1.18); hp.add(head); d.head = head;
   const skull = put(head, sdfGeo(J ? 'jh' : 'bh', headSDF(J), [-0.135, -0.075, -0.1], [0.135, 0.175, 0.245], 0.0042), null, null, null, headPaint);
   skull.userData.fur = [2, 0.0018, 2200];
-  put(head, sph(), [0, 0.03, J ? 0.148 : 0.151], null, [0.021, 0.0155, 0.015], null, new THREE.MeshPhysicalMaterial({ color: C.nose, roughness: 0.42, clearcoat: 0.5, clearcoatRoughness: 0.3 }));
-  if (!silhouette) for (const sx of [1, -1]) put(head, sph(12, 8), [sx * 0.0072, 0.026, J ? 0.16 : 0.164], [0, 0, sx * 0.4], [0.0048, 0.0032, 0.003], null, M(0x050303, { roughness: 0.6 }));
-  if (!silhouette && !J) {
-    const lipM = M(0x3a2418, { roughness: 0.7 });
-    put(head, new THREE.CapsuleGeometry(0.0014, 0.012, 4, 8), [0, 0.008, 0.1585], [-0.15, 0, 0], null, null, lipM);
-    for (const sx of [1, -1]) put(head, new THREE.TorusGeometry(0.0105, 0.0015, 6, 18, Math.PI * 0.85), [sx * 0.0102, 0.0015, 0.1555], [0.1, sx * 0.35, Math.PI + (sx > 0 ? 0.08 : 0.4)], null, null, lipM);
+  const noseM = new THREE.MeshPhysicalMaterial({ color: C.nose, roughness: 0.42, clearcoat: 0.5, clearcoatRoughness: 0.3 });
+  if (J) {
+    put(head, sph(), [0, 0.03, 0.148], null, [0.021, 0.0155, 0.015], null, noseM);
+    if (!silhouette) for (const sx of [1, -1]) put(head, sph(12, 8), [sx * 0.0072, 0.026, 0.16], [0, 0, sx * 0.4], [0.0048, 0.0032, 0.003], null, M(0x050303, { roughness: 0.6 }));
+  } else {
+    // 코: 크고 네모진 검은 코, 콧구멍 둘
+    put(head, sph(), [0, 0.018, 0.156], null, [0.023, 0.016, 0.015], null, noseM);
+    if (!silhouette) {
+      for (const sx of [1, -1]) put(head, sph(12, 8), [sx * 0.008, 0.015, 0.168], [0, 0, sx * 0.45], [0.005, 0.0034, 0.003], null, M(0x050303, { roughness: 0.6 }));
+      // 입선: 주둥이 표면을 따라 거리장에서 점을 떠서 가는 관으로 긋는다 (앞은 살짝, 입꼬리로 가며 조금 내려감)
+      const lipM = M(0x4a3a30, { roughness: 0.75 }), sdfH = headSDF(false), pts = [];
+      for (let i = -8; i <= 8; i++) {
+        const ph = (i / 8) * 1.7, y = -0.021 - Math.abs(i / 8) * 0.007;
+        let r = 0.02; while (r < 0.09 && sdfH(Math.sin(ph) * r, y, 0.118 + Math.cos(ph) * r) < 0.0006) r += 0.0005;
+        pts.push(V3(Math.sin(ph) * r, y, 0.118 + Math.cos(ph) * r));
+      }
+      for (const sx of [1, -1]) put(head, new THREE.TorusGeometry(0.0085, 0.0012, 6, 16, Math.PI * 0.8), [sx * 0.0085, -0.017, 0.1545], [0.15, sx * 0.3, Math.PI + (sx > 0 ? 0.1 : 0.4)], null, null, lipM);
+      put(head, new THREE.CapsuleGeometry(0.0009, 0.016, 4, 8), [0, -0.01, 0.161], [-0.1, 0, 0], null, null, lipM);
+    }
   }
   const jaw = new THREE.Group(); jaw.position.set(0, -0.03, 0.07); head.add(jaw); d.jaw = jaw;
-  put(jaw, sph(), [0, -0.004, 0.04], null, [0.027, 0.013, 0.04], whitePaint).userData.fur = [0];
+  if (J) put(jaw, sph(), [0, -0.004, 0.04], null, [0.027, 0.013, 0.04], whitePaint).userData.fur = [0];
+  else put(jaw, sph(), [0, -0.007, 0.03], null, [0.027, 0.015, 0.042], whitePaint).userData.fur = [2, 0.0018, 2200]; // 아래턱 · 턱
   d.tongue = put(jaw, sph(16, 10), [0, 0.006, 0.035], null, [0.02, 0.007, 0.03], null, M(0xe9808e, { roughness: 0.45 }));
   for (const sx of [1, -1]) {
-    const eg = new THREE.Group(); eg.position.set(sx * 0.04, 0.066, J ? 0.097 : 0.101); eg.rotation.set(0, sx * 0.26, 0); eg.scale.setScalar(1.12); head.add(eg);
+    const eg = new THREE.Group(); eg.scale.setScalar(J ? 1.3 : 1.02); head.add(eg);
+    if (J) { eg.position.set(sx * 0.04, 0.066, 0.097); eg.rotation.set(0, sx * 0.24, 0); }
+    else { eg.position.set(sx * 0.04, 0.068, 0.088); eg.rotation.set(0, sx * 0.24, -sx * 0.06); }
     if (!silhouette) {
-      put(eg, sph(24, 16), [0, 0, -0.001], null, [0.021, 0.018, 0.011], null, M(0x3a2216, { roughness: 0.75 }));
-      put(eg, sph(24, 16), [0, 0, 0.002], null, [0.018, 0.016, 0.011], null, new THREE.MeshPhysicalMaterial({ color: 0x3b2112, roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.04 }));
-      put(eg, sph(16, 10), [0, 0, 0.0068], null, [0.0105, 0.0105, 0.0075], null, M(0x060303, { roughness: 0.1 }));
-      // 윗눈꺼풀 (부드러운 표정)
-      put(eg, new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, 0.85), [0, 0.001, 0.0005], [0.12, 0, 0], [0.022, 0.019, 0.0125], () => {}, M(C.tan, { roughness: 0.8 }));
-      const w = new THREE.MeshBasicMaterial({ color: 0xffffff });
-      const h1 = new THREE.Mesh(SPH, w); h1.position.set(-0.005, 0.004, 0.0128); h1.scale.setScalar(0.0032); eg.add(h1);
-      const h2 = new THREE.Mesh(SPH, w); h2.position.set(0.004, -0.0045, 0.0125); h2.scale.setScalar(0.0013); eg.add(h2);
+      // 눈꺼풀 테(짙은 피부, 얇게) · 안구(짙은 갈색, 촉촉) · 큰 동공 · 살구색 윗눈꺼풀(얇게) · 반짝임 하나
+      put(eg, sph(24, 16), [0, 0, -0.002], null, [0.019, 0.0165, 0.011], null, M(0x1a0f0a, { roughness: 0.85 }));
+      put(eg, sph(24, 16), [0, 0, 0.0], null, [0.0172, 0.0152, 0.012], null, new THREE.MeshPhysicalMaterial({ color: 0x4a2a14, roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02 }));
+      put(eg, sph(16, 10), [0, -0.0005, 0.0068], null, [0.0098, 0.0098, 0.006], null, M(0x060302, { roughness: 0.15 }));
+      put(eg, new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, 0.95), [0, 0.0025, -0.0005], [0.32, 0, 0], [0.0205, 0.0178, 0.0132], () => {}, M(new THREE.Color(C.headTan ?? C.tan).multiplyScalar(0.92), { roughness: 0.85 }));
+      const h1 = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: 0xffffff })); h1.position.set(-sx * 0.004, 0.003, 0.0128); h1.scale.setScalar(0.0024); eg.add(h1);
     }
     d.eyes.push(eg);
   }
   for (const sx of [1, -1]) {
     const ep = new THREE.Group(); head.add(ep);
     if (J) { ep.position.set(sx * 0.056, 0.128, 0); put(ep, new THREE.ConeGeometry(0.042, 0.1, 16), [0, 0.044, 0], null, [1, 1, 0.55], earPaint); ep.rotation.z = sx * -0.22; }
-    else { ep.position.set(sx * 0.088, 0.092, -0.012); put(ep, sph(), [sx * 0.012, -0.088, 0.016], [0.16, 0, sx * 0.05], [0.015, 0.108, 0.062], earPaint).userData.fur = [3, 0.0025, 1800]; }
+    else {
+      ep.position.set(sx * 0.09, 0.088, -0.004);
+      put(ep, sdfGeo('be' + sx, earSDF(sx), [sx > 0 ? -0.03 : -0.05, -0.19, -0.05], [sx > 0 ? 0.05 : 0.03, 0.03, 0.11], 0.0035), null, null, null, earPaint).userData.fur = [3, 0.002, 1800];
+    }
     d.ears.push({ g: ep, side: sx, ax: 0, vx: 0, az: 0, vz: 0 });
   }
 
-  // 꼬리
+  // 꼬리 (뿌리가 굵고 끝으로 가늘어지며 흰 끝)
   const tp = new THREE.Group(); tp.position.set(0, 0.07, -0.196); body.add(tp); d.tail = tp;
   if (J) put(tp, new THREE.TorusGeometry(0.055, 0.03, 10, 20, Math.PI * 1.5), [0, 0.06, 0], [0, Math.PI / 2, 0.5], null, tailPaint);
-  else { put(tp, new THREE.CapsuleGeometry(0.02, 0.12, 8, 14), [0, 0.075, 0], null, null, tailPaint); put(tp, sph(), [0, 0.15, 0], null, [0.024, 0.042, 0.024], tailPaint); }
+  else {
+    put(tp, sph(), [0, 0.0, 0], null, [0.03, 0.03, 0.03], tailPaint);
+    put(tp, new THREE.CylinderGeometry(0.015, 0.03, 0.13, 14, 1, true), [0, 0.065, 0], null, null, tailPaint);
+    put(tp, sph(), [0, 0.14, 0], null, [0.02, 0.034, 0.02], tailPaint).userData.fur = [3, 0.0045, 1400];
+  }
 
   // 다리: 앞다리 = 위팔 · 아래팔 · 발허리 (팔꿈치는 뒤로, 손목은 들 때 뒤로 접힘)
   //       뒷다리 = 허벅지 · 정강이 · 뒷발허리 (무릎은 앞으로, 뒤꿈치는 뒤로)
@@ -332,17 +404,18 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   for (const [sx, z, front] of [[1, 0.132, true], [-1, 0.132, true], [1, -0.119, false], [-1, -0.119, false]]) {
     const L1 = (front ? 0.095 : 0.09) * k, L2 = 0.095 * k, L3 = (front ? 0.045 : 0.065) * k;
     const hip = new THREE.Group(); hip.position.set(sx * 0.07, -0.05, z); body.add(hip);
-    put(hip, new THREE.CapsuleGeometry(front ? 0.042 : 0.054, L1 * 0.7, 8, 16), [0, -L1 / 2, 0], null, null, segPaint(L1, front ? 0.7 : 1, front ? 0.1 : 0.85));
+    put(hip, new THREE.CapsuleGeometry((front ? 0.044 : 0.056) * k, L1 * 0.7, 8, 16), [0, -L1 / 2, 0], null, null, segPaint(L1, front ? 0.7 : 1, front ? 0.1 : 0.85));
     const knee = new THREE.Group(); knee.position.set(0, -L1, 0); hip.add(knee);
-    put(knee, new THREE.CapsuleGeometry(front ? 0.035 : 0.038, L2 * 0.75, 8, 16), [0, -L2 / 2, 0], null, null, segPaint(L2, front ? 0.05 : 0.7, 0));
+    put(knee, new THREE.CapsuleGeometry((front ? 0.036 : 0.039) * k, L2 * 0.75, 8, 16), [0, -L2 / 2, 0], null, null, segPaint(L2, front ? 0.05 : 0.7, 0));
     const ank = new THREE.Group(); ank.position.set(0, -L2, 0); knee.add(ank);
-    put(ank, new THREE.CapsuleGeometry(front ? 0.029 : 0.03, L3 * 0.7, 6, 14), [0, -L3 / 2, 0], null, null, whitePaint);
+    put(ank, new THREE.CapsuleGeometry((front ? 0.03 : 0.031) * k, L3 * 0.7, 6, 14), [0, -L3 / 2, 0], null, null, whitePaint);
     const foot = new THREE.Group(); foot.position.set(0, -L3, 0); ank.add(foot);
-    put(foot, sph(), [0, -0.004, 0.016], null, [0.04, 0.026, 0.05], whitePaint);
+    if (J) put(foot, sph(), [0, -0.004, 0.016], null, [0.04, 0.026, 0.05], whitePaint);
+    else put(foot, sdfGeo('bf', footSDF, [-0.05, -0.035, -0.045], [0.05, 0.03, 0.06], 0.003), [0, 0, 0.012], null, null, whitePaint).userData.fur = [2, 0.002, 1900];
     d.legs.push({ sx, front, hip, knee, ank, foot, L1, L2, L3 });
   }
 
-  if (!silhouette) for (const m of furry) { const f = m.userData.fur || (m === d.torso ? [7, 0.0055, 1300] : [3, 0.003, 1600]); if (f[0]) furShells(m, f[0], f[1], f[2]); }
+  if (!silhouette) for (const m of furry) { const f = m.userData.fur || (m === d.torso ? [6, 0.004, 1400] : [3, 0.0025, 1700]); if (f[0]) furShells(m, f[0], f[1], f[2]); }
   d.cur = poseFor('stand', d); d.tgt = poseFor('stand', d);
   Object.assign(d, {
     x: 0, z: 0, yaw: 0, lift: 0, liftT: 0, external: false, phase: 0, gait: 0, walkTarget: null, walkSpeed: 0.5, steer: null,
@@ -414,6 +487,7 @@ function updateDog(d, dt, t, camPos) {
   d.body.position.set(0, c.bodyY + br + bob, c.bodyZ);
   d.body.rotation.set(c.pitch, 0, c.roll);
   d.torso.scale.set(1 + br * 2.5, 1 + br * 2.5, 1);
+  if (d.medal) d.medal.rotation.set(-c.pitch * 0.95 + Math.sin(d.phase * 2) * 0.12 * d.gait + Math.sin(t * 1.3) * 0.03, 0, -c.roll * 0.9 + Math.sin(d.phase) * 0.1 * d.gait);
   d.root.updateMatrixWorld(true);
 
   // 머리 · 시선
