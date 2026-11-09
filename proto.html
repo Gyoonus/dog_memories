@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>핑키 모델 시험</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #2a221d; color: #f3ece1; font-family: system-ui, sans-serif; overflow: hidden; }
+    #c { display: block; width: 100%; height: 100%; }
+    #ui { position: fixed; left: 12px; right: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+    #ui button { font: inherit; font-size: 13px; padding: 7px 11px; border-radius: 999px; border: 1px solid #ffffff33; background: #00000066; color: inherit; cursor: pointer; }
+    #ui button.on { background: #f3b466; color: #2a190d; }
+    #info { position: fixed; left: 12px; top: 10px; font-size: 12px; opacity: .8; white-space: pre; }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info"></div>
+<div id="ui"></div>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+<script type="module" src="proto.js"></script>
+</body>
+</html>
