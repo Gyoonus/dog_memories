@@ -18,7 +18,7 @@ function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; l
 // ================================================================
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ canvas: $('#c'), antialias: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas: $('#c'), antialias: false, powerPreference: 'high-performance' });
 } catch (e) {
   $('#boot').textContent = '이 기기에서는 3D 화면을 열 수 없어요.';
   throw e;
@@ -32,7 +32,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const SPH = new THREE.SphereGeometry(1, 24, 18);
 const LITE = window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency || 8) <= 4;
-const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: LITE ? 0 : 2 }));
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 2 }));
 const renderPass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
 composer.addPass(renderPass);
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.22, 0.55, 0.92);
@@ -457,7 +457,7 @@ function updateDog(d, dt, t, camPos) {
         d.lastD = dist; d.stuckT = 0;
       }
       let gx = d.walkTarget.x, gz = d.walkTarget.z;
-      if (d.detour) { d.detour.t -= dt; if (d.detour.t <= 0 || Math.hypot(d.detour.x - d.x, d.detour.z - d.z) < 0.08) d.detour = null; else { gx = d.detour.x; gz = d.detour.z; } }
+      if (d.detour) { d.detour.t -= dt; if (d.detour.t <= 0 || Math.hypot(d.detour.x - d.x, d.detour.z - d.z) < 0.08) { d.detour = null; d.stuckT = 0; d.lastD = dist; } else { gx = d.detour.x; gz = d.detour.z; } }
       const [sx, sz] = d.steer ? d.steer(d.x, d.z, gx, gz) : [dx / dist, dz / dist];
       const want = Math.atan2(sx, sz), diff = angDiff(d.yaw, want);
       d.yaw += diff * (1 - Math.exp(-5 * dt));
@@ -495,7 +495,8 @@ function updateDog(d, dt, t, camPos) {
   const look = d.lookFn ? d.lookFn() : camPos;
   if (look && c.gaze > 0.01) {
     _v.copy(look); d.body.worldToLocal(_v); _v.sub(d.hp.position);
-    yaw = clamp(Math.atan2(_v.x, _v.z), -1.05, 1.05);
+    const rawYaw = Math.atan2(_v.x, _v.z), behind = ss(1.2, 1.9, Math.abs(rawYaw));
+    yaw = clamp(rawYaw, -1.05, 1.05) * (1 - behind);
     pitch = clamp(Math.atan2(_v.y, Math.hypot(_v.x, _v.z)), -1.0, 1.1);
   }
   d.tilt += (d.tiltT - d.tilt) * (1 - Math.exp(-6 * dt));
@@ -520,7 +521,7 @@ function updateDog(d, dt, t, camPos) {
     }
     if (d.paddle > 0.001) { _paw.y += Math.sin(t * 8 + i * 1.7) * 0.035 * d.paddle; _paw.z += Math.cos(t * 8 + i * 1.7) * 0.03 * d.paddle; }
     _hipS.copy(L.hip.position).applyMatrix4(d.body.matrix);
-    const lean = c.lean[i] + up * (L.front ? 1.5 : 0.9);
+    const lean = c.lean[i] + up * (L.front ? -1.2 : 0.9);
     _dir.set(0, Math.cos(lean), -Math.sin(lean)).lerp(_tmp.copy(_hipS).sub(_paw).normalize(), c.free).normalize();
     _ank.copy(_paw).addScaledVector(_dir, L.L3).applyMatrix4(_m).sub(L.hip.position);
     _paw.applyMatrix4(_m).sub(L.hip.position);
@@ -1073,7 +1074,7 @@ const contact = new THREE.Mesh(new THREE.CircleGeometry(1, 40), new THREE.MeshBa
 }));
 contact.rotation.x = -Math.PI / 2; contact.renderOrder = 1; roomScene.add(contact);
 roomUpd.push(() => {
-  contact.position.set(pinky.x, 0.004 + pinky.lift * 0, pinky.z);
+  contact.position.set(pinky.x, 0.009, pinky.z);
   contact.rotation.z = -pinky.yaw;
   const lying = ['side', 'belly', 'down'].includes(pinky.tgt.name), f = Math.max(0, 1 - pinky.lift * 3);
   contact.scale.set(lying ? 0.3 : 0.2, lying ? 0.36 : 0.32, 1);
@@ -1173,7 +1174,7 @@ function stepKibble(dt) {
     pourAcc += dt * 45;
     while (pourAcc > 1) {
       pourAcc--;
-      const m = new THREE.Mesh(kibbleGeo, kibbleMat); m.castShadow = true; scoop.getWorldPosition(m.position); m.position.y += 0.02; roomScene.add(m);
+      const m = new THREE.Mesh(kibbleGeo, kibbleMat); m.castShadow = false; scoop.getWorldPosition(m.position); m.position.y += 0.02; m.position.x = lerp(m.position.x, BOWL.x, 0.7) + (Math.random() - 0.5) * 0.03; m.position.z = lerp(m.position.z, BOWL.z, 0.7) + (Math.random() - 0.5) * 0.03; roomScene.add(m);
       kibbles.push({ m, v: V3((Math.random() - 0.5) * 0.25, 0.1 + Math.random() * 0.2, (Math.random() - 0.5) * 0.25), t: 0 });
     }
   }
@@ -1310,7 +1311,7 @@ const actionsEl = $('#actions');
 function setActiveBtn(name) { [...actionsEl.querySelectorAll('button')].forEach((b) => b.classList.toggle('on', b.dataset.cmd === name)); }
 function cancelActive() { if (active) { active.cancelled = true; active.cleanups.forEach((f) => f()); active = null; setActiveBtn(null); } }
 function resetTransient(d) {
-  Object.assign(d, { walkTarget: null, walkSpeed: 0.5, chew: false, lick: 0, tongueOut: 0, pant: false, sniff: 0, paddle: 0, lookFn: null, face: 'cam', eyeOpen: 1, tiltT: 0, jawOpen: 0, earPerk: 0, wagAmpT: 0.3, wagSpeedT: 6, liftT: 0 });
+  Object.assign(d, { stuckT: 0, lastD: undefined, detour: null, walkTarget: null, walkSpeed: 0.5, chew: false, lick: 0, tongueOut: 0, pant: false, sniff: 0, paddle: 0, lookFn: null, face: 'cam', eyeOpen: 1, tiltT: 0, jawOpen: 0, earPerk: 0, wagAmpT: 0.3, wagSpeedT: 6, liftT: 0 });
 }
 function releaseHands() { handR.want = null; handL.want = null; treat.visible = false; roomScene.add(treat); scoop.visible = false; pouring = false; }
 function startCommand(name, fn, keepCam = false) {
@@ -1318,13 +1319,13 @@ function startCommand(name, fn, keepCam = false) {
   const tok = { cancelled: false, cleanups: [], name };
   active = tok; setActiveBtn(name); idleT = 5;
   resetTransient(pinky); releaseHands();
-  if (pinky.tgt.name === 'held') setPose(pinky, 'stand', 5);
+  if (pinky.tgt.name === 'held' || pinky.tgt.name === 'eat') setPose(pinky, 'stand', 5);
   if (!keepCam) camHome();
   fn(tok).then(() => { if (active === tok) { active = null; setActiveBtn(null); idleT = 4; } })
-    .catch((e) => { if (e !== CANCEL) console.error(e); });
+    .catch((e) => { if (e === CANCEL) return; console.error(e); if (active === tok) { active = null; setActiveBtn(null); idleT = 4; } });
 }
 async function walkTo(tok, x, z) {
-  pinky.walkTarget = { x, z };
+  Object.assign(pinky, { walkTarget: { x, z }, stuckT: 0, lastD: undefined, detour: null });
   tok.cleanups.push(() => { pinky.walkTarget = null; });
   await until(tok, () => pinky.walkTarget === null);
 }
@@ -1415,7 +1416,6 @@ const CMDS = {
     const p0 = { x: pinky.x, z: pinky.z }, dx = roomCam.position.x - p0.x, dz = roomCam.position.z - p0.z, L = Math.hypot(dx, dz);
     const p1 = { x: p0.x + (dx / L) * 0.33, z: p0.z + (dz / L) * 0.33 };
     camTo(cam.tPos, V3(p1.x, 0.64, p1.z), 2.2);
-    tok.cleanups.push(() => { pinky.x = p0.x; pinky.z = p0.z; });
     await tween(tok, 1.1, (k) => { const e = ease(k); pinky.x = lerp(p0.x, p1.x, e); pinky.z = lerp(p0.z, p1.z, e); });
     happy(true); pinky.pant = false; pinky.tiltT = 0;
     for (let i = 0; i < 3; i++) {
@@ -1452,10 +1452,11 @@ const CMDS = {
     // 쫓아가기
     pinky.walkSpeed = 1.15; pinky.wagAmpT = 0.7;
     tok.cleanups.push(() => { pinky.walkTarget = null; });
-    const reach = 0.3;
+    const reach = 0.26, chaseT0 = clock;
     await until(tok, () => {
       const b = ball.g.position, dx = b.x - pinky.x, dz = b.z - pinky.z, dist = Math.hypot(dx, dz) || 1;
       pinky.walkTarget = dist > reach + 0.03 ? { x: b.x - (dx / dist) * reach, z: b.z - (dz / dist) * reach } : null;
+      if (clock - chaseT0 > 12) { ball.state = 'rest'; ball.g.position.set(pinky.x + Math.sin(pinky.yaw) * reach, ball.r, pinky.z + Math.cos(pinky.yaw) * reach); return true; }
       return ball.state === 'rest' && dist < reach + 0.08;
     });
     pinky.walkTarget = null; pinky.face = { x: ball.g.position.x, z: ball.g.position.z };
@@ -1514,6 +1515,7 @@ const CMDS = {
   async feed(tok) {
     camTo(V3(1.2, 1.18, 2.2), V3(2.0, 0.1, 0.9));
     mound.amount = 0; updateMound();
+    tok.cleanups.push(() => { pouring = false; });
     handR.rig.inner.add(scoop); scoop.position.set(0, -0.075, 0.05); scoop.visible = true; scoopKibble.visible = true;
     let roll = 0;
     const above = () => BOWL.clone().add(V3(-0.04, 0.3, 0.1));
@@ -1524,7 +1526,7 @@ const CMDS = {
     scoopKibble.visible = false; pouring = true;
     say('와르르', () => BOWL.clone().add(V3(0, 0.3, 0)), '', 1.4);
     setPose(pinky, 'stand', 6); pinky.walkSpeed = 0.9; pinky.lookFn = () => BOWL;
-    const going = walkTo(tok, EAT.x, EAT.z);
+    const going = walkTo(tok, EAT.x, EAT.z); going.catch(() => {});
     await wait(tok, 1.0); pouring = false;
     await tween(tok, 0.4, (k) => { roll = -1.9 * (1 - ease(k)); });
     handR.want = null;
@@ -1590,7 +1592,7 @@ async function roam(tok) {
       pinky.face = { x: SPOTS.window.fx, z: SPOTS.window.fz }; await wait(tok, 0.6);
       setPose(pinky, 'sit', 5); pinky.lookFn = () => V3(-4.6, 1.0, -0.6);
       await wait(tok, 3 + Math.random() * 2);
-      say('눈 온다…', headTop, 'soft', 1.9); await wait(tok, 2.2);
+      say('단풍 예쁘다…', headTop, 'soft', 1.9); await wait(tok, 2.2);
       pinky.lookFn = null; setPose(pinky, 'stand', 5); await wait(tok, 0.5);
     },
     async () => { pinky.walkSpeed = 0.4; await sniffAt(tok, SPOTS.table, '뭐 떨어진 거 없나'); },
@@ -1638,7 +1640,8 @@ function setTouchHit(hit) {
 function stepTouch(dt) {
   if (!touch.active) return;
   const hit = pickPinky(touch.x, touch.y);
-  if (hit) { setTouchHit(hit); touch.moved += touch.pt.distanceTo(touch.last); touch.last.copy(touch.pt); }
+  if (hit) { touch.miss = 0; setTouchHit(hit); touch.moved += touch.pt.distanceTo(touch.last); touch.last.copy(touch.pt); }
+  else if (++touch.miss > 45) { touch.active = false; return; }
   touch.heartT -= dt;
   if (touch.moved > 0.12 || touch.heartT <= 0) { touch.moved = 0; touch.heartT = 1.1; heart(); }
 }
@@ -1646,8 +1649,11 @@ function stepTouch(dt) {
 // ================================================================
 // 방 들어가기 · 매 프레임
 // ================================================================
+let greetTimer = 0;
 function resetRoom() {
-  cancelActive(); clearBubbles(); hideHandsNow();
+  cancelActive(); clearBubbles(); releaseHands(); hideHandsNow(); drag = null; touch.active = false;
+  for (const k of kibbles) roomScene.remove(k.m); kibbles.length = 0; for (const c of crumbs) roomScene.remove(c.m); crumbs.length = 0;
+  $('#hint').classList.remove('gone');
   Object.assign(pinky, { x: HOME.x, z: HOME.z, yaw: 0, lift: 0 });
   resetTransient(pinky);
   setPose(pinky, 'stand', 50);
@@ -1660,7 +1666,7 @@ function resetRoom() {
   look.y = look.ty = look.p = look.tp = 0;
   idleT = 6;
   pinky.wagAmpT = 0.7; pinky.wagSpeedT = 15; pinky.earPerk = 0.6;
-  setTimeout(() => { if (!active) { pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6; pinky.earPerk = 0; } }, 2600);
+  clearTimeout(greetTimer); greetTimer = setTimeout(() => { if (!active) { pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6; pinky.earPerk = 0; } }, 2600);
 }
 function updateRoom(dt, t) {
   const k = 1 - Math.exp(-cam.rate * dt);
@@ -1674,7 +1680,7 @@ function updateRoom(dt, t) {
   roomCam.updateMatrixWorld(true);
   roomUpd.forEach((f) => f(t, dt));
   stepTouch(dt);
-  if (!active) { idleT -= dt; if (idleT <= 0) startCommand('roam', roam, true); }
+  if (!active && !transitioning) { idleT -= dt; if (idleT <= 0) startCommand('roam', roam, true); }
   updateDog(pinky, dt, t, roomCam.position);
   updateHand(handR, 1, dt); updateHand(handL, -1, dt);
   stepCrumbs(dt); stepKibble(dt); stepBall(dt);
@@ -1685,16 +1691,19 @@ function updateRoom(dt, t) {
 // ================================================================
 let mode = 'select';
 const fadeEl = $('#fade');
+let transitioning = false;
 function fade(mid) {
-  fadeEl.classList.add('on');
-  setTimeout(() => { mid(); requestAnimationFrame(() => requestAnimationFrame(() => fadeEl.classList.remove('on'))); }, reduceMotion ? 0 : 560);
+  if (transitioning) return;
+  transitioning = true; fadeEl.classList.add('on');
+  setTimeout(() => { mid(); requestAnimationFrame(() => requestAnimationFrame(() => { fadeEl.classList.remove('on'); transitioning = false; })); }, reduceMotion ? 0 : 560);
 }
 function goRoom() {
   fade(() => { mode = 'room'; $('#selectUI').hidden = true; $('#roomUI').hidden = false; resetRoom(); $('#backBtn').focus({ preventScroll: true }); });
 }
 function goSelect() {
-  cancelActive(); clearBubbles(); touch.active = false;
-  fade(() => { mode = 'select'; hideHandsNow(); $('#roomUI').hidden = true; $('#selectUI').hidden = false; });
+  if (transitioning) return;
+  cancelActive(); clearBubbles(); releaseHands(); touch.active = false; drag = null; idleT = Infinity;
+  fade(() => { mode = 'select'; clearBubbles(); hideHandsNow(); drag = null; $('#roomUI').hidden = true; $('#selectUI').hidden = false; });
 }
 $('#backBtn').addEventListener('click', goSelect);
 
@@ -1703,12 +1712,14 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.ad
 
 const canvas = $('#c');
 let drag = null;
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('pointerdown', (e) => {
+  if (!e.isPrimary || e.button !== 0 || transitioning) return;
   canvas.setPointerCapture(e.pointerId);
   if (mode === 'room') {
     const hit = pickPinky(e.clientX, e.clientY);
     if (hit) {
-      Object.assign(touch, { active: true, x: e.clientX, y: e.clientY, moved: 0, heartT: 0.4 });
+      Object.assign(touch, { active: true, x: e.clientX, y: e.clientY, moved: 0, heartT: 0.4, miss: 0 });
       setTouchHit(hit); touch.last.copy(touch.pt);
       $('#hint').classList.add('gone');
       startCommand('touch', CMDS.touch);
@@ -1718,6 +1729,7 @@ canvas.addEventListener('pointerdown', (e) => {
   drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: 0 };
 });
 canvas.addEventListener('pointermove', (e) => {
+  if (!e.isPrimary) return;
   if (touch.active) { touch.x = e.clientX; touch.y = e.clientY; return; }
   if (!drag) return;
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
@@ -1729,7 +1741,8 @@ canvas.addEventListener('pointermove', (e) => {
   }
 });
 canvas.addEventListener('pointerup', (e) => {
-  if (touch.active) { touch.active = false; return; }
+  if (!e.isPrimary) return;
+  if (touch.active) { touch.active = false; drag = null; return; }
   if (!drag) return;
   const dx = e.clientX - drag.x0, moved = drag.moved; drag = null;
   if (mode !== 'select') return;
@@ -1740,7 +1753,7 @@ canvas.addEventListener('pointerup', (e) => {
   const hit = ray.intersectObjects(ring.children, true).find((h) => h.object.userData.idx !== undefined);
   if (!hit) return;
   const i = hit.object.userData.idx;
-  if (i === sel) { if (DOGS[i].ready) goRoom(); else toast(`${DOGS[i].name}의 ${DOGS[i].place === '장소 정하는 중' ? '추억 장소' : DOGS[i].place}는 준비 중이에요`); }
+  if (i === sel) { if (DOGS[i].ready) goRoom(); else { const pl = DOGS[i].place === '장소 정하는 중' ? '추억 장소' : DOGS[i].place, jong = (pl.charCodeAt(pl.length - 1) - 0xac00) % 28; toast(`${DOGS[i].name}의 ${pl}${jong ? '은' : '는'} 준비 중이에요`); } }
   else select(i);
 });
 canvas.addEventListener('pointercancel', () => { drag = null; touch.active = false; });
@@ -1754,10 +1767,11 @@ window.addEventListener('keydown', (e) => {
 function resize() {
   const w = innerWidth, h = innerHeight, a = w / h;
   renderer.setSize(w, h, false);
-  composer.setPixelRatio(Math.min(window.devicePixelRatio, LITE ? 1.5 : 2)); composer.setSize(w, h);
+  const pr = Math.min(window.devicePixelRatio, LITE ? 1.5 : 2); renderer.setPixelRatio(pr); composer.setPixelRatio(pr); composer.setSize(w, h);
   selCam.aspect = a; selCam.fov = a < 0.8 ? 48 : 38; selCam.updateProjectionMatrix();
   selCam.position.set(0, 1.25, a < 0.8 ? 6.0 : 5.2); selCam.lookAt(0, a < 0.8 ? 0.42 : 0.36, RING_R - 0.1);
   roomCam.aspect = a; roomCam.fov = a < 0.8 ? 64 : 50; roomCam.updateProjectionMatrix();
+  CAM_POS.set(0, a < 0.8 ? 1.42 : 1.22, a < 0.8 ? 3.65 : 3.0);
 }
 window.addEventListener('resize', resize); resize();
 
