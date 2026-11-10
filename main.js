@@ -4,7 +4,7 @@ import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from './vendor/jsm/postprocessing/ShaderPass.js';
-import { sound } from './sound.js?v=14';
+import { sound } from './sound.js?v=15';
 
 const $ = (s) => document.querySelector(s);
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -3120,7 +3120,7 @@ let toyIdle = 50 + Math.random() * 30;
 roomUpd.push((t, dt) => {
   if (!active || active.name !== 'roam' || active.toy || pinky.J) return;
   toyIdle -= dt; if (toyIdle > 0) return;
-  if (pinky.tgt.name !== 'stand' || pinky.walkTarget || cushGo || pickerFor || touch.active || !rope.state.asleep) { toyIdle = 3; return; }
+  if (pinky.tgt.name !== 'stand' || pinky.walkTarget || cushGo || pickerFor || touch.active || !rope.state.asleep || Math.hypot(pinky.x - CUSH.x, pinky.z - CUSH.z) < 0.6) { toyIdle = 3; return; } // 방석에서 기지개 켜고 내려온 뒤에
   toyIdle = 110 + Math.random() * 80;
   startCommand('roam', (tok) => { tok.toy = true; return bringToy(tok); }, true);
 });
@@ -3286,7 +3286,7 @@ function placePicker() {
   else { s.width = ''; const w = pickerEl.offsetWidth, x = clamp(r.left + r.width / 2 - w / 2, 12, innerWidth - w - 12); s.left = x + 'px'; s.bottom = innerHeight - bar.top + 10 + 'px'; }
   pickerEl.style.setProperty('--caret', r.left + r.width / 2 - pickerEl.getBoundingClientRect().left + 'px');
 }
-const pickerIdle = () => (!active || active.name === 'roam') && pinky.tgt.name !== 'curl';
+const pickerIdle = () => (!active || (active.name === 'roam' && !active.toy)) && pinky.tgt.name !== 'curl'; // 로프를 물고 오는 중에는 표정을 건드리지 않는다
 let pickerPerk = false; // 고르는 걸 쳐다보느라 귀를 세웠는지 (닫을 때 꼭 되돌린다 — 그사이 방석에 누웠어도)
 function openPicker(btn, focus) {
   closePicker();
@@ -3369,7 +3369,7 @@ function resetRoom() {
   for (const k of kibbles) roomScene.remove(k.m); kibbles.length = 0; for (const c of crumbs) roomScene.remove(c.m); crumbs.length = 0;
   $('#hint').classList.remove('gone');
   Object.assign(pinky, { x: HOME.x, z: HOME.z, yaw: 0, lift: 0 });
-  resetTransient(pinky); Object.assign(pinky, { sigh: 0, curlK: 0, curlS: 0, napEnd: 0, tailWrap: false, tailW: 0 }); for (const L of pinky.legs) L.hip.rotation.y = 0; cushGo = false;
+  resetTransient(pinky); Object.assign(pinky, { sigh: 0, curlK: 0, curlS: 0, napEnd: 0, tailWrap: false, tailW: 0 }); toy.fk = 0; faceFill.intensity = 0; // 간식 먹다 나갔다 와도 얼굴 불빛이 남지 않게 for (const L of pinky.legs) L.hip.rotation.y = 0; cushGo = false;
   setPose(pinky, 'stand', 50);
   const st = poseFor('stand', pinky);
   for (const k of POSE_KEYS) pinky.cur[k] = st[k];
