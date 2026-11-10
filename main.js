@@ -2661,13 +2661,13 @@ async function roam(tok) {
 // ================================================================
 // 정면 앉기: 보는 사람과 마주 앉으면 앞다리를 가슴 밑에 가지런히 모으고, 뒷발이 앞발 양옆으로 보이게 벌린다.
 // 옆·비스듬히 보일 때는 원래 앉기 그대로 (보이는 각도에 따라 부드럽게 섞인다)
-const SIT_F = { splay: 0.36, paws: [P(0.056, 0.03, 0.172), P(-0.056, 0.03, 0.172), P(0.116, 0.03, 0.06), P(-0.116, 0.03, 0.06)] };
+const SIT_F = { splay: 0.36, tailCurl: 2.0, paws: [P(0.056, 0.03, 0.172), P(-0.056, 0.03, 0.172), P(0.116, 0.03, 0.06), P(-0.116, 0.03, 0.06)] };
 function sitShape(d) {
   if (d.J || d.tgt.name !== 'sit') return;
   if (active && active.name === 'roam' && d.face === 'cam') d.tgt.yawOff = 0; // 혼자 놀다 와서 쳐다볼 때도 마주 보고 앉는다
   const c = roomCam.position, a = Math.abs(angDiff(d.yaw, Math.atan2(c.x - d.x, c.z - d.z))), f = ss(0.6, 0.28, a), b = POSES.sit;
   for (let i = 0; i < 4; i++) d.tgt.paws[i].lerpVectors(b.paws[i], SIT_F.paws[i], f);
-  d.tgt.splay = lerp(b.splay, SIT_F.splay, f);
+  d.tgt.splay = lerp(b.splay, SIT_F.splay, f); d.tgt.tailCurl = lerp(b.tailCurl, SIT_F.tailCurl, f); // 꼬리는 엉덩이를 감아 옆으로 끝이 보인다
 }
 roomUpd.push(() => sitShape(pinky));
 const camYaw = () => Math.atan2(roomCam.position.x - pinky.x, roomCam.position.z - pinky.z);
@@ -2728,7 +2728,7 @@ async function ropePlay(tok) {
   const ph = phoneK(), run = ropeRuns++;
   toy.tok = tok; tok.cleanups.push(() => { toyOff(); pinky.walkTarget = null; });
   const mouth = () => pinky.jaw.localToWorld(V3(0, -0.012, 0.088));
-  const pullDir = () => { const d = toCamDir(), c = Math.cos(0.7), sn = Math.sin(0.7); return V3(d.x * c + d.z * sn, 0, d.z * c - d.x * sn); }; // 내 손은 화면 오른쪽 앞에서 당긴다 (줄이 화면에 길게 보이게)
+  const pullA = ph > 1 ? 0.36 : 0.7, pullDir = () => { const d = toCamDir(), c = Math.cos(pullA), sn = Math.sin(pullA); return V3(d.x * c + d.z * sn, 0, d.z * c - d.x * sn); }; // 내 손은 화면 오른쪽 앞에서 당긴다 (줄이 화면에 길게 보이게)
   const kickA = (v) => { for (let i = 0; i < rope.NP; i++) rope.kick(v, 'A' + i); };
   const slide = (dur, dir, dist, fn) => { const p0 = { x: pinky.x, z: pinky.z }; return tween(tok, dur, (q) => { const e = ease(q); pinky.x = p0.x + dir.x * dist * e; pinky.z = p0.z + dir.z * dist * e; if (fn) fn(e); }); };
   setPose(pinky, 'stand', 6); pinky.face = 'cam';
@@ -2757,7 +2757,7 @@ async function ropePlay(tok) {
   await wait(tok, 0.4);
   pinky.walkSpeed = 0.9; await walkTo(tok, HOME.x, HOME.z); pinky.walkSpeed = 0.5;
   pinky.face = 'cam'; setPose(pinky, 'stand', 6); pinky.tgt.yawOff = 0;
-  { const [p, a] = kneelAt(1.2 * ph, 0.66, 0.2); camTo(p, a); }
+  { const [p, a] = kneelAt(1.2 * ph, 0.66, 0.2); camTo(p, a.addScaledVector(pullDir(), ph > 1 ? 0.08 : 0.14)); } // 핑키와 내 손이 함께 보이게
   await wait(tok, 0.6);
   // 고개를 휙 쳐서 남은 줄을 내 쪽으로 던져 준다
   toy.shake = 1; kickA(pullDir().multiplyScalar(1.6).add(V3(0, 1.3, 0))); say('으응!', headTop, 'small', 1);
@@ -2850,7 +2850,7 @@ async function ropePlay(tok) {
 async function yogurtTreat(tok) {
   const ph = phoneK();
   toy.tok = tok; tok.cleanups.push(() => { toyOff(); yogurt.reset(); yogurtDab.set(0); });
-  { const [p, a] = kneelFor(HOME, 1.0 * ph, 0.64, 0.3); camTo(p, a); }
+  { const [p, a] = kneelFor(HOME, 1.0 * ph, 0.64, 0.34); camTo(p, a); }
   yogurt.reset(); yogurtDab.set(0);
   handR.rig.inner.add(yogurt.g); yogurt.g.position.set(0, -0.016, 0.03); yogurt.g.visible = true;
   let tilt = 0; const setTilt = (a) => { tilt = a; yogurt.g.rotation.set(-a, 0, Math.PI); }; setTilt(0); // 손바닥 위에 세운 컵 · 입구를 핑키 쪽으로 기울인다
