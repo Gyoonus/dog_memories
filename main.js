@@ -747,7 +747,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   return d;
 }
 
-const COLLAR_C = [0.075, 0.135], COLLAR_AX = [0.62, 0.785], COLLAR_FOLLOW = 0.3; // 비글 목줄 고리 중심(y, z) · 고리 면의 법선(y, z) · 목이 굽을 때 고리 면이 따라 도는 비율
+const COLLAR_C = [0.095, 0.155], COLLAR_AX = [0.72, 0.69], COLLAR_FOLLOW = 0.3; // 비글 목줄 고리 중심(y, z) · 고리 면의 법선(y, z) · 목이 굽을 때 고리 면이 따라 도는 비율
 const NECK_P = [0.07, 0.15], NECK_W = [-0.03, 0.07, 0.04, 0.13]; // 목 관절 축(y, z) · 가중치 구간(목 축 방향, z)
 const WALK_OFF = [0.75, 0.25, 0, 0.5], WALK_DUTY = 0.65, WALK_S = 0.068; // 다리별 박자(앞+, 앞-, 뒤+, 뒤-) · 딛는 비율 · 보폭 절반
 const _zAx = V3(0, 0, 1);
