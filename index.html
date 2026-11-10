@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" />
-  <link rel="stylesheet" href="style.css?v=9" />
+  <link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
 <div id="stage"><canvas id="c" aria-label="강아지와 추억의 장소 3D 화면"></canvas></div>
@@ -34,6 +34,7 @@
 </section>
 
 <section id="roomUI" class="ui" aria-label="추억의 장소" hidden>
+  <div id="pickBack" hidden></div>
   <header class="room-head">
     <button id="backBtn" class="back glass" type="button">‹ 친구들</button>
     <div class="title"><span class="name">핑키</span><span class="place">푸맘네 집 · 이태원동</span></div>
@@ -42,8 +43,8 @@
     <p class="hint" id="hint">핑키를 만지면 좋아해요 · 화면을 끌어서 둘러보기</p>
     <nav class="actions glass" id="actions" aria-label="핑키랑 하기">
       <button type="button" data-cmd="pet"><span class="ic" aria-hidden="true">✋</span>쓰다듬기</button>
-      <button type="button" data-cmd="play"><span class="ic" aria-hidden="true">🎾</span>놀아주기</button>
-      <button type="button" data-cmd="treat"><span class="ic" aria-hidden="true">🦴</span>간식</button>
+      <button type="button" data-cmd="play" data-menu="play" aria-haspopup="menu" aria-expanded="false"><span class="ic" aria-hidden="true">🎾</span>놀아주기</button>
+      <button type="button" data-cmd="treat" data-menu="treat" aria-haspopup="menu" aria-expanded="false"><span class="ic" aria-hidden="true">🦴</span>간식</button>
       <button type="button" data-cmd="feed"><span class="ic" aria-hidden="true">🍚</span>밥 주기</button>
       <button type="button" data-cmd="hug"><span class="ic" aria-hidden="true">🤗</span>안기</button>
       <button type="button" data-cmd="sit"><span class="ic" aria-hidden="true">🐾</span>앉아</button>
@@ -53,6 +54,7 @@
       <button type="button" data-cmd="cushion"><span class="ic" aria-hidden="true">🍩</span>방석</button>
     </nav>
   </div>
+  <div id="picker" class="picker glass" role="menu" hidden></div>
 </section>
 
 <div id="toast" class="glass" role="status"></div>
@@ -60,6 +62,6 @@
 <div id="boot">불을 켜는 중…</div>
 
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
-<script type="module" src="main.js?v=9"></script>
+<script type="module" src="main.js?v=10"></script>
 </body>
 </html>
