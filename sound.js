@@ -471,7 +471,7 @@ function play(name, o = {}) {
 }
 const later = (delay, fn, tag) => { queue.push({ at: T + delay, fn, tag }); };
 /** 하다 만 소리 묶음(엄마다! · 찾았다)의 남은 소리를 거둔다 — 명령이 끊기면 뒤따르던 소리도 나지 않게 */
-function cancelPhrase(tag) { for (let i = queue.length - 1; i >= 0; i--) if (queue[i].tag === tag) queue.splice(i, 1); }
+function cancelPhrase(tag) { for (let i = queue.length - 1; i >= 0; i--) if (queue[i].tag === tag) queue.splice(i, 1); if (tag === 'found' && st) st.foundBig = -9; }
 /** 이어지는 소리(쏟아지는 사료 등)를 멈춘다. 짧은 소리는 끝까지 울리게 둔다 */
 function stopAll(fadeMs = 80, everything = false) {
   for (const v of voices) if (everything || v.loop) fadeOut(v, fadeMs);
@@ -514,7 +514,7 @@ function phrase(name, o = {}) {
     if (st) { st.sniffFast = T + 0.8; st.sniffRest = 0; st.foundT = T; }
     later(0.8, () => play('gasp_alert', { force: 1, why: 'found' }), 'found');
     later(1.1, () => play('treat_take', { force: 1, why: 'found' }), 'found');
-    later(1.25, () => { play('crunch_big', { force: 1, why: 'found' }); if (st) { st.foundT = T; st.gulpAfter = true; } }, 'found');
+    later(1.25, () => { if (st) { st.foundT = T; st.foundBig = T; st.gulpAfter = true; } }, 'found'); // 와작은 물고 고개를 든 뒤 실제로 씹기 시작할 때 (첫 턱 닫힘)
   } else if (name === 'beg') { voice('whine', { force: 1, vlo: 2, vhi: 4, why: 'beg' }); later(1.0, () => voice('whine', { force: 1, vlo: 0, vhi: 2, gain: -3, why: 'beg' })); }
 }
 
@@ -620,7 +620,7 @@ function update(dt, t, s) {
     const kind = chewKind !== 'auto' ? chewKind : s.pose === 'eat' && nearBowl(s) ? 'kibble' : T - (st.softT ?? -9) < 3 ? 'soft' : 'treat';
     if (!p.chew) {
       st.chewN = 0; st.chewI = 0; st.skipAt = 6 + Math.floor(Math.random() * 4);
-      st.bigFirst = s.pose === 'eat' && kind !== 'kibble' && T - (st.foundT ?? -9) > 2.5; // 바닥에서 주운 간식: 첫입은 와작
+      st.bigFirst = (kind !== 'kibble' && T - (st.foundBig ?? -9) < 3.5) || (s.pose === 'eat' && kind !== 'kibble' && T - (st.foundT ?? -9) > 2.5); st.foundBig = -9; // 바닥에서 주운 간식: 첫입은 와작
       if (kind !== 'kibble' && T - (st.foundT ?? -9) > 2.5) play('treat_take', { why: 'chew on' });
     }
     if (wrap(CHEW_W, Math.PI / 2)) {

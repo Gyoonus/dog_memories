@@ -3719,7 +3719,7 @@ async function ballCheeky(tok, mood) {
     pinky.tgt.yawOff = 0; await wait(tok, 0.5);
     setPose(pinky, 'bow', 5); pinky.tgt.headPitch = -0.25; pinky.wagAmpT = 0.95; pinky.wagSpeedT = 19; say('내 꺼야!', headTop, '', 1.4);
     await wait(tok, 1.0);
-    handR.want = { pos: () => ball.g.getWorldPosition(V3()).addScaledVector(toCamDir(), 0.22).add(V3(0, 0.06, 0)), up: () => V3(0, -1, 0), curl: 0.25, rate: 3.2 };
+    handR.want = { pos: () => { const b = ball.g.getWorldPosition(V3()).addScaledVector(toCamDir(), 0.22).add(V3(0, 0.06, 0)), c = roomCam.position, d = b.sub(c), L = d.length(); return c.clone().addScaledVector(d, Math.min(1, 0.72 / L)); }, up: () => V3(0, -1, 0), curl: 0.25, rate: 3.2 }; // 멀리 있으면 팔이 닿는 데까지만 (소매가 방 한가운데 떠 보이지 않게)
     await wait(tok, 0.9);
     const s = pinky.x > 0.1 ? -1 : 1, p2 = { x: p1.x + camRight().x * s * 0.62, z: p1.z + camRight().z * s * 0.62 }; collide(p2);
     setPose(pinky, 'stand', 8); pinky.walkSpeed = 1.05; pinky.earPerk = -0.4; await walkTo(tok, p2.x, p2.z); pinky.walkSpeed = 0.5; handR.want = null; // 쏙 피한다
