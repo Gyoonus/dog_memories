@@ -1387,7 +1387,7 @@ function buildRoom(S) {
 
   // 핑키 방석 (도넛방석 · 핑키의 애착 공간): 보송보송한 긴 털 인조 모피. 모양은 cushSDF, 털은 여러 겹의 셸
   {
-    const cg = sdfGeo('cush', cushSDF, [-0.55, -0.0125, -0.55], [0.55, 0.25, 0.55], 0.0125);
+    const ch = LITE ? 0.018 : 0.014, cg = sdfGeo('cush', cushSDF, [-0.55, -ch, -0.55], [0.55, 0.25, 0.55], ch); // 폰에서는 성기게(털 겹 수도 적게)
     const pos = cg.attributes.position, nor = cg.attributes.normal, col = new Float32Array(pos.count * 3), furA = new Float32Array(pos.count);
     const cCream = new THREE.Color(0xf4ebdb), cDeep = new THREE.Color(0xc8b193), cPress = new THREE.Color(0xe2d3bb), cBase = new THREE.Color(0xb7a48a), cc = new THREE.Color();
     for (let i = 0; i < pos.count; i++) {
