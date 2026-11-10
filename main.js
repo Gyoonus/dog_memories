@@ -570,7 +570,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   d.torso = put(body, sdfGeo(J ? 'jb' : 'bb', bodySDF(J), J ? [-0.17, -0.17, -0.3] : [-0.15, -0.17, -0.27], J ? [0.17, 0.2, 0.33] : [0.15, 0.25, 0.3], 0.006, 2), null, null, null, bodyPaint);
   if (J) d.torso.userData.fur = [2, 0.002, 1600];
   if (!silhouette && C.collar) {
-    const sdfB = bodySDF(J), ring = J ? collarRing(sdfB, V3(0, 0.068, 0.148), V3(0, 0.72, 0.69).normalize(), 0.011) : collarRing(sdfB, V3(0, 0.075, 0.135), V3(0, 0.62, 0.785).normalize(), 0.011); // 목 밑동(턱에서 손 한 뼘 아래), 가는 띠가 가슴 위로 V자로 늘어진다
+    const sdfB = bodySDF(J), ring = J ? collarRing(sdfB, V3(0, 0.068, 0.148), V3(0, 0.72, 0.69).normalize(), 0.011) : collarRing(sdfB, V3(0, COLLAR_C[0], COLLAR_C[1]), V3(0, COLLAR_AX[0], COLLAR_AX[1]).normalize(), 0.011); // 목 밑동(턱에서 손 한 뼘 아래), 가는 띠가 가슴 위로 V자로 늘어진다
     if (C.collar === 'ribbon') {
       // 빨강·흰·남색 줄무늬 리본(바랜 색): 몸 표면을 따라가는 얇은 띠
       const ribbonTex = canvasTex(8, 64, (x, w, h) => {
@@ -604,7 +604,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
     rigFollow(R, hp.position);
     if (d.collarRing) {
       // 리본·메달: 정점을 따로 굽히지 않고(고리가 찢어지듯 늘어난다) 굽은 몸 표면에 고리를 통째로 다시 두른다. 메달이 가슴에 눕는 판정도 굽은 몸으로 한다
-      const sdf0 = d.medalSDF || bodySDF(false), ring = d.collarRing, cc = V3(0, 0.075, 0.135), ax = V3(0, 0.62, 0.785).normalize(), wc = nw(0, cc.y, cc.z);
+      const sdf0 = d.medalSDF || bodySDF(false), ring = d.collarRing, cc = V3(0, COLLAR_C[0], COLLAR_C[1]), ax = V3(0, COLLAR_AX[0], COLLAR_AX[1]).normalize(), wc = nw(0, cc.y, cc.z);
       const bent = (x, y, z) => {
         const th = R.theta; if (!th) return sdf0(x, y, z);
         let py = y, pz = z;
@@ -617,7 +617,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
         if (Math.abs(R.theta - last) < 0.002) return;
         last = R.theta;
         const a = last * wc, c = Math.cos(a), s = Math.sin(a), ry = cc.y - NP.y, rz = cc.z - NP.z;
-        const a2 = a * 0.3, c2 = Math.cos(a2), s2 = Math.sin(a2); // 고리 면은 조금만 따라 돈다 (많이 돌면 리본이 가슴 아래까지 늘어진다)
+        const a2 = a * COLLAR_FOLLOW, c2 = Math.cos(a2), s2 = Math.sin(a2); // 고리 면은 조금만 따라 돈다 (많이 돌면 리본이 가슴 아래까지 늘어진다)
         ring.refit(bent, NP.y + ry * c - rz * s, NP.z + ry * s + rz * c, ax.y * c2 - ax.z * s2, ax.y * s2 + ax.z * c2);
         if (d.medal) d.medal.position.copy(ring.front);
       };
@@ -747,6 +747,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   return d;
 }
 
+const COLLAR_C = [0.075, 0.135], COLLAR_AX = [0.62, 0.785], COLLAR_FOLLOW = 0.3; // 비글 목줄 고리 중심(y, z) · 고리 면의 법선(y, z) · 목이 굽을 때 고리 면이 따라 도는 비율
 const NECK_P = [0.07, 0.15], NECK_W = [-0.03, 0.07, 0.04, 0.13]; // 목 관절 축(y, z) · 가중치 구간(목 축 방향, z)
 const WALK_OFF = [0.75, 0.25, 0, 0.5], WALK_DUTY = 0.65, WALK_S = 0.068; // 다리별 박자(앞+, 앞-, 뒤+, 뒤-) · 딛는 비율 · 보폭 절반
 const _zAx = V3(0, 0, 1);
