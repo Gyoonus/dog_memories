@@ -94,25 +94,26 @@ const P = (x, y, z) => V3(x, y, z);
 //   척추: 갈비 구간은 한 덩어리, 목뿌리(neck)와 허리(lumbar: 양수 = 골반이 밑으로 말림)에서 굽는다. abd: 다리별 벌림각(양수 = 바깥으로) · bendY: 허리가 옆으로 휘는 각
 const POSES = {
   stand: { bodyY: 0.3, bodyZ: 0, pitch: 0, roll: 0, yawOff: -0.5, gaze: 1, headPitch: 0.12, headTilt: 0, tail: -1.8, level: 1, free: 0,
-    lean: [0.2, 0.2, 0.25, 0.25], paws: [P(0.066, 0.03, 0.195), P(-0.066, 0.03, 0.195), P(0.072, 0.03, -0.19), P(-0.072, 0.03, -0.19)] }, // 팔꿈치 ~135°·아래팔 수직·앞발은 팔꿈치(기갑) 아래, 무릎 ~135°·뒷발허리는 거의 수직·뒷발은 엉덩이 조금 뒤
+    lean: [0.2, 0.2, 0.18, 0.18], paws: [P(0.066, 0.03, 0.195), P(-0.066, 0.03, 0.195), P(0.072, 0.03, -0.176), P(-0.072, 0.03, -0.176)] }, // 팔꿈치 ~135°·아래팔 수직·앞발은 팔꿈치(기갑) 아래, 무릎 ~135°·뒷발허리는 거의 수직·뒷발은 엉덩이 조금 뒤
   // 앉기: 가슴(갈비)은 30°쯤만 서고, 허리가 굽어 골반이 밑으로 말려 엉덩이·비절·뒷발허리가 바닥에 닿는다. 앞다리는 거의 곧게 수직, 무릎은 앞 위로 접혀 가슴 옆에, 뒷발은 앞발 바로 뒤에서 앞을 본다
-  sit: { bodyY: 0.19, bodyZ: -0.02, pitch: -0.55, roll: 0, yawOff: -0.6, gaze: 1, headPitch: 0, headTilt: 0, tail: -0.5, level: 1, free: 0, splay: 0.3, neck: 0.4, lumbar: 0.55,
-    lean: [0.05, 0.05, 1.45, 1.45], paws: [P(0.07, 0.03, 0.17), P(-0.07, 0.03, 0.17), P(0.09, 0.03, 0.03), P(-0.09, 0.03, 0.03)] },
+  sit: { bodyY: 0.19, bodyZ: -0.02, pitch: -0.55, roll: 0, yawOff: -0.6, gaze: 1, headPitch: 0, headTilt: 0, tail: -0.5, level: 1, free: 0, splay: 0.3, neck: 0.4, lumbar: 0.55, tailCurl: 1.25,
+    lean: [0.05, 0.05, 1.45, 1.45], paws: [P(0.075, 0.03, 0.17), P(-0.075, 0.03, 0.17), P(0.09, 0.03, 0.02), P(-0.09, 0.03, 0.02)] },
   // 엎드리기(스핑크스): 위팔이 가슴 옆으로 접혀 팔꿈치가 기갑 아래 바닥에 놓이고 아래팔은 앞으로 납작하게. 뒷다리는 Z자로 접혀 무릎은 옆구리 옆 낮게, 비절은 엉덩이 옆 바닥, 뒷발은 옆구리 옆에서 앞을 본다
   down: { bodyY: 0.145, bodyZ: -0.02, pitch: 0.02, roll: 0, yawOff: -0.7, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.75, level: 1, free: 0, splay: 0.2,
-    lean: [1.5, 1.5, 1.5, 1.5], paws: [P(0.068, 0.03, 0.33), P(-0.068, 0.03, 0.33), P(0.095, 0.03, -0.11), P(-0.095, 0.03, -0.11)] },
+    lean: [1.5, 1.5, 1.5, 1.5], paws: [P(0.068, 0.03, 0.33), P(-0.068, 0.03, 0.33), P(0.1, 0.03, -0.085), P(-0.1, 0.03, -0.085)] },
   // 옆으로 눕기: 다리는 느슨하게 반쯤 펴고(팔꿈치 ~115°, 무릎 ~105°) 손목은 살짝 접혀 늘어지며, 위쪽 다리는 아래쪽 다리 위로 처진다
-  side: { bodyY: 0.12, bodyZ: 0, pitch: 0, roll: 1.5, yawOff: -1.15, gaze: 0.6, headPitch: 0.15, headTilt: 0.2, tail: -1.5, level: 0, free: 0, neck: 0.15, lumbar: 0.15,
-    lean: [-0.5, -0.5, 0.5, 0.5], abd: [-0.35, 0, -0.35, 0], paws: [P(0.249, 0.15, 0.214), P(0.237, 0.055, 0.269), P(0.235, 0.166, -0.191), P(0.231, 0.041, -0.141)] }, // 위쪽 다리는 아래쪽 다리보다 발 하나만큼 뒤에 놓인다
+  side: { bodyY: 0.12, bodyZ: 0, pitch: 0, roll: 1.5, yawOff: -1.15, gaze: 0.6, headPitch: 0.15, headTilt: 0.2, tail: -1.5, level: 0, free: 0, neck: 0.15, lumbar: 0.15, bendY: 0.1, tailCurl: 0.35,
+    lean: [-0.5, -0.5, 0.3, 0.3], abd: [-0.48, 0.12, -0.5, 0.02], paws: [P(0.249, 0.15, 0.2), P(0.237, 0.055, 0.275), P(0.25, 0.166, -0.215), P(0.25, 0.041, -0.14)] }, // 위쪽 다리는 아래쪽 다리보다 발 하나만큼 뒤에 놓인다
   // 배 보이기: 앞다리는 가슴 위로 접고 손목이 힘없이 꺾이며, 뒷다리는 무릎·비절을 굽힌 채 양옆으로 벌어진다(개구리 다리)
   belly: { bodyY: 0.135, bodyZ: 0, pitch: 0, roll: 2.85, yawOff: -1.15, gaze: 0.75, headPitch: -0.2, headTilt: -0.55, tail: -1.4, level: 0, free: 0, bendY: 0.2,
     lean: [1.88, 1.88, 0.53, 0.53], abd: [0.3, 0.3, 0.55, 0.55], paws: [P(-0.005, 0.285, 0.276), P(0.09, 0.267, 0.258), P(0, 0.349, -0.175), P(0.12, 0.318, -0.195)] }, // 팔꿈치 ~75°로 접혀 앞발이 가슴뼈 위에 늘어지고, 무릎·비절 ~90°로 접힌 뒷다리가 양옆으로 벌어진다. 등은 옆으로 살짝 C자
   // 먹기: 등은 거의 수평, 앞다리는 거의 곧게 선 채 목뿌리에서 목이 내려가고 머리가 조금 더 숙여진다 (앞다리를 접어 엎드리지 않는다)
-  eat: { bodyY: 0.295, bodyZ: 0.05, pitch: 0.08, roll: 0, yawOff: 0, gaze: 0, headPitch: 0.55, headTilt: 0, tail: -1.7, level: 1, free: 0, neck: 0.6,
-    lean: [0.1, 0.1, 0.25, 0.25], paws: [P(0.07, 0.03, 0.228), P(-0.07, 0.03, 0.228), P(0.072, 0.03, -0.14), P(-0.072, 0.03, -0.14)] },
+  // 목이 짧고 머리가 커서: 몸을 앞발 위로 조금 기울여 기갑을 낮추고(팔꿈치 ~108°, 아래팔은 수직), 목을 길게 빼서(reach) 코가 바닥의 밥그릇에 닿는다
+  eat: { bodyY: 0.285, bodyZ: 0.05, pitch: 0.15, roll: 0, yawOff: 0, gaze: 0, headPitch: -0.12, headTilt: 0, tail: -1.7, level: 1, free: 0, neck: 1.35, reach: 0.05,
+    lean: [0.1, 0.1, 0.18, 0.18], paws: [P(0.08, 0.03, 0.185), P(-0.08, 0.03, 0.185), P(0.072, 0.03, -0.135), P(-0.072, 0.03, -0.135)] },
   // 안기기: 등이 C자로 굽고, 앞다리는 팔꿈치를 굽혀 손목이 늘어지며, 뒷다리는 무릎·비절을 반쯤 굽힌 채 매달린다
-  held: { bodyY: 0.2, bodyZ: 0, pitch: -1.15, roll: 0, yawOff: 0, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.3, level: 0, free: 0, neck: 0.7, lumbar: 0.35,
-    lean: [-0.3, -0.3, 0.5, 0.5], paws: [P(0.08, 0.235, 0.225), P(-0.08, 0.235, 0.225), P(0.075, -0.165, 0.03), P(-0.075, -0.165, 0.03)] },
+  held: { bodyY: 0.25, bodyZ: 0, pitch: -1.15, roll: 0, yawOff: 0, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.3, level: 0, free: 0, neck: 0.7, lumbar: 0.35,
+    lean: [-0.3, -0.3, 0.3, 0.3], paws: [P(0.07, 0.25, 0.19), P(-0.08, 0.235, 0.2), P(0.075, -0.18, -0.005), P(-0.075, -0.168, 0.012)] }, // 아래팔은 수평에서 ~30° 아래로, 손목은 늘어지고, 뒷다리는 무릎 ~100°·비절 ~125°로 매달린다 (좌우가 조금 다르다)
 };
 // 진돗개(푸푸): 예전 몸통·다리 기준 그대로
 const POSES_J = {
@@ -131,11 +132,11 @@ const POSES_J = {
   held: { bodyY: 0.2, bodyZ: 0, pitch: -1.15, roll: 0, yawOff: 0, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.9, level: 0, free: 1,
     lean: [0.1, 0.1, 0.15, 0.15], paws: [P(0.09, 0.15, 0.17), P(-0.09, 0.15, 0.17), P(0.08, -0.15, 0.02), P(-0.08, -0.15, 0.02)] },
 };
-const POSE_KEYS = ['bodyY', 'bodyZ', 'pitch', 'roll', 'yawOff', 'gaze', 'headPitch', 'headTilt', 'tail', 'level', 'free', 'splay', 'neck', 'lumbar', 'bendY']; // splay: 뒷다리를 옆으로 벌리는 각(앉기) · neck: 목을 앞으로 굽히는 각(앉기 — 몸이 뒤로 기울어도 머리는 가슴 앞 위에)
+const POSE_KEYS = ['bodyY', 'bodyZ', 'pitch', 'roll', 'yawOff', 'gaze', 'headPitch', 'headTilt', 'tail', 'level', 'free', 'splay', 'neck', 'lumbar', 'bendY', 'tailCurl', 'reach']; // splay: 뒷다리를 옆으로 벌리는 각(앉기) · neck: 목을 앞으로 굽히는 각(앉기 — 몸이 뒤로 기울어도 머리는 가슴 앞 위에)
 
 function poseFor(name, d) {
   const p = (d.J ? POSES_J : POSES)[name];
-  const o = { ...p, name, splay: p.splay ?? 0, neck: p.neck ?? 0, lumbar: p.lumbar ?? 0, bendY: p.bendY ?? 0, abd: [...(p.abd || [0, 0, 0, 0])], lean: [...p.lean], paws: p.paws.map((v) => v.clone()) };
+  const o = { ...p, name, splay: p.splay ?? 0, neck: p.neck ?? 0, lumbar: p.lumbar ?? 0, bendY: p.bendY ?? 0, tailCurl: p.tailCurl ?? 0, reach: p.reach ?? 0, abd: [...(p.abd || [0, 0, 0, 0])], lean: [...p.lean], paws: p.paws.map((v) => v.clone()) };
   if (d.J && (name === 'stand' || name === 'eat')) o.bodyY += 0.035;
   return o;
 }
@@ -606,19 +607,22 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
       // 리본·메달: 정점을 따로 굽히지 않고(고리가 찢어지듯 늘어난다) 굽은 몸 표면에 고리를 통째로 다시 두른다. 메달이 가슴에 눕는 판정도 굽은 몸으로 한다
       const sdf0 = d.medalSDF || bodySDF(false), ring = d.collarRing, cc = V3(0, COLLAR_C[0], COLLAR_C[1]), ax = V3(0, COLLAR_AX[0], COLLAR_AX[1]).normalize(), wc = nw(0, cc.y, cc.z);
       const bent = (x, y, z) => {
-        const th = R.theta; if (!th) return sdf0(x, y, z);
+        const th = R.theta; if (!th && !R.sy && !R.sz) return sdf0(x, y, z);
         let py = y, pz = z;
-        for (let i = 0; i < 3; i++) { const a = -th * nw(x, py, pz), c = Math.cos(a), s = Math.sin(a), ry = y - NP.y, rz = z - NP.z; py = NP.y + ry * c - rz * s; pz = NP.z + ry * s + rz * c; }
-        return sdf0(x, py, pz);
+        for (let i = 0; i < 4; i++) { const w = nw(x, py, pz), a = -th * w, c = Math.cos(a), s = Math.sin(a), ry = y - R.sy * w - NP.y, rz = z - R.sz * w - NP.z; py = NP.y + ry * c - rz * s; pz = NP.z + ry * s + rz * c; }
+        // 많이 굽으면(먹기) 목덜미 뒤 접히는 곳에서는 되돌린 점이 수렴하지 않는다: 되돌린 점을 다시 굽혀 제자리로 오지 않으면 몸 밖으로 친다 (리본이 등 위로 치솟지 않게)
+        const w = nw(x, py, pz), a = th * w, c = Math.cos(a), s = Math.sin(a), ry = py - NP.y, rz = pz - NP.z, ey = NP.y + ry * c - rz * s + R.sy * w - y, ez = NP.z + ry * s + rz * c + R.sz * w - z;
+        const d0 = sdf0(x, py, pz);
+        return ey * ey + ez * ez > 0.0001 ? Math.max(d0, 0.01) : d0;
       };
       if (d.medal) d.medalSDF = bent;
-      let last = 0;
+      let last = 0, lastS = 0;
       d.collarFit = () => {
-        if (Math.abs(R.theta - last) < 0.002) return;
-        last = R.theta;
+        if (Math.abs(R.theta - last) < 0.002 && Math.abs(R.sy - lastS) < 0.0005) return;
+        last = R.theta; lastS = R.sy;
         const a = last * wc, c = Math.cos(a), s = Math.sin(a), ry = cc.y - NP.y, rz = cc.z - NP.z;
-        const a2 = a * COLLAR_FOLLOW, c2 = Math.cos(a2), s2 = Math.sin(a2); // 고리 면은 조금만 따라 돈다 (많이 돌면 리본이 가슴 아래까지 늘어진다)
-        ring.refit(bent, NP.y + ry * c - rz * s, NP.z + ry * s + rz * c, ax.y * c2 - ax.z * s2, ax.y * s2 + ax.z * c2);
+        const aT = Math.min(a, 0.7 * wc), a2 = aT * COLLAR_FOLLOW + (a - aT), c2 /* 앉기·안기기 범위(목 0.7)까지는 조금만, 그보다 더 숙이면(먹기) 목과 함께 돈다 — 고리 면이 등을 길게 가르며 손잡이처럼 서지 않게 */ = Math.cos(a2), s2 = Math.sin(a2); // 고리 면은 조금만 따라 돈다 (많이 돌면 리본이 가슴 아래까지 늘어진다)
+        ring.refit(bent, NP.y + ry * c - rz * s + R.sy * wc, NP.z + ry * s + rz * c + R.sz * wc, ax.y * c2 - ax.z * s2, ax.y * s2 + ax.z * c2);
         if (d.medal) d.medal.position.copy(ring.front);
       };
     }
@@ -686,14 +690,14 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   // 꼬리
   const tp = new THREE.Group(); tp.position.set(0, J ? 0.07 : 0.053, J ? -0.196 : -0.25); body.add(tp); d.tail = tp;
   if (J) put(tp, new THREE.TorusGeometry(0.055, 0.03, 10, 20, Math.PI * 1.5), [0, 0.06, 0], [0, Math.PI / 2, 0.5], null, tailPaint).userData.fur = [3, 0.006, 400];
-  else put(tp, sdfGeo('bt', tailSDF, [-0.048, -0.048, -0.05], [0.048, 0.3, 0.11], 0.003), null, null, null, tailPaint);
+  else d.tailMesh = put(tp, sdfGeo('bt', tailSDF, [-0.048, -0.048, -0.05], [0.048, 0.3, 0.11], 0.003), null, null, null, tailPaint);
 
   // 다리: 앞다리 = 위팔 · 아래팔 · 발허리 (팔꿈치는 뒤로, 손목은 들 때 뒤로 접힘)
   //       뒷다리 = 허벅지 · 정강이 · 뒷발허리 (무릎은 앞으로, 뒤꿈치는 뒤로)
   const k = J ? 1.15 : 1;
   const LEGS = J ? [[1, 0.132, true], [-1, 0.132, true], [1, -0.119, false], [-1, -0.119, false]] : [[1, 0.226, true], [-1, 0.226, true], [1, -0.175, false], [-1, -0.175, false]];
   for (const [sx, z, front] of LEGS) {
-    const L1 = J ? (front ? 0.095 : 0.09) * k : front ? 0.1 : 0.125, L2 = J ? 0.095 * k : front ? 0.122 : 0.115, L3 = J ? (front ? 0.045 : 0.065) * k : front ? 0.045 : 0.07;
+    const L1 = J ? (front ? 0.095 : 0.09) * k : front ? 0.1 : 0.118, L2 = J ? 0.095 * k : front ? 0.122 : 0.105, L3 = J ? (front ? 0.045 : 0.065) * k : front ? 0.045 : 0.088; // 뒷다리: 허벅지 ≈ 정강이, 뒷발허리(비절~발)는 기갑 높이의 ~0.24 — 비절이 바닥에서 확실히 떠 보인다
     const hip = new THREE.Group(); body.add(hip);
     let thighM = null;
     const knee = new THREE.Group(); knee.position.set(0, -L1, 0); hip.add(knee);
@@ -708,18 +712,19 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
     } else {
       // 굵고 거의 가늘어지지 않는 원통 마디 + 관절마다 공 하나 (공 반지름 = 원통 끝 반지름이라 링 솔기가 없다)
       hip.position.set(sx * (front ? 0.048 : 0.062), front ? -0.022 : 0.015, z); // 앞: 어깨 관절(견단)은 가슴 앞쪽 위(몸 높이의 2/3) — 위팔이 뒤·아래로 내려가 팔꿈치가 가슴 바닥 높이에서 갈비에 붙고, 아래팔은 수직으로 선다. // 고관절은 골반 가운데 높이(좌골보다 위)에 두어 앉을 때 엉덩이는 바닥에, 고관절은 바닥 위에 있고 무릎이 앞 위로 나온다
-      const r1 = front ? 0.027 : 0.052, r2 = front ? 0.036 : 0.038, r3 = front ? 0.029 : 0.027, r4 = 0.028; // 짧고 튼튼하지만 팔꿈치·무릎 아래로 가늘어지는 다리 (발목은 윗다리의 55%)
+      const r1 = front ? 0.027 : 0.052, r2 = front ? 0.036 : 0.036, r3 = front ? 0.027 : 0.0235, r4 = front ? 0.028 : 0.0255; // 짧고 튼튼하지만 팔꿈치·무릎 아래로 가늘어지는 다리 (발목은 윗다리의 55%)
       const paintAt = front ? V3(sx * 0.046, -0.048, 0.228) : hip.position.clone(); // 무늬는 예전 어깨 자리 기준 그대로 (관절을 옮겨도 털색은 그대로)
       const bodySpace = (p, c) => bodyPaint(_pb.copy(p).add(paintAt), c, 1); // 위팔·허벅지는 몸통 무늬를 그대로 이어받는다 (배 흰색은 끄고 황갈로 — 위팔은 팔꿈치까지 황갈)
       const seg = (key, L, ra, rb) => sdfGeo(key, legSegSDF(L, ra, rb), [-ra - 0.003, -L - rb - 0.003, -ra - 0.003], [ra + 0.003, ra + 0.003, ra + 0.003], 0.003);
       const fk = front ? 'f' : 'h';
       if (front) put(hip, seg('bl1f', L1, r1, r2), null, null, null, bodySpace);
-      else thighM = put(hip, sdfGeo('bl1h', (x, y, z) => smin(sdRoundCone(x, y, z, L1, r1, r2), sdE(x, y, z, 0, -L1 * 0.36, 0.012, 0.064, 0.086, 0.066), 0.03), [-0.075, -L1 - r2 - 0.003, -0.078], [0.075, r1 + 0.003, 0.095], 0.003), null, null, null, bodySpace); // 허벅지: 다리와 한 덩어리로 움직이는 둥근 '바지' (서면 둥근 허벅지, 앉으면 접힌 무릎·정강이를 덮는 둥근 엉덩이 살)
+      else thighM = put(hip, sdfGeo('bl1h', (x, y, z) => smin(sdRoundCone(x, y, z, L1, r1, r2), sdE(x, y, z, 0, -L1 * 0.3, 0.01, 0.062, 0.074, 0.062), 0.03), [-0.075, -L1 - r2 - 0.003, -0.078], [0.075, r1 + 0.003, 0.095], 0.003), null, null, null, (p, c) => { bodySpace(p, c); c.lerp(cT, 0.5 * ss(0.0, -0.07, p.y)); }); // 허벅지 아래쪽은 안장빛을 덜어 황갈로: 앉거나 엎드려 허벅지가 옆구리에 겹쳐도 어두운 원반으로 떠 보이지 않는다
+      // 허벅지: 다리와 한 덩어리로 움직이는 둥근 '바지' (서면 둥근 허벅지, 앉으면 접힌 무릎·정강이를 덮는 둥근 엉덩이 살)
       const lower = front ? legPaint(-0.166, -0.13, -0.21, sx) : legPaint(hip.position.y - L1, -0.19, -0.26, sx); // 앞다리는 팔꿈치까지 황갈, 아래팔 중간부터 흰색; 뒷다리는 정강이까지 황갈, 비절(hock)부터 흰 양말 (앉아도 정강이가 흰 통나무로 보이지 않는다)
-      if (front) put(knee, sdfGeo('bl2f', (x, y, z) => smin(sdRoundCone(x, y, z, L2, r2, r3), Math.hypot(x, y - 0.004, z + 0.02) - 0.021, 0.012), [-r2 - 0.003, -L2 - r3 - 0.003, -0.046], [r2 + 0.003, r2 + 0.003, r2 + 0.003], 0.003), null, null, null, lower); // 팔꿈치 머리(olecranon): 아래팔 위 끝 뒤로 살짝 나온 뼈 — 다리가 책상 다리처럼 밋밋한 통이 되지 않게
-      else put(knee, sdfGeo('bl2h', (x, y, z) => smin(sdRoundCone(x, y, z, L2, r2, r3), sdE(x, y, z, 0, -L2 * 0.12, 0.004, 0.042, 0.052, 0.046), 0.03), [-0.05, -L2 - r3 - 0.003, -0.05], [0.05, r2 + 0.003, 0.055], 0.003), null, null, null, lower); // 정강이 위쪽의 둥근 무릎(stifle) 살: 앉으면 허벅지와 이어져 정강이가 통나무로 보이지 않는다
-      if (front) put(ank, seg('bl3f', L3, r3, r4), null, null, null, pawPaint);
-      else put(ank, sdfGeo('bl3h', (x, y, z) => smin(sdRoundCone(x, y, z, L3, r3, r4), Math.hypot(x, y - 0.002, z + 0.014) - 0.02, 0.012), [-r3 - 0.003, -L3 - r4 - 0.003, -0.038], [r3 + 0.003, r3 + 0.003, r3 + 0.003], 0.003), null, null, null, pawPaint); // 비절 끝(뒤꿈치뼈)이 뒤로 살짝 나온다
+      if (front) put(knee, sdfGeo('bl2f', (x, y, z) => smin(sdRoundCone(x, y, z, L2, r2, r3), Math.hypot(x, y - 0.006, z + 0.03) - 0.02, 0.014), [-r2 - 0.003, -L2 - r3 - 0.003, -0.058], [r2 + 0.003, r2 + 0.003, r2 + 0.003], 0.003), null, null, null, lower); // 팔꿈치 머리(olecranon): 아래팔 위 끝 뒤로 살짝 나온 뼈 — 다리가 책상 다리처럼 밋밋한 통이 되지 않게
+      else put(knee, sdfGeo('bl2h', (x, y, z) => smin(sdRoundCone(x, y, z, L2, r2, r3), sdE(x, y, z, 0, -L2 * 0.1, 0.004, 0.04, 0.046, 0.043), 0.03), [-0.05, -L2 - r3 - 0.003, -0.05], [0.05, r2 + 0.003, 0.055], 0.003), null, null, null, lower); // 정강이 위쪽의 둥근 무릎(stifle) 살: 앉으면 허벅지와 이어져 정강이가 통나무로 보이지 않는다
+      if (front) put(ank, sdfGeo('bl3f', (x, y, z) => smin(sdRoundCone(x, y, z, L3, r3, r4), Math.hypot(x, y + 0.004, z + 0.019) - 0.0135, 0.012), [-r4 - 0.003, -L3 - r4 - 0.003, -0.04], [r4 + 0.003, r4 + 0.003, r4 + 0.003], 0.003), null, null, null, pawPaint); // 손목 뒤 볼록(덧손목뼈): 아래팔과 발허리 사이가 살짝 꺾여 보인다
+      else put(ank, sdfGeo('bl3h', (x, y, z) => smin(sdRoundCone(x, y, z, L3, r3, r4), Math.hypot(x, y - 0.004, z + 0.022) - 0.021, 0.014), [-r4 - 0.003, -L3 - r4 - 0.003, -0.05], [r4 + 0.003, 0.03, r4 + 0.003], 0.003), null, null, null, pawPaint); // 비절 끝(뒤꿈치뼈)이 뒤로 살짝 나온다
       put(foot, sph(), [0, 0, 0], null, r4 * 0.9, pawPaint);
       put(foot, sdfGeo('bf', footSDF, [-0.045, -0.03, -0.04], [0.045, 0.025, 0.055], 0.0025), [0, 0, 0.01], null, 1.0, pawPaint);
     }
@@ -729,7 +734,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   if (!J) {
     // 허리 관절(흉요추·요천추): 갈비 뒤부터 엉덩이까지의 몸통 정점을 허리 축 둘레로 굽힌다 — 앉으면 가슴은 덜 눕고 골반이 밑으로 말려 엉덩이가 바닥에 앉는다.
     // 고관절·꼬리 뿌리도 골반과 함께 움직인다 (갈비뼈 구간 z > -0.02 는 한 덩어리로 굳어 있다)
-    const R = d.lumbarRig = makeRig(V3(0, 0.02, -0.06), (x, y, z) => ss(-0.02, -0.14, z));
+    const R = d.lumbarRig = makeRig(V3(0, 0.02, -0.06), (x, y, z) => ss(0.0, -0.17, z));
     rigMesh(R, d.torso.geometry);
     for (const L of d.legs) if (!L.front) L.fol = rigFollow(R, L.hip.position);
     rigFollow(R, tp.position);
@@ -749,7 +754,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
 
 const COLLAR_C = [0.095, 0.155], COLLAR_AX = [0.72, 0.69], COLLAR_FOLLOW = 0.3; // 비글 목줄 고리 중심(y, z) · 고리 면의 법선(y, z) · 목이 굽을 때 고리 면이 따라 도는 비율
 const NECK_P = [0.07, 0.15], NECK_W = [-0.03, 0.07, 0.04, 0.13]; // 목 관절 축(y, z) · 가중치 구간(목 축 방향, z)
-const WALK_OFF = [0.75, 0.25, 0, 0.5], WALK_DUTY = 0.65, WALK_S = 0.068; // 다리별 박자(앞+, 앞-, 뒤+, 뒤-) · 딛는 비율 · 보폭 절반
+const WALK_OFF = [0.75, 0.25, 0, 0.5], WALK_DUTY = 0.65, WALK_S = 0.08; // 다리별 박자(앞+, 앞-, 뒤+, 뒤-) · 딛는 비율 · 보폭 절반
 const _zAx = V3(0, 0, 1);
 const _v = V3(), _m = new THREE.Matrix4(), _paw = V3(), _hipS = V3(), _dir = V3(), _tmp = V3(), _ank = V3();
 function solveLeg(L, A, Pw, level, bodyPitch) {
@@ -766,23 +771,23 @@ function solveLeg(L, A, Pw, level, bodyPitch) {
 }
 
 // 척추 관절(목·허리) 굽힘: 가중치가 있는 정점과 따라가는 것들(머리·리본·메달 / 고관절·꼬리)을 관절 축(x축) 둘레로 th만큼 돌린다. 각이 바뀔 때만 다시 계산
-function makeRig(P, wfn) { return { P, wfn, meshes: [], follow: [], theta: 0, phi: 0 }; }
+function makeRig(P, wfn) { return { P, wfn, meshes: [], follow: [], theta: 0, phi: 0, sy: 0, sz: 0 }; }
 function rigMesh(R, geo) {
   const pos = geo.attributes.position, n = geo.attributes.normal, idx = [], w = [];
   for (let i = 0; i < pos.count; i++) { const wi = R.wfn(pos.getX(i), pos.getY(i), pos.getZ(i)); if (wi > 0.001) { idx.push(i); w.push(wi); } }
   R.meshes.push({ geo, rest: pos.array.slice(), nrest: n ? n.array.slice() : null, idx: Int32Array.from(idx), w: Float32Array.from(w) });
 }
 function rigFollow(R, v) { const f = { v, rest: v.clone(), w: R.wfn(v.x, v.y, v.z), dx: 0 }; R.follow.push(f); return f; }
-function bendRig(R, th, ph = 0) { // th: 앞뒤 굽힘(x축 둘레) · ph: 좌우 굽힘(y축 둘레 — 걸을 때 골반이 좌우로 돌고, 누우면 등이 C자로 휜다)
-  if (Math.abs(th - R.theta) < 0.002 && Math.abs(ph - R.phi) < 0.002) return;
-  R.theta = th; R.phi = ph;
+function bendRig(R, th, ph = 0, sy = 0, sz = 0) { // sy·sz: 가중치만큼 밀어 늘인다(목을 길게 뺀다 — 바닥의 밥그릇에 코가 닿게) · // th: 앞뒤 굽힘(x축 둘레) · ph: 좌우 굽힘(y축 둘레 — 걸을 때 골반이 좌우로 돌고, 누우면 등이 C자로 휜다)
+  if (Math.abs(th - R.theta) < 0.002 && Math.abs(ph - R.phi) < 0.002 && Math.abs(sy - R.sy) + Math.abs(sz - R.sz) < 0.0005) return;
+  R.theta = th; R.phi = ph; R.sy = sy; R.sz = sz;
   const Py = R.P.y, Pz = R.P.z;
   for (const m of R.meshes) {
     const pos = m.geo.attributes.position, pa = pos.array, nAttr = m.geo.attributes.normal, na = nAttr ? nAttr.array : null;
     for (let k = 0; k < m.idx.length; k++) {
       const j = m.idx[k] * 3, a = th * m.w[k], c = Math.cos(a), s = Math.sin(a), b = ph * m.w[k], cb = Math.cos(b), sb = Math.sin(b);
       const x = m.rest[j], y = m.rest[j + 1] - Py, z = m.rest[j + 2] - Pz, z1 = y * s + z * c;
-      pa[j] = x * cb + z1 * sb; pa[j + 1] = Py + y * c - z * s; pa[j + 2] = Pz - x * sb + z1 * cb;
+      pa[j] = x * cb + z1 * sb; pa[j + 1] = Py + y * c - z * s + sy * m.w[k]; pa[j + 2] = Pz - x * sb + z1 * cb + sz * m.w[k];
       if (na && m.nrest) { const nx = m.nrest[j], ny = m.nrest[j + 1], nz = m.nrest[j + 2], n1 = ny * s + nz * c; na[j] = nx * cb + n1 * sb; na[j + 1] = ny * c - nz * s; na[j + 2] = -nx * sb + n1 * cb; }
     }
     pos.needsUpdate = true; if (nAttr) nAttr.needsUpdate = true;
@@ -790,8 +795,24 @@ function bendRig(R, th, ph = 0) { // th: 앞뒤 굽힘(x축 둘레) · ph: 좌�
   }
   for (const f of R.follow) {
     const a = th * f.w, c = Math.cos(a), s = Math.sin(a), b = ph * f.w, cb = Math.cos(b), sb = Math.sin(b), x = f.rest.x, y = f.rest.y - Py, z = f.rest.z - Pz, z1 = y * s + z * c;
-    f.dx = x * cb + z1 * sb - x; f.v.x = x + f.dx; f.v.y = Py + y * c - z * s; f.v.z = Pz - x * sb + z1 * cb;
+    f.dx = x * cb + z1 * sb - x; f.v.x = x + f.dx; f.v.y = Py + y * c - z * s + sy * f.w; f.v.z = Pz - x * sb + z1 * cb + sz * f.w;
   }
+}
+
+// 꼬리를 옆으로 둥글게 만다(앉으면 바닥에 놓인 꼬리가 막대처럼 곧지 않게): 꼬리 메시 정점을 꼬리 축(y)을 따라 일정한 곡률로 굽힌다. k = 끝까지의 총 굽힘각
+function curlTail(d, k) {
+  if (Math.abs(k - (d.tailK || 0)) < 0.004) return;
+  d.tailK = k;
+  const g = d.tailMesh.geometry, pos = g.attributes.position, nor = g.attributes.normal, pa = pos.array, na = nor.array;
+  if (!d.tailRest) d.tailRest = [pa.slice(), na.slice()];
+  const [pr, nr] = d.tailRest, LEN = 0.25, kap = k / LEN;
+  for (let j = 0; j < pa.length; j += 3) {
+    const x = pr[j], y = pr[j + 1], sl = clamp(y, 0, LEN), a = kap * sl, c = Math.cos(a), s = Math.sin(a), e = y - sl;
+    const cx = Math.abs(kap) < 1e-4 ? 0 : (1 - c) / kap, cy = Math.abs(kap) < 1e-4 ? sl : s / kap;
+    pa[j] = cx + x * c + e * s; pa[j + 1] = cy - x * s + e * c;
+    na[j] = nr[j] * c + nr[j + 1] * s; na[j + 1] = -nr[j] * s + nr[j + 1] * c;
+  }
+  pos.needsUpdate = true; nor.needsUpdate = true; g.computeBoundingSphere();
 }
 
 function updateDog(d, dt, t, camPos) {
@@ -837,11 +858,11 @@ function updateDog(d, dt, t, camPos) {
 
   // 몸
   const br = Math.sin(t * (d.pant ? 7 : 2.3) + d.seed * 3) * (d.pant ? 0.006 : 0.0035);
-  const bob = d.J ? d.gait * Math.abs(Math.cos(d.phase)) * 0.01 : d.gait * (Math.abs(Math.cos(d.phase)) * 0.006 - 0.006); // 비글: 걸을 때는 몸을 살짝 낮춰 다리가 끝까지 닿는다
+  const bob = d.J ? d.gait * Math.abs(Math.cos(d.phase)) * 0.01 : d.gait * (Math.abs(Math.cos(d.phase)) * 0.006 - 0.016); // 비글: 걸을 때는 몸을 살짝 낮춰 다리가 끝까지 닿는다
   d.body.position.set(0, c.bodyY + br + bob, c.bodyZ);
   d.body.rotation.set(c.pitch + (d.J ? 0 : Math.sin(d.phase * 2) * 0.012 * d.gait), 0, c.roll + (d.J ? 0 : Math.sin(d.phase) * 0.035 * d.gait)); // 걸을 때 몸이 좌우로 살짝 흔들리고, 어깨와 엉덩이가 번갈아 오르내린다
   d.torso.scale.set(1 + br * 2.5, 1 + br * 2.5, 1);
-  if (d.neckRig) { bendRig(d.neckRig, c.neck || 0); if (d.collarFit) d.collarFit(); }
+  if (d.neckRig) { const rc = c.reach || 0, na = (c.neck || 0) + 0.65; bendRig(d.neckRig, c.neck || 0, 0, Math.cos(na) * rc, Math.sin(na) * rc); if (d.collarFit) d.collarFit(); } // reach: 굽은 목 방향(쉬는 목은 수직에서 ~37° 앞으로 누워 있다)으로 목을 뺀다
   const pelvisYaw = d.J ? 0 : -Math.cos(d.phase) * 0.07 * d.gait; // 평보: 앞으로 나간 뒷발 쪽 골반이 앞으로 돈다(허리가 좌우로 굽는다)
   if (d.lumbarRig) bendRig(d.lumbarRig, -(c.lumbar || 0), (c.bendY || 0) + pelvisYaw); // 양수 = 골반이 밑으로 말린다(엉덩이가 아래·앞으로) · bendY: 등이 옆으로 C자로 휜다
   if (d.medal) {
@@ -895,11 +916,11 @@ function updateDog(d, dt, t, camPos) {
         let sz;
         if (u < WALK_DUTY) sz = 1 - (2 * u) / WALK_DUTY;
         else { const sw = (u - WALK_DUTY) / (1 - WALK_DUTY); sz = -Math.cos(Math.PI * sw); up = Math.sin(Math.PI * sw) * d.gait; }
-        _paw.z += sz * WALK_S * d.gait; _paw.y += up * 0.035;
+        _paw.z += (sz * WALK_S + (L.front ? 0.012 : 0)) * d.gait; _paw.y += up * 0.035; // 앞발은 걸을 때 조금 앞에서 딛는다(뒤로 끝까지 밀어도 다리가 모자라지 않게)
       }
     }
     if (d.paddle > 0.001) { _paw.y += Math.sin(t * 8 + i * 1.7) * 0.035 * d.paddle; _paw.z += Math.cos(t * 8 + i * 1.7) * 0.03 * d.paddle; }
-    if (!d.J && L.front) L.hip.position.z = L.z0 + (_paw.z - c.paws[i].z) * 0.25; // 견갑골은 갈비 위에서 미끄러진다: 앞발이 나가면 어깨 관절도 조금 앞으로, 밀면 뒤로
+    if (!d.J && L.front) L.hip.position.z = L.z0 + (_paw.z - c.paws[i].z) * 0.15; // 견갑골은 갈비 위에서 미끄러진다: 앞발이 나가면 어깨 관절도 조금 앞으로, 밀면 뒤로
     _hipS.copy(L.hip.position).applyMatrix4(d.body.matrix);
     const lean = c.lean[i] + up * (L.front ? -1.2 : 0.9);
     _dir.set(0, Math.cos(lean), -Math.sin(lean)); if (!d.J && c.roll) _dir.applyAxisAngle(_zAx, c.roll); // 누운 자세: 발목 기울기는 강아지 몸 기준(옆으로 굴러도 손목·비절이 제 방향으로 접힌다)
@@ -908,7 +929,7 @@ function updateDog(d, dt, t, camPos) {
     _paw.applyMatrix4(_m).sub(L.hip.position);
     solveLeg(L, _ank, _paw, c.level, c.pitch);
     L.hip.rotation.z = d.J ? 0 : L.sx * ((L.front ? 0 : c.splay || 0) + c.abd[i]); // 벌림(abduction): 앉을 때 뒷다리, 누운 자세의 다리
-    if (L.thigh) { const sp = clamp((c.splay || 0) / 0.3, 0, 1.2); L.hip.position.x = L.sx * (0.062 + 0.012 * sp) + L.fol.dx; L.thigh.scale.set(1 + 0.3 * sp, 1 + 0.08 * sp, 1 + 0.18 * sp); } // 앉으면 허벅지·엉덩이 살이 옆으로 퍼져 가슴보다 넓은 둥근 엉덩이가 된다 (서면 원래 폭) // 앉을 때 뒷다리(허벅지째)를 바깥으로 벌려 엉덩이가 바닥에서 넓어진다
+    if (L.thigh) { const sp = clamp((c.splay || 0) / 0.3, 0, 1.2); L.hip.position.x = L.sx * (0.062 + 0.012 * sp) + L.fol.dx; const q = clamp((c.lumbar || 0) / 0.55, 0, 1); L.thigh.scale.set(1 + 0.3 * sp * (0.35 + 0.65 * q), 1 + 0.08 * sp, 1 + sp * (0.18 * q - 0.14 * (1 - q))); } // q: 앉기(골반이 말림)일 때만 엉덩이 살이 크게 퍼진다 — 엎드리면 허벅지가 등선 위로 솟지 않게 오히려 납작해진다 // 앉으면 허벅지·엉덩이 살이 옆으로 퍼져 가슴보다 넓은 둥근 엉덩이가 된다 (서면 원래 폭) // 앉을 때 뒷다리(허벅지째)를 바깥으로 벌려 엉덩이가 바닥에서 넓어진다
   }
 
   // 귀 (중력 따라 덜렁)
@@ -927,7 +948,9 @@ function updateDog(d, dt, t, camPos) {
   const wk = 1 - Math.exp(-4 * dt);
   d.wagAmp += (d.wagAmpT - d.wagAmp) * wk; d.wagSpeed += (d.wagSpeedT - d.wagSpeed) * wk;
   d.wagPhase += dt * d.wagSpeed;
-  d.tail.rotation.set(c.tail - (d.J ? 0 : c.lumbar || 0), 0, Math.sin(d.wagPhase) * d.wagAmp * (d.J ? 0.35 : 1) + (d.J ? 0 : Math.cos(d.phase) * 0.12 * d.gait)); // 걸을 때 꼬리는 골반과 반대로 흔들린다
+  d.tail.rotation.set(c.tail - (d.J ? 0 : c.lumbar || 0), 0, Math.sin(d.wagPhase) * d.wagAmp * (d.J ? 0.35 : 1) + (d.J ? 0 : Math.cos(d.phase) * 0.12 * d.gait - (c.tailCurl || 0) * 0.3)); // 걸을 때 꼬리는 골반과 반대로 흔들린다
+
+  if (d.tailMesh) curlTail(d, c.tailCurl || 0);
 
   // 눈 깜빡
   d.blinkT -= dt;
@@ -1845,7 +1868,7 @@ const CMDS = {
     });
     pinky.walkTarget = null; pinky.face = { x: ball.g.position.x, z: ball.g.position.z };
     await wait(tok, 0.3);
-    setPose(pinky, 'eat', 7); pinky.tgt.headPitch = 0.95; pinky.jawOpen = 0.35;
+    setPose(pinky, 'eat', 7); pinky.tgt.headPitch += 0.3; pinky.jawOpen = 0.35;
     await wait(tok, 0.45);
     pinky.jaw.attach(ball.g); ball.g.position.set(0, -0.012, 0.1); ball.state = 'mouth'; pinky.jawOpen = 0.12;
     say('앙!', headTop, '', 1.1);
