@@ -4,6 +4,7 @@ import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from './vendor/jsm/postprocessing/ShaderPass.js';
+import { sound } from './sound.js?v=11';
 
 const $ = (s) => document.querySelector(s);
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -2374,6 +2375,7 @@ function say(text, anchor, cls = '', life = 1.7, dx = null) {
   const el = document.createElement('div'); el.className = 'bubble ' + cls; el.textContent = text;
   bubbleLayer.appendChild(el);
   bubbles.push({ el, anchor, age: 0, life, dx: dx ?? (Math.random() - 0.5) * 40 });
+  sound.onSay(text); // 말풍선 글자에 맞는 소리 (왈! → 짖는 소리 …)
 }
 const headTop = () => pinky.head.localToWorld(V3(0, 0.125, 0.015));
 const noseTip = () => pinky.head.localToWorld(V3(0, 0.004, 0.14));
@@ -3383,6 +3385,36 @@ function resize() {
 window.addEventListener('resize', resize); resize();
 
 // ================================================================
+// 소리 — 핑키의 상태를 읽기만 해서 sound.js에 넘겨 준다 (언제 무슨 소리를 낼지는 sound.js가 정한다)
+// ================================================================
+sound.init({ off: WALK_OFF, duty: WALK_DUTY, rug: [0.1, 0.8, 1.45, 0.95], cush: [CUSH.x, CUSH.z, CUSH.R], bowl: [BOWL.x, BOWL.z], lite: LITE });
+const _sv = V3();
+let sndGreetAt = -1, sndMode = 'select';
+function updateSound(dt, t) {
+  sound.setScene(mode);
+  if (mode !== sndMode) { sndMode = mode; sndGreetAt = mode === 'room' ? t + 1.3 : -1; }
+  if (mode !== 'room') { sound.update(dt, t, null); return; }
+  if (sndGreetAt > 0 && t >= sndGreetAt && !transitioning) { sndGreetAt = -1; if (!active) { sound.phrase('greet'); say('멍!', headTop, 'soft', 1.3); } } // 방에 들어오면 반갑다고: 인식표 짤랑, 작게 멍 (소리를 꺼도 말풍선은 뜬다)
+  _sv.setFromMatrixColumn(roomCam.matrixWorld, 0);
+  sound.setListener([roomCam.position.x, roomCam.position.y, roomCam.position.z], [_sv.x, _sv.y, _sv.z]);
+  pinky.head.getWorldPosition(_sv); const hd = [_sv.x, _sv.y, _sv.z];
+  ball.g.getWorldPosition(_sv);
+  sound.update(dt, t, {
+    x: pinky.x, z: pinky.z, lift: pinky.lift, pose: pinky.tgt.name, head: hd, cmd: active ? active.name : null, touchActive: touch.active,
+    chew: pinky.chew, lick: pinky.lick, pant: pinky.pant, sniff: pinky.sniff, sigh: pinky.sigh || 0, paddle: pinky.paddle, eyeOpen: pinky.eyeOpen,
+    gait: pinky.gait, phase: pinky.phase, wagAmp: pinky.wagAmp, wagPhase: pinky.wagPhase,
+    pouring, kibbles: kibbles.length, mound: mound.amount, bowl: [BOWL.x, 0.03, BOWL.z],
+    ball: { on: ball.state === 'fly' || ball.state === 'roll', x: _sv.x, y: _sv.y, z: _sv.z, vx: ball.v.x, vy: ball.v.y, vz: ball.v.z },
+  });
+}
+const sndBtns = document.querySelectorAll('.snd'); // 방 머리줄과 친구들 화면에 하나씩 (들어가기 전에 미리 끌 수 있게)
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Mac/.test(navigator.platform || '') && navigator.maxTouchPoints > 1);
+function paintSndBtn() { const on = sound.enabled; for (const b of sndBtns) { b.hidden = !sound.supported; b.textContent = on ? '🔊' : '🔇'; b.setAttribute('aria-pressed', String(on)); b.title = on ? '소리 끄기' : '소리 켜기'; b.classList.toggle('off', !on); } }
+for (const b of sndBtns) b.addEventListener('click', () => { sound.setEnabled(!sound.enabled); paintSndBtn(); toast(!sound.supported ? '이 브라우저에서는 소리를 낼 수 없어요' : sound.enabled ? (IOS ? '소리를 켰어요 · 무음 모드에서는 들리지 않아요' : '소리를 켰어요') : '소리를 껐어요'); });
+paintSndBtn();
+if (location.hostname === 'localhost') setTimeout(() => { if (window.__dbg) window.__dbg.sound = sound; }); // 로컬 점검용
+
+// ================================================================
 // 루프
 // ================================================================
 function setupPost() {
@@ -3403,6 +3435,7 @@ function frame(now) {
   stepTimers();
   if (mode === 'select') { updateSelect(dt, clock); drawFrame(selScene, selCam); stepBubbles(dt, selCam); }
   else { updateRoom(dt, clock); drawFrame(roomScene, roomCam); stepBubbles(dt, roomCam); }
+  updateSound(dt, clock);
   if (!booted) { booted = true; $('#boot').classList.add('gone'); }
   requestAnimationFrame(frame);
 }

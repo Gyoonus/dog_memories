@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" />
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=11" />
 </head>
 <body>
 <div id="stage"><canvas id="c" aria-label="강아지와 추억의 장소 3D 화면"></canvas></div>
@@ -29,6 +29,7 @@
     </div>
     <div class="chips" id="chips" role="tablist" aria-label="강아지 목록"></div>
   </div>
+  <button id="sndBtnSel" class="snd sel-snd glass" type="button" aria-pressed="true" aria-label="소리" title="소리 끄기">🔊</button>
   <button class="arrow left glass" id="prevBtn" type="button" aria-label="이전 강아지">‹</button>
   <button class="arrow right glass" id="nextBtn" type="button" aria-label="다음 강아지">›</button>
 </section>
@@ -38,6 +39,7 @@
   <header class="room-head">
     <button id="backBtn" class="back glass" type="button">‹ 친구들</button>
     <div class="title"><span class="name">핑키</span><span class="place">푸맘네 집 · 이태원동</span></div>
+    <button id="sndBtn" class="snd glass" type="button" aria-pressed="true" aria-label="소리" title="소리 끄기">🔊</button>
   </header>
   <div class="room-bottom">
     <p class="hint" id="hint">핑키를 만지면 좋아해요 · 화면을 끌어서 둘러보기</p>
@@ -62,6 +64,6 @@
 <div id="boot">불을 켜는 중…</div>
 
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
-<script type="module" src="main.js?v=10"></script>
+<script type="module" src="main.js?v=11"></script>
 </body>
 </html>
