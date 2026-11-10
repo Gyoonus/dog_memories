@@ -227,15 +227,12 @@ const _q0 = new THREE.Quaternion(), _q1 = new THREE.Quaternion(), _xAx = V3(1, 0
 // updateDog 뒤에 부른다: 자는 자세에서만 다리·머리·꼬리를 몸이 말린 쪽으로 돌리고, 느리고 깊은 숨을 쉰다 (curlK: 0 → 1로 부드럽게)
 function napPost(d, dt, t) {
   const on = d.tgt.name === 'curl' ? 1 : 0, k0 = d.curlK || 0;
-  if (d.wasCurl && !on) d.wakeT = 1.15; // 자다가 일어나는 동안: 눈을 천천히 뜨고, 다 일어설 때까지는 걸음을 떼지 않는다
-  d.wasCurl = on;
-  if (d.wakeT > 0) { d.wakeT -= dt; const o = 0.12 + 0.88 * ss(1.0, 0.25, d.wakeT); for (const e of d.eyes) e.scale.y = Math.min(e.scale.y, o * e.scale.x); }
   if (!on && k0 < 0.002) {
-    if (d.curlK) { d.curlK = 0; for (const L of d.legs) L.hip.rotation.y = 0; }
+    if (d.curlK) { d.curlK = 0; d.curlS = 0; for (const L of d.legs) L.hip.rotation.y = 0; }
     bendTail(d, 0); if (d.napLids) for (const g of d.napLids) g.visible = false;
     return;
   }
-  const K = d.curlK = k0 + (on - k0) * (1 - Math.exp(-(on ? 2.2 : 3.0) * dt)), s = K * K * (3 - 2 * K), c = d.cur;
+  const K = d.curlK = k0 + (on - k0) * (1 - Math.exp(-(on ? 2.2 : 4.0) * dt)), s = d.curlS = K * K * (3 - 2 * K), c = d.cur;
   d.legs.forEach((L, i) => { L.hip.rotation.y = CURL.hip[i] * s; });
   const sigh = d.sigh || 0, br = Math.sin(t * 1.5) * (1 + sigh * 0.3) + sigh * 1.4; // 자는 숨: 느리고 깊게 (한숨 쉴 때는 한 번 크게 부푼다)
   d.torso.scale.x *= 1 + 0.06 * br * s; d.torso.scale.y *= 1 + 0.035 * br * s;
@@ -884,7 +881,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
   Object.assign(d, {
     x: 0, z: 0, yaw: 0, lift: 0, liftT: 0, external: false, phase: 0, gait: 0, walkTarget: null, walkSpeed: 0.5, steer: null,
     face: 'cam', lookFn: null, wagPhase: seed, wagAmp: 0.3, wagSpeed: 6, wagAmpT: 0.3, wagSpeedT: 6,
-    jawOpen: 0, chew: false, lick: 0, tongueOut: 0, pant: false, sniff: 0, paddle: 0,
+    jawOpen: 0, chew: false, lick: 0, tongueOut: 0, pant: false, sniff: 0, paddle: 0, paddleFront: false, shuffle: 0,
     eyeOpen: 1, eyeY: 1, blinkT: 1 + seed, blinkDur: 0, tilt: 0, tiltT: 0, hx: 0, hy: 0, hz: 0, poseRate: 5, earPerk: 0,
   });
   return d;
@@ -947,42 +944,54 @@ function updateDog(d, dt, t, camPos) {
 
   // 걷기 · 방향
   let moving = 0;
+  if (!d.walkTarget && (d.path || d.walkT)) { d.path = null; d.pathGoal = null; d.ghost = false; d.stuckN = 0; d.walkT = 0; d.lastP = null; }
   if (d.walkTarget) {
     let dx = d.walkTarget.x - d.x, dz = d.walkTarget.z - d.z, dist = Math.hypot(dx, dz);
-    if (dist < 0.03) { d.walkTarget = null; d.detour = null; }
+    // 길(d.route): 장애물 사이를 지나는 꺾이는 점들. 목적지가 장애물 속이면 가장 가까운 빈 자리까지만 간다
+    let gx = d.walkTarget.x, gz = d.walkTarget.z;
+    if (d.route && !d.ghost) {
+      const pg = d.pathGoal;
+      if (!d.path || !pg || Math.hypot(pg.x - gx, pg.z - gz) > 0.12) { d.path = d.route(d.x, d.z, gx, gz); d.pathGoal = { x: gx, z: gz }; }
+      const P = d.path;
+      while (P.length > 1 && (Math.hypot(P[0].x - d.x, P[0].z - d.z) < 0.09 || d.routeSee(d.x, d.z, P[1].x, P[1].z))) P.shift();
+      if (P.length > 1 || P[0].snap) { gx = P[0].x; gz = P[0].z; }
+      if (P.length === 1) { dx = gx - d.x; dz = gz - d.z; dist = Math.hypot(dx, dz); }
+    }
+    if (dist < 0.03) { d.walkTarget = null; }
     else {
-      d.stuckT = (d.stuckT || 0) + dt;
+      // 절대로 제자리걸음에 갇히지 않는다: 한동안 나아가지 못하면 길을 다시 찾고, 그래도 안 되면(또는 너무 오래 걸리면) 장애물을 무시하고 곧장 간다
+      d.stuckT = (d.stuckT || 0) + dt; d.walkT = (d.walkT || 0) + dt;
       if (d.stuckT > 0.8) {
-        if (d.lastD !== undefined && d.lastD - dist < 0.03 && !d.detour) { const sd = Math.random() < 0.5 ? 1 : -1; d.detour = { x: d.x - (dz / dist) * sd * 0.6, z: d.z + (dx / dist) * sd * 0.6, t: 1.4 }; }
-        d.lastD = dist; d.stuckT = 0;
+        if (d.lastP && Math.hypot(d.x - d.lastP.x, d.z - d.lastP.z) < 0.03 && d.walkSpeed > 0.05 && !(d.curlK > 0.3)) { d.path = null; d.stuckN = (d.stuckN || 0) + 1; if (d.stuckN >= 3) d.ghost = true; }
+        d.lastP = { x: d.x, z: d.z }; d.stuckT = 0;
       }
-      let gx = d.walkTarget.x, gz = d.walkTarget.z;
-      if (d.detour) { d.detour.t -= dt; if (d.detour.t <= 0 || Math.hypot(d.detour.x - d.x, d.detour.z - d.z) < 0.08) { d.detour = null; d.stuckT = 0; d.lastD = dist; } else { gx = d.detour.x; gz = d.detour.z; } }
-      const [sx, sz] = d.steer ? d.steer(d.x, d.z, gx, gz) : [dx / dist, dz / dist];
-      const want = Math.atan2(sx, sz), diff = angDiff(d.yaw, want);
-      d.yaw += diff * (1 - Math.exp(-5 * dt));
-      const sp = d.walkSpeed * Math.max(0, 1 - Math.abs(diff) / 1.3) * Math.min(1, dist / 0.18 + 0.25);
+      if (d.walkT > 45) d.ghost = true;
+      const tl = Math.hypot(gx - d.x, gz - d.z) || 1, sx = (gx - d.x) / tl, sz = (gz - d.z) / tl;
+      const want = Math.atan2(sx, sz), diff = angDiff(d.yaw, want), up = d.curlK > 0.3 ? 0 : 1; // 몸을 말고 있는 동안에는 돌지도 걷지도 않는다(먼저 몸을 편다)
+      d.yaw += diff * (1 - Math.exp(-5 * dt)) * up;
+      const sp = d.walkSpeed * Math.max(0, 1 - Math.abs(diff) / 1.3) * Math.min(1, dist / 0.18 + 0.25) * up;
       d.x += Math.sin(d.yaw) * sp * dt; d.z += Math.cos(d.yaw) * sp * dt;
-      if (d.collide) d.collide(d);
-      moving = Math.max(sp / Math.max(d.walkSpeed, 0.01), Math.min(1, Math.abs(diff) * 1.5));
+      if (d.collide && !d.ghost) d.collide(d);
+      moving = Math.max(sp / Math.max(d.walkSpeed, 0.01), Math.min(1, Math.abs(diff) * 1.5)) * up;
       d.phase += Math.max(sp, 0.16) * dt * Math.PI / (d.J ? 2 * 0.055 * d.scale : (WALK_S * d.scale) / WALK_DUTY); // 딛고 있는 발이 바닥에서 미끄러지지 않는 박자
     }
   } else if (!d.external) {
     let want = null;
     if (d.face === 'cam' && camPos) want = Math.atan2(camPos.x - d.x, camPos.z - d.z) + c.yawOff;
     else if (d.face && d.face.x !== undefined) want = Math.atan2(d.face.x - d.x, d.face.z - d.z);
-    if (want !== null) {
+    if (want !== null && !(d.curlK > 0.3)) { // 몸을 말고 있는 동안에는 몸을 돌리지 않는다
       const diff = angDiff(d.yaw, want);
       d.yaw += diff * (1 - Math.exp(-3.5 * dt));
       if (Math.abs(diff) > 0.45 && (g.name === 'stand' || g.name === 'eat')) { moving = Math.min(1, Math.abs(diff)); d.phase += dt * 9; }
     }
   }
+  if (d.shuffle > 0.01 && !d.walkTarget) { moving = Math.max(moving, d.shuffle); d.phase += dt * 6.5 * d.shuffle; } // 제자리에서 발을 옮겨 딛는다(방석 위에서 빙글 돌 때)
   d.gait += (moving - d.gait) * (1 - Math.exp(-8 * dt));
   d.lift += (d.liftT - d.lift) * (1 - Math.exp(-4 * dt));
   if (!d.external) { d.root.position.set(d.x, d.lift, d.z); d.root.rotation.y = d.yaw; }
 
   // 몸
-  const br = Math.sin(t * (d.pant ? 7 : 2.3) + d.seed * 3) * (d.pant ? 0.006 : 0.0035);
+  const br = Math.sin(t * (d.pant ? 7 : 2.3) + d.seed * 3) * (d.pant ? 0.006 : 0.0035) * (1 - (d.curlS || 0)); // 잘 때는 napPost의 느린 숨 하나만 쉰다
   const bob = d.J ? d.gait * Math.abs(Math.cos(d.phase)) * 0.01 : d.gait * (Math.abs(Math.cos(d.phase)) * 0.006 - 0.016); // 비글: 걸을 때는 몸을 살짝 낮춰 다리가 끝까지 닿는다
   d.body.position.set(0, c.bodyY + br + bob, c.bodyZ);
   d.body.rotation.set(c.pitch + (d.J ? 0 : Math.sin(d.phase * 2) * 0.012 * d.gait), 0, c.roll + (d.J ? 0 : Math.sin(d.phase) * 0.035 * d.gait)); // 걸을 때 몸이 좌우로 살짝 흔들리고, 어깨와 엉덩이가 번갈아 오르내린다
@@ -1044,7 +1053,7 @@ function updateDog(d, dt, t, camPos) {
         stZ = sz; _paw.z += (sz * WALK_S + (L.front ? 0.012 : 0)) * d.gait; _paw.y += up * 0.035; // 앞발은 걸을 때 조금 앞에서 딛는다(뒤로 끝까지 밀어도 다리가 모자라지 않게)
       }
     }
-    if (d.paddle > 0.001) { _paw.y += Math.sin(t * 8 + i * 1.7) * 0.035 * d.paddle; _paw.z += Math.cos(t * 8 + i * 1.7) * 0.03 * d.paddle; }
+    if (d.paddle > 0.001 && (!d.paddleFront || L.front)) { const po = d.paddleFront ? i * Math.PI : i * 1.7; _paw.y += Math.max(d.paddleFront ? 0 : -1, Math.sin(t * 8 + po)) * 0.035 * d.paddle; _paw.z += Math.cos(t * 8 + po) * 0.03 * d.paddle; } // paddleFront: 앞발만 번갈아 꾹꾹(자리 다지기)
     if (!d.J && L.front) L.hip.position.z = L.z0 + (_paw.z - c.paws[i].z) * 0.15; // 견갑골은 갈비 위에서 미끄러진다: 앞발이 나가면 어깨 관절도 조금 앞으로, 밀면 뒤로
     _hipS.copy(L.hip.position).applyMatrix4(d.body.matrix);
     const lean = c.lean[i] + up * (L.front ? -1.2 : 0.9) + (d.J || L.front ? 0 : (stZ - 0.3) * 0.16 * d.gait); // 뒷발허리: 디딜 때는 비절이 발 뒤에, 밀어낼수록 서서 뒤꿈치가 들린다(비절이 펴진다)
@@ -1082,8 +1091,9 @@ function updateDog(d, dt, t, camPos) {
   d.blinkT -= dt;
   if (d.blinkT <= 0) { d.blinkT = 3 + Math.random() * 5; d.blinkDur = 0.12; }
   let eo = d.eyeOpen;
-  if (d.blinkDur > 0) { d.blinkDur -= dt; eo = 0.1; }
-  d.eyeY += (eo - d.eyeY) * (1 - Math.exp(-35 * dt));
+  if (d.blinkDur > 0) eo = 0.1;
+  if (d.blinkDur > -0.25) d.blinkDur -= dt;
+  d.eyeY += (eo - d.eyeY) * (1 - Math.exp(-(d.blinkDur > -0.25 ? 35 : 9) * dt)); // 깜빡임은 빠르게, 졸리거나 깨어날 때 눈꺼풀은 천천히
   for (const e of d.eyes) e.scale.y = Math.max(0.08, d.eyeY) * e.scale.x;
 
   // 입 · 혀
@@ -1600,23 +1610,71 @@ const OBST = [
   { x: -2.85, z: -2.35, r: 0.3 },
 ];
 const CUSH_OB = { x: CUSH.x, z: CUSH.z, r: 0.36, br: 0.4, h: 0.3 }; OBST.push(CUSH_OB); // 방석: 평소에는 돌아서 다니고, 방석에 갈 때(cushGo)나 그 위에 있을 때만 비켜 준다
-let cushGo = false, onCush = false, wakeSpeed = 0;
+let cushGo = false, onCush = false, cushOn = false;
 const cushLift = (dist) => (dist < CUSH.R ? CUSH.lift + 0.065 * Math.exp(-(((dist - CUSH.R) / 0.1) ** 2)) : (CUSH.lift + 0.065) * ss(0.6, CUSH.R, dist)); // 방석 위에서 몸이 올라가는 높이: 테두리를 넘을 때 가장 높고 가운데 베개에서는 낮다
-function steer(x, z, tx, tz) {
-  let dx = tx - x, dz = tz - z; const dist = Math.hypot(dx, dz) || 1; dx /= dist; dz /= dist;
-  let ax = 0, az = 0;
+// 길 찾기: 방을 8cm 격자로 나눠 A*로 장애물 사이를 지나는 길을 찾고, 곧게 갈 수 있는 구간은 곧게 편다 (가구 사이 좁은 틈에 끼어 제자리걸음을 하지 않게)
+const NAV = { x0: -2.85, z0: -2.25, h: 0.08, nx: 72, nz: 62, pad: 0.15 };
+const navIn = (x, z) => x >= -2.851 && z >= -2.251 && z <= 2.601 && x <= (z > -0.6 && z < 2.1 ? 2.351 : 2.851);
+function navFree(x, z, pad = NAV.pad) {
+  if (!navIn(x, z)) return false;
+  for (const o of OBST) if (o.r > 0 && Math.hypot(x - o.x, z - o.z) < o.r + pad) return false;
+  return true;
+}
+function navSee(ax, az, bx, bz, pad = NAV.pad - 0.012) {
+  const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1e-9;
   for (const o of OBST) {
-    const ox = o.x - x, oz = o.z - z, proj = ox * dx + oz * dz;
-    if (proj <= 0 || proj > dist + o.r) continue;
-    const px = ox - dx * proj, pz = oz - dz * proj, pd = Math.hypot(px, pz), R = o.r + 0.2;
-    if (pd >= R) continue;
-    const near = clamp(1 - (Math.hypot(ox, oz) - R) / 0.7, 0, 1);
-    let sx = -px, sz = -pz; if (pd < 1e-3) { sx = -dz; sz = dx; }
-    const sl = Math.hypot(sx, sz), w = ((R - pd) / R) * near * 2.2;
-    ax += (sx / sl) * w; az += (sz / sl) * w;
+    if (o.r <= 0) continue;
+    const t = clamp(((o.x - ax) * dx + (o.z - az) * dz) / l2, 0, 1);
+    if (Math.hypot(ax + dx * t - o.x, az + dz * t - o.z) < o.r + pad) return false;
   }
-  const rx = dx + ax, rz = dz + az, rl = Math.hypot(rx, rz) || 1;
-  return [rx / rl, rz / rl];
+  const n = Math.ceil(Math.sqrt(l2) / 0.15);
+  for (let i = 1; i <= n; i++) if (!navIn(ax + (dx * i) / n, az + (dz * i) / n)) return false;
+  return true;
+}
+function route(x, z, tx, tz) {
+  const { x0, z0, h, nx, nz } = NAV, N = nx * nz, goal = { x: tx, z: tz };
+  if (navSee(x, z, tx, tz) && navFree(tx, tz, 0.121)) return [goal];
+  const free = new Uint8Array(N);
+  for (let i = 0; i < N; i++) free[i] = navFree(x0 + (i % nx) * h, z0 + Math.floor(i / nx) * h) ? 1 : 0;
+  const near = (px, pz) => { // 가장 가까운 빈 칸
+    let best = -1, bd = 1e9;
+    const cx = Math.round((px - x0) / h), cz = Math.round((pz - z0) / h);
+    for (let R = 0; R < 16 && best < 0; R++) for (let iz = cz - R; iz <= cz + R; iz++) for (let ix = cx - R; ix <= cx + R; ix++) {
+      if (ix < 0 || iz < 0 || ix >= nx || iz >= nz || !free[ix + iz * nx]) continue;
+      const dd = Math.hypot(x0 + ix * h - px, z0 + iz * h - pz); if (dd < bd) { bd = dd; best = ix + iz * nx; }
+    }
+    return best;
+  };
+  const s = near(x, z), g = near(tx, tz);
+  if (s < 0 || g < 0) return [goal];
+  const gs = new Float32Array(N).fill(1e9), from = new Int32Array(N).fill(-1), done = new Uint8Array(N), heap = [];
+  const gxI = g % nx, gzI = Math.floor(g / nx), hh = (i) => Math.hypot((i % nx) - gxI, Math.floor(i / nx) - gzI);
+  const push = (i, f) => { heap.push([f, i]); let k = heap.length - 1; while (k > 0) { const q = (k - 1) >> 1; if (heap[q][0] <= heap[k][0]) break; [heap[q], heap[k]] = [heap[k], heap[q]]; k = q; } };
+  const pop = () => { const top = heap[0], lastE = heap.pop(); if (heap.length) { heap[0] = lastE; let k = 0; for (;;) { let m = k; const l = 2 * k + 1, r = l + 1; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
+  gs[s] = 0; push(s, hh(s));
+  while (heap.length) {
+    const [, i] = pop(); if (done[i]) continue; done[i] = 1; if (i === g) break;
+    const ix = i % nx, iz = Math.floor(i / nx);
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dz) continue;
+      const jx = ix + dx, jz = iz + dz; if (jx < 0 || jz < 0 || jx >= nx || jz >= nz) continue;
+      const j = jx + jz * nx; if (!free[j] || done[j]) continue;
+      if (dx && dz && (!free[ix + dx + iz * nx] || !free[ix + jz * nx])) continue; // 모서리를 비스듬히 스치지 않는다
+      const c = gs[i] + (dx && dz ? 1.4142 : 1);
+      if (c < gs[j]) { gs[j] = c; from[j] = i; push(j, c + hh(j)); }
+    }
+  }
+  if (!done[g]) return [goal]; // 길이 없으면 곧장 (막히면 updateDog가 풀어 준다)
+  const cells = []; for (let i = g; i >= 0; i = from[i]) cells.push({ x: x0 + (i % nx) * h, z: z0 + Math.floor(i / nx) * h });
+  cells.reverse();
+  const gFree = navFree(tx, tz, 0.121);
+  if (gFree) cells.push(goal); else cells[cells.length - 1].snap = true; // 목적지가 장애물 속: 가장 가까운 빈 칸에서 멈춘다
+  const out = []; let a = { x, z }, k = 0; // 곧게 펴기
+  while (k < cells.length) {
+    let far = k; for (let q = cells.length - 1; q > k; q--) if (navSee(a.x, a.z, cells[q].x, cells[q].z)) { far = q; break; }
+    out.push(cells[far]); a = cells[far]; k = far + 1;
+  }
+  return out;
 }
 function collide(d) {
   for (const o of OBST) {
@@ -1627,16 +1685,16 @@ function collide(d) {
   d.z = clamp(d.z, -2.25, 2.6);
 }
 const pinky = buildDog({ kind: 'beagle', colors: COLORS.pinky, scale: 1, seed: 7 });
-pinky.steer = steer; pinky.collide = collide;
+pinky.route = route; pinky.routeSee = navSee; pinky.collide = collide;
 roomScene.add(pinky.root);
 fitCurl(pinky);
 roomUpd.push(() => {
   const dist = Math.hypot(pinky.x - CUSH.x, pinky.z - CUSH.z), inside = dist < 0.6;
-  CUSH_OB.r = cushGo || dist < 0.5 ? -9 : 0.36;
+  if (dist < 0.3) cushOn = true; else if (dist >= 0.5) cushOn = false; // 방석 위에 올라와 있는 동안(내려올 때까지)만 비켜 준다 — 그냥 지나갈 때는 돌아서 간다
+  const ballOn = active && active.name === 'play' && ball.state !== 'none' && Math.hypot(ball.g.position.x - CUSH.x, ball.g.position.z - CUSH.z) < 0.5; // 공이 방석에 떨어지면 올라가서 물어 온다
+  CUSH_OB.r = cushGo || cushOn || ballOn ? -9 : 0.36;
   if (inside) pinky.liftT = cushLift(dist); else if (onCush) pinky.liftT = 0;
   onCush = inside;
-  if (pinky.wakeT > 0) { if (pinky.walkSpeed > 0) { wakeSpeed = pinky.walkSpeed; pinky.walkSpeed = 0; } pinky.stuckT = 0; } // 일어서는 동안은 제자리에서 몸만 돌린다
-  else if (wakeSpeed) { if (pinky.walkSpeed === 0) pinky.walkSpeed = wakeSpeed; wakeSpeed = 0; }
 });
 const contact = new THREE.Mesh(new THREE.CircleGeometry(1, 40), new THREE.MeshBasicMaterial({
   map: canvasTex(128, 128, (x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(40,24,12,.55)'); g.addColorStop(0.6, 'rgba(40,24,12,.22)'); g.addColorStop(1, 'rgba(40,24,12,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); }),
@@ -1882,7 +1940,7 @@ const actionsEl = $('#actions');
 function setActiveBtn(name) { [...actionsEl.querySelectorAll('button')].forEach((b) => b.classList.toggle('on', b.dataset.cmd === name)); }
 function cancelActive() { if (active) { active.cancelled = true; active.cleanups.forEach((f) => f()); active = null; setActiveBtn(null); } }
 function resetTransient(d) {
-  Object.assign(d, { stuckT: 0, lastD: undefined, detour: null, walkTarget: null, walkSpeed: 0.5, chew: false, lick: 0, tongueOut: 0, pant: false, sniff: 0, paddle: 0, lookFn: null, face: 'cam', eyeOpen: 1, tiltT: 0, jawOpen: 0, earPerk: 0, wagAmpT: 0.3, wagSpeedT: 6, liftT: 0 });
+  Object.assign(d, { stuckT: 0, lastP: null, path: null, ghost: false, stuckN: 0, walkT: 0, walkTarget: null, walkSpeed: 0.5, chew: false, lick: 0, tongueOut: 0, pant: false, sniff: 0, paddle: 0, paddleFront: false, shuffle: 0, lookFn: null, face: 'cam', eyeOpen: 1, tiltT: 0, jawOpen: 0, earPerk: 0, wagAmpT: 0.3, wagSpeedT: 6, liftT: 0 });
 }
 function releaseHands() { handR.want = null; handL.want = null; treat.visible = false; roomScene.add(treat); scoop.visible = false; pouring = false; }
 function startCommand(name, fn, keepCam = false) {
@@ -1891,13 +1949,28 @@ function startCommand(name, fn, keepCam = false) {
   active = tok; setActiveBtn(name); idleT = 5;
   resetTransient(pinky); releaseHands();
   if (pinky.tgt.name === 'held' || pinky.tgt.name === 'eat') setPose(pinky, 'stand', 5);
-  if (pinky.tgt.name === 'curl') { if (['touch', 'cushion', 'roam'].includes(name)) Object.assign(pinky, { eyeOpen: Math.min(pinky.eyeY, 0.3), face: null, wagAmpT: 0.05 }); else { setPose(pinky, 'stand', 3.0); pinky.napEnd = 0; } } // 방석에서 자다가 불리면 부드럽게 일어난다 (쓰다듬거나 계속 재울 때는 눈을 번쩍 뜨지 않는다)
+  let run = fn;
+  if (!['touch', 'cushion'].includes(name)) pinky.napEnd = 0;
+  if (pinky.tgt.name === 'curl' || pinky.curlK > 0.3) { // 방석에서 자다가: 쓰다듬거나 계속 재울 때는 눈을 번쩍 뜨지 않고, 불리면 차례로 천천히 일어난 다음에 한다
+    if (['touch', 'cushion', 'roam'].includes(name)) Object.assign(pinky, { eyeOpen: Math.min(pinky.eyeY, 0.3), face: null, wagAmpT: 0.05 });
+    else { Object.assign(pinky, { eyeOpen: pinky.eyeY, face: null, wagAmpT: 0.1, wagSpeedT: 5 }); run = async (tk) => { await wakeUp(tk, name); return fn(tk); }; }
+  }
   if (!keepCam) camHome();
-  fn(tok).then(() => { if (active === tok) { active = null; setActiveBtn(null); idleT = 4; } })
+  run(tok).then(() => { if (active === tok) { active = null; setActiveBtn(null); idleT = 4; } })
     .catch((e) => { if (e === CANCEL) return; console.error(e); if (active === tok) { active = null; setActiveBtn(null); idleT = 4; } });
 }
+// 자다가 불렸을 때: 눈을 뜨고 → 고개를 들고 → 제자리에서 말았던 몸을 펴 엎드리고 → 일어선다 (다 일어설 때까지 몸을 돌리거나 걷지 않는다). 1.5초쯤
+async function wakeUp(tok, name) {
+  const e0 = pinky.eyeY; pinky.blinkT = 3; pinky.sigh = 0;
+  pinky.tgt.gaze = 0.75; pinky.tgt.headPitch = -0.3;
+  await tween(tok, 0.4, (k) => { pinky.eyeOpen = lerp(e0, 0.7, ease(k)); });
+  setPose(pinky, 'down', 4.6); pinky.tgt.gaze = 0.9;
+  await tween(tok, 0.6, (k) => { pinky.eyeOpen = lerp(0.7, 1, ease(k)); });
+  if (!['down', 'roll'].includes(name)) { setPose(pinky, 'stand', 4.6); pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6; await wait(tok, 0.5); }
+  Object.assign(pinky, { face: 'cam', eyeOpen: 1, wagAmpT: 0.3, wagSpeedT: 6 });
+}
 async function walkTo(tok, x, z) {
-  Object.assign(pinky, { walkTarget: { x, z }, stuckT: 0, lastD: undefined, detour: null });
+  Object.assign(pinky, { walkTarget: { x, z }, stuckT: 0, lastP: null, path: null, ghost: false, stuckN: 0, walkT: 0 });
   tok.cleanups.push(() => { pinky.walkTarget = null; });
   await until(tok, () => pinky.walkTarget === null);
 }
@@ -1931,7 +2004,7 @@ async function cushionNap(tok, sec = 16, cam = false) {
   const view = () => { if (cam) { const [p, a] = kneelFor({ x: CUSH.x - 0.04, z: CUSH.z }, roomCam.aspect < 0.8 ? 1.9 : 1.5, roomCam.aspect < 0.8 ? 1.0 : 0.86, 0.14); camTo(p, a, 1.4); } };
   const lids = (to, dur) => { const from = pinky.eyeOpen; return tween(tok, dur, (k) => { pinky.eyeOpen = lerp(from, to, k * k * (3 - 2 * k)); }); }; // 눈꺼풀은 천천히 내려오고 천천히 올라간다
   const curlHead = () => { pinky.face = null; pinky.tgt.gaze = POSES.curl.gaze; pinky.tgt.headPitch = POSES.curl.headPitch; };
-  tok.cleanups.push(() => { cushGo = false; pinky.sigh = 0; });
+  tok.cleanups.push(() => { cushGo = false; pinky.sigh = 0; pinky.shuffle = 0; });
   if (pinky.tgt.name !== 'curl' || dist() > 0.1) {
     setPose(pinky, 'stand', 4); pinky.walkSpeed = 0.4; pinky.wagAmpT = 0.4; pinky.wagSpeedT = 8;
     cushGo = true;
@@ -1941,18 +2014,23 @@ async function cushionNap(tok, sec = 16, cam = false) {
     await walkTo(tok, C.x, C.z);
     // 빙글빙글: 몸을 마는 쪽(왼쪽)으로, 코를 앞세워 작은 원을 그리며 돌다가 눕는 방향에서 멈춘다
     let a0 = pinky.yaw, turn = CUSH.yaw - a0; turn -= Math.floor(turn / (Math.PI * 2)) * Math.PI * 2;
-    turn += Math.PI * 2 * (turn < 1.6 || Math.random() < 0.45 ? 1 : 0); if (turn < 4.5) turn += Math.PI * 2;
-    const half = turn > 9 ? 0.5 : 0.6;
-    const spin = (from, to) => tween(tok, (Math.abs(to - from) * turn) / 2.1, (k) => {
-      const a = a0 + turn * lerp(from, to, k), r = 0.035 * Math.sin(Math.PI * k);
-      pinky.x = C.x - r * Math.cos(a); pinky.z = C.z + r * Math.sin(a);
-      pinky.face = { x: pinky.x + Math.sin(a), z: pinky.z + Math.cos(a) };
+    if (turn < 3.3 || (turn < 4.6 && Math.random() < 0.4)) turn += Math.PI * 2; // 한 바퀴 남짓 ~ 한 바퀴 반
+    const half = turn > 7 ? 0.5 : 0.58;
+    // 나이 든 강아지답게 느릿느릿: 천천히 돌기 시작해 천천히 멈추고, 도는 쪽으로 허리가 휘며 발을 조금씩 옮겨 딛는다
+    const spin = (from, to) => tween(tok, (Math.abs(to - from) * turn) / 1.2 + 0.5, (k) => {
+      const w = Math.sin(Math.PI * k), a = a0 + turn * lerp(from, to, k * k * (3 - 2 * k)), r = 0.035 * w;
+      pinky.x = C.x - r * Math.cos(a); pinky.z = C.z + r * Math.sin(a); pinky.yaw = a;
+      pinky.shuffle = 0.25 + 0.4 * w; pinky.tgt.bendY = -0.38 * w; pinky.tgt.headTilt = 0.1 * w;
     });
-    pinky.sniff = 0.35; await spin(0, half);
-    pinky.sniff = 0; await wait(tok, 0.5);
-    pinky.paddle = 0.32; say('꾹꾹', headTop, 'small', 1.3); await wait(tok, 1.1); pinky.paddle = 0; // 자리를 다진다
-    pinky.sniff = 0.3; await spin(half, 1); pinky.sniff = 0;
-    await wait(tok, 0.7); pinky.face = null; pinky.yaw = a0 + turn; pinky.x = C.x; pinky.z = C.z;
+    pinky.face = null;
+    pinky.sniff = 0.35; await spin(0, half); pinky.shuffle = 0;
+    pinky.sniff = 0; await wait(tok, 0.4);
+    // 꾹꾹: 고개를 숙이고 앞발로만 번갈아 자리를 다진다
+    Object.assign(pinky.tgt, { gaze: 0, headPitch: 0.5, neck: 0.75, pitch: 0.1 }); await wait(tok, 0.45);
+    pinky.paddleFront = true; pinky.paddle = 0.55; say('꾹꾹', headTop, 'small', 1.5); await wait(tok, 1.7); pinky.paddle = 0;
+    await wait(tok, 0.25); pinky.paddleFront = false; Object.assign(pinky.tgt, { gaze: 0.15, headPitch: 0.4, neck: 0, pitch: 0 }); await wait(tok, 0.35);
+    pinky.sniff = 0.3; await spin(half, 1); pinky.sniff = 0; pinky.shuffle = 0;
+    await wait(tok, 0.6); pinky.yaw = a0 + turn; pinky.x = C.x; pinky.z = C.z;
     pinky.wagAmpT = 0.12; pinky.wagSpeedT = 4;
     setPose(pinky, 'down', 2.6); pinky.tgt.gaze = 0.2; await wait(tok, 0.95); // 나이 든 강아지답게 차례로: 먼저 앞다리를 접어 엎드리고
     setPose(pinky, 'curl', 1.7); await lids(0.45, 2.4); // 그다음 엉덩이를 옆으로 누이며 몸을 만다
@@ -1960,9 +2038,8 @@ async function cushionNap(tok, sec = 16, cam = false) {
     say('후우…', headTop, 'soft', 1.8);
   } else { setPose(pinky, 'curl', 1.9); curlHead(); view(); await wait(tok, 0.8); } // 쓰다듬다 만 뒤: 고개를 다시 테두리에 내려놓고 그대로 잠든다
   curlHead(); pinky.wagAmpT = 0.03; await lids(0.04, 2.6);
-  if (cam) pinky.napEnd = clock + sec; // 버튼으로 재운 낮잠은 쓰다듬어도 남은 시간만큼 이어서 잔다
   const zz = ['쿨…', 'z Z', '쿨…', '새근…'];
-  for (let t0 = clock, n = 0; clock - t0 < sec; n++) {
+  for (let t0 = clock, n = 0; cam ? clock < pinky.napEnd : clock - t0 < sec; n++) { // 버튼으로 재운 낮잠은 napEnd(정해진 시각)까지: 쓰다듬어도 늘어나지 않는다
     pinky.blinkT = 9;
     await wait(tok, 2.4 + Math.random() * 1.4);
     const r = Math.random();
@@ -1985,8 +2062,9 @@ async function cushionNap(tok, sec = 16, cam = false) {
   cushGo = true; pinky.walkSpeed = 0.3; await walkTo(tok, C.ex, C.ez); cushGo = false; pinky.walkSpeed = 0.5;
 }
 
+const napKeep = () => pinky.napEnd > clock + 3 && Math.hypot(pinky.x - CUSH.x, pinky.z - CUSH.z) < 0.5;
 const CMDS = {
-  async cushion(tok) { const left = pinky.tgt.name === 'curl' ? (pinky.napEnd || 0) - clock : 0; await cushionNap(tok, left > 3 ? left : 75, true); },
+  async cushion(tok) { if (!(pinky.napEnd > clock + 3)) pinky.napEnd = clock + 90; await cushionNap(tok, 0, true); }, // 버튼을 누른 때부터 90초(가서 눕는 시간 포함). 쓰다듬은 뒤에는 남은 시간만 잔다
   async sit(tok) {
     setPose(pinky, 'sit', 6);
     pinky.wagAmpT = 0.4; pinky.wagSpeedT = 8; pinky.earPerk = 0.4;
@@ -2191,7 +2269,8 @@ const CMDS = {
     await wait(tok, 0.8);
   },
   async touch(tok) {
-    const [p, a] = kneelAt(0.78, 0.95, 0.22); camTo(p, a, 2.2);
+    const keep = napKeep(); // 방석 버튼으로 재우는 중(가서 눕는 동안 포함)에 쓰다듬으면: 방석을 보던 시점 그대로, 끝나면 이어서 잔다
+    if (!keep) { const [p, a] = kneelAt(0.78, 0.95, 0.22); camTo(p, a, 2.2); }
     happy(true); if (['side', 'belly'].includes(pinky.tgt.name)) pinky.paddle = 0.5;
     const curled = pinky.tgt.name === 'curl'; // 방석에서 자는 중이면 깨우지 않고 눈만 살짝, 꼬리만 탁탁
     if (curled) Object.assign(pinky, { face: null, pant: false, eyeOpen: 0.2, tiltT: 0, earPerk: 0, wagAmpT: 0.2, wagSpeedT: 7 });
@@ -2201,7 +2280,7 @@ const CMDS = {
     handR.want = null; pinky.paddle = 0;
     await wait(tok, 0.6); happy(false); if (curled) { pinky.eyeOpen = 0.3; pinky.wagAmpT = 0.1; } else pinky.tiltT = 0.3; say('더 해줘…', headTop, 'soft', 1.8);
     await wait(tok, 1.6); pinky.tiltT = 0;
-    if (curled && pinky.tgt.name === 'curl' && pinky.napEnd > clock + 3) { startCommand('cushion', CMDS.cushion, true); return; } // 방석 버튼으로 자던 중이면 남은 낮잠을 그대로 이어서 잔다
+    if (keep && napKeep()) { startCommand('cushion', CMDS.cushion, true); return; }
     camHome();
   },
 };
@@ -2285,7 +2364,7 @@ function resetRoom() {
   for (const k of kibbles) roomScene.remove(k.m); kibbles.length = 0; for (const c of crumbs) roomScene.remove(c.m); crumbs.length = 0;
   $('#hint').classList.remove('gone');
   Object.assign(pinky, { x: HOME.x, z: HOME.z, yaw: 0, lift: 0 });
-  resetTransient(pinky); Object.assign(pinky, { wasCurl: 0, wakeT: 0, sigh: 0, curlK: 0, napEnd: 0 }); for (const L of pinky.legs) L.hip.rotation.y = 0; cushGo = false;
+  resetTransient(pinky); Object.assign(pinky, { sigh: 0, curlK: 0, curlS: 0, napEnd: 0 }); for (const L of pinky.legs) L.hip.rotation.y = 0; cushGo = false;
   setPose(pinky, 'stand', 50);
   const st = poseFor('stand', pinky);
   for (const k of POSE_KEYS) pinky.cur[k] = st[k];
@@ -2352,7 +2431,8 @@ canvas.addEventListener('pointerdown', (e) => {
       Object.assign(touch, { active: true, x: e.clientX, y: e.clientY, moved: 0, heartT: 0.4, miss: 0 });
       setTouchHit(hit); touch.last.copy(touch.pt);
       $('#hint').classList.add('gone');
-      startCommand('touch', CMDS.touch);
+      const keep = napKeep(); if (!keep) pinky.napEnd = 0;
+      startCommand('touch', CMDS.touch, keep); if (keep) setActiveBtn('cushion');
       return;
     }
   }
@@ -2419,7 +2499,9 @@ function drawFrame(scene, cam) {
   composer.render();
 }
 let last = performance.now(), booted = false;
+let dbgPause = false; // 점검용: 화면 그리기를 멈추고 시간을 손으로 넘긴다
 function frame(now) {
+  if (dbgPause) { last = now; requestAnimationFrame(frame); return; }
   const dt = Math.min(0.05, (now - last) / 1000); last = now; clock += dt;
   stepTimers();
   if (mode === 'select') { updateSelect(dt, clock); drawFrame(selScene, selCam); stepBubbles(dt, selCam); }
@@ -2430,4 +2512,7 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // 로컬에서만 쓰는 점검용 핸들
-if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCommand, CMDS, look, cam, ball, goRoom, goSelect, roomCam, CUSH, POSES, CURL, fitCurl, NAP: (pk) => { Object.assign(pk, { x: SPOTS.cushion.x, z: SPOTS.cushion.z, yaw: CUSH.yaw, face: null, lift: cushLift(Math.hypot(CUSH.px, CUSH.pz)), eyeOpen: 0.04, wagAmpT: 0.03, curlK: 1 }); setPose(pk, 'curl', 50); } };
+if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCommand, CMDS, look, cam, ball, goRoom, goSelect, roomCam, CUSH, POSES, CURL, fitCurl, OBST, roomScene, renderer, ballToWorld,
+  get clock() { return clock; }, get active() { return active; }, get idleT() { return idleT; }, set idleT(v) { idleT = v; }, pause(v) { dbgPause = v; },
+  step(dt) { clock += dt; stepTimers(); updateRoom(dt, clock); }, draw() { drawFrame(roomScene, roomCam); stepBubbles(0, roomCam); },
+  NAP: (pk) => { Object.assign(pk, { x: SPOTS.cushion.x, z: SPOTS.cushion.z, yaw: CUSH.yaw, face: null, lift: cushLift(Math.hypot(CUSH.px, CUSH.pz)), eyeOpen: 0.04, wagAmpT: 0.03, curlK: 1 }); setPose(pk, 'curl', 50); } };
