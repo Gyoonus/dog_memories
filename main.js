@@ -4,7 +4,7 @@ import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from './vendor/jsm/postprocessing/ShaderPass.js';
-import { sound } from './sound.js?v=12';
+import { sound } from './sound.js?v=13';
 
 const $ = (s) => document.querySelector(s);
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -1743,7 +1743,7 @@ roomScene.add(pinky.root);
 fitCurl(pinky);
 roomUpd.push(() => {
   const dist = Math.hypot(pinky.x - CUSH.x, pinky.z - CUSH.z), inside = dist < 0.6;
-  const ballOn = active && active.name === 'play' && ball.state !== 'none' && Math.hypot(ball.g.position.x - CUSH.x, ball.g.position.z - CUSH.z) < 0.5; // 공이 방석에 떨어지면 올라가서 물어 온다
+  const ballOn = active && active.name === 'play' && toy.tok !== active && ball.state !== 'none' && Math.hypot(ball.g.position.x - CUSH.x, ball.g.position.z - CUSH.z) < 0.5; // 공이 방석에 떨어지면 올라가서 물어 온다
   if (dist < 0.3 || (dist < 0.5 && (cushGo || ballOn))) cushOn = true; else if (dist >= 0.5) cushOn = false; // 방석 위에 올라와 있는 동안(내려올 때까지)만 비켜 준다 — 그냥 지나갈 때는 돌아서 간다. 테두리를 넘다가 불려도 올라선 높이 그대로다
   CUSH_OB.r = cushGo || cushOn || ballOn ? -9 : 0.36;
   const up = inside && (cushGo || cushOn || ballOn); // 방석 옆을 지나갈 때는 몸이 뜨지 않는다
@@ -2387,7 +2387,8 @@ function stepBubbles(dt, cam) {
   for (let i = bubbles.length - 1; i >= 0; i--) {
     const b = bubbles[i]; b.age += dt;
     _p.copy(b.anchor()); _p.y += b.age * 0.1; _p.project(cam);
-    const x = (_p.x * 0.5 + 0.5) * innerWidth + b.dx, y = (-_p.y * 0.5 + 0.5) * innerHeight;
+    if (!b.h) { b.h = b.el.offsetHeight || 1; b.w = b.el.offsetWidth || 1; }
+    const x = clamp((_p.x * 0.5 + 0.5) * innerWidth + b.dx, b.w / 2 + 6, Math.max(b.w / 2 + 6, innerWidth - b.w / 2 - 6)), y = Math.max((-_p.y * 0.5 + 0.5) * innerHeight, b.h + 8); // 가까이서 볼 때도 화면 밖으로 잘리지 않게
     const o = b.age < 0.2 ? b.age / 0.2 : b.age > b.life - 0.45 ? Math.max(0, (b.life - b.age) / 0.45) : 1;
     b.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
     b.el.style.opacity = _p.z > 1 ? 0 : o;
@@ -2926,7 +2927,7 @@ const ROPE_BITE = [V3(0.012, -0.012, 0.088), V3(-0.012, -0.012, 0.088)]; // 통�
 let ropeRuns = 0;
 async function ropePlay(tok) {
   const ph = phoneK(), run = ropeRuns++;
-  toy.tok = tok; tok.cleanups.push(() => { toyOff(); pinky.walkTarget = null; });
+  toy.tok = tok; tok.cleanups.push(() => { toyOff(); pinky.walkTarget = null; if (['tug', 'bow'].includes(pinky.tgt.name)) setPose(pinky, 'stand', 3); }); // 버티던 중에 그만두면 몸을 편다
   const mouth = () => pinky.jaw.localToWorld(V3(0, -0.012, 0.088));
   const pullA = ph > 1 ? 0.36 : 0.7, pullDir = () => { const d = toCamDir(), c = Math.cos(pullA), sn = Math.sin(pullA); return V3(d.x * c + d.z * sn, 0, d.z * c - d.x * sn); }; // 내 손은 화면 오른쪽 앞에서 당긴다 (줄이 화면에 길게 보이게)
   const kickA = (v) => { for (let i = 0; i < rope.NP; i++) rope.kick(v, 'A' + i); };
@@ -2941,12 +2942,13 @@ async function ropePlay(tok) {
   // 로프가 놓인 데로 가서 문다 (어디에 두었든 찾아간다)
   const reach = 0.25, t0 = clock; pinky.walkSpeed = 1.0;
   const rel = () => { const b = rope.pos('B.bite'); return [b, b.x - pinky.x, b.z - pinky.z, Math.hypot(b.x - pinky.x, b.z - pinky.z) || 1e-3]; };
-  let [b, dx, dz, dist] = rel();
+  let [b, dx, dz, dist] = rel(); const still = { x: pinky.x, z: pinky.z, t: clock };
   if (dist < 0.17) { pinky.face = { x: b.x, z: b.z }; pinky.paddle = 0.25; await slide(0.6, V3(-Math.sin(pinky.yaw), 0, -Math.cos(pinky.yaw)), reach - dist * 0.5); pinky.paddle = 0; } // 발밑에 있으면 한 발 물러나서
   else await until(tok, () => {
     [b, dx, dz, dist] = rel();
     pinky.walkTarget = dist > reach + 0.03 ? { x: b.x - (dx / dist) * reach, z: b.z - (dz / dist) * reach } : null;
-    if (clock - t0 > 10) { rope.place(pinky.x + Math.sin(pinky.yaw) * 0.3, pinky.z + Math.cos(pinky.yaw) * 0.3, pinky.yaw + 1.2); return true; } // 가구 밑처럼 닿지 않는 곳이면 앞으로 끌어다 놓는다
+    if (Math.hypot(pinky.x - still.x, pinky.z - still.z) > 0.03) Object.assign(still, { x: pinky.x, z: pinky.z, t: clock });
+    if (clock - t0 > 10 || (clock - t0 > 2 && clock - still.t > 1.6)) { rope.place(pinky.x + Math.sin(pinky.yaw) * 0.3, pinky.z + Math.cos(pinky.yaw) * 0.3, pinky.yaw + 1.2); return true; } // 가구 밑처럼 닿지 않는 곳이면 앞으로 끌어다 놓는다
     return dist < reach + 0.07 || (clock - t0 > 6 && dist < 0.5);
   });
   pinky.walkTarget = null; [b] = rel(); pinky.face = { x: b.x, z: b.z };
@@ -3196,6 +3198,7 @@ function placePicker() {
   pickerEl.style.setProperty('--caret', r.left + r.width / 2 - pickerEl.getBoundingClientRect().left + 'px');
 }
 const pickerIdle = () => (!active || active.name === 'roam') && pinky.tgt.name !== 'curl';
+let pickerPerk = false; // 고르는 걸 쳐다보느라 귀를 세웠는지 (닫을 때 꼭 되돌린다 — 그사이 방석에 누웠어도)
 function openPicker(btn, focus) {
   closePicker();
   pickerFor = btn; const menu = btn.dataset.menu;
@@ -3209,7 +3212,7 @@ function openPicker(btn, focus) {
   btn.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
   placePicker();
   if (focus) pickerEl.firstChild.focus();
-  if (pickerIdle()) { pinky.earPerk = 0.6; pinky.tiltT = 0.15; pinky.wagAmpT = Math.max(pinky.wagAmpT, 0.6); pinky.wagSpeedT = Math.max(pinky.wagSpeedT, 13); snd('sfx', 'tag_jingle', { gain: -4, gap: 1.5, why: 'picker (ear perk)' }); } // 뭘 고르나 귀를 쫑긋하고 쳐다본다
+  if (pickerIdle()) { pickerPerk = true; pinky.earPerk = 0.6; pinky.tiltT = 0.15; pinky.wagAmpT = Math.max(pinky.wagAmpT, 0.6); pinky.wagSpeedT = Math.max(pinky.wagSpeedT, 13); snd('sfx', 'tag_jingle', { gain: -4, gap: 1.5, why: 'picker (ear perk)' }); } // 뭘 고르나 귀를 쫑긋하고 쳐다본다
 }
 function closePicker(refocus = false, chosen = false) {
   if (!pickerFor) return;
@@ -3217,7 +3220,8 @@ function closePicker(refocus = false, chosen = false) {
   pickerEl.hidden = true; pickBack.hidden = true; $('#roomUI').classList.remove('picking');
   btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false');
   if (refocus) btn.focus({ preventScroll: true });
-  if (!chosen && pickerIdle()) { pinky.earPerk = 0; pinky.tiltT = 0; pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6; }
+  if (pickerPerk && !chosen && (!active || active.name === 'roam')) { pinky.earPerk = 0; pinky.tiltT = 0; if (pickerIdle()) { pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6; } }
+  pickerPerk = false;
 }
 pickBack.addEventListener('pointerdown', (e) => { e.preventDefault(); closePicker(); });
 pickerEl.addEventListener('click', (e) => {
@@ -3326,7 +3330,7 @@ function goRoom() {
 }
 function goSelect() {
   if (transitioning) return;
-  cancelActive(); clearBubbles(); releaseHands(); closePicker(); touch.active = false; drag = null; idleT = Infinity;
+  cancelActive(); resetTransient(pinky); snd('hush', 250); clearBubbles(); releaseHands(); closePicker(); touch.active = false; drag = null; idleT = Infinity; // 나가는 동안에는 씹는 소리도 로프 떨어지는 소리도 나지 않게
   fade(() => { mode = 'select'; clearBubbles(); hideHandsNow(); drag = null; $('#roomUI').hidden = true; $('#selectUI').hidden = false; });
 }
 $('#backBtn').addEventListener('click', goSelect);

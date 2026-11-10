@@ -163,7 +163,7 @@ def('chomp_ball', 3, -14, 'dog', () => { // 앙! — 공을 덥석
   const g = bq(bq(voiced(120, { f0: curve([[0, 270], [120, 235]]), jit: 0.02, shim: 0.08, oq: 0.7, tilt: 900, asp: -18 }), 'pk', 400, 2, 8), 'lp', 1500, 0.7);
   return mix(out, mulf(norm(g), bell(120, 0.8)), 35, db(-10));
 }, { gap: 0.5 });
-def('growl_play', 3, -15, 'dog', () => { // 으르릉 — 장난으로 (짧게 두 번 부풀었다 꺼진다)
+def('growl_play', 3, -18, 'dog', () => { // 으르릉 — 장난으로 (짧게 두 번 부풀었다 꺼진다)
   const D = rr(500, 800), f = rr(105, 135), am = rr(28, 34), w = rr(0.7, 1.5), ph = rr(0, TAU);
   let y = voiced(D, { f0: (m) => f * (1 + 0.06 * Math.sin((TAU * w * m) / 1000 + ph)), jit: 0.04, shim: 0.12, oq: 0.55, tilt: 1800, sub: 0.4, asp: -13, F: [700, 1750, 2900], B: [220, 340, 480], G: [0, -5, -11], dry: 0.1 });
   y = norm(bq(y, 'lp', 2500, 0.7));
@@ -475,6 +475,7 @@ function stopAll(fadeMs = 80, everything = false) {
   for (const v of voices) if (everything || v.loop) fadeOut(v, fadeMs);
   if (st) st.pour = null;
 }
+function hush(fadeMs = 250) { queue.length = 0; stopAll(fadeMs, true); } // 방을 나설 때: 예약된 소리까지 모두 거둔다
 
 // ---------------------------------------------------------------- 목소리 · 이어지는 소리 묶음
 const VOICE = { yip: 'bark_yip', woof: 'bark_woof', aroo: 'bay_aroo', whine: 'whine', growl: 'growl_play', yawn: 'yawn', content: 'content', sigh: 'sigh', whimper: 'whimper' };
@@ -724,7 +725,7 @@ export const sound = {
   setLickKind(k) { lickKind = k || 'auto'; },
   ballBounce(speed, pos, surface) { play('ball_bounce', { pos, gain: clamp(20 * Math.log10(Math.max(speed, 0.01) / 3), -16, 4) + (surface && surface !== 'wood' ? -4 : 0), why: 'bounce' }); },
   lap(kind = 'mouth') { if (live() && st) lap('lap (' + kind + ')', kind); }, // 'yogurt' · 'mouth' · 'bowl'
-  chewHit, shakeHit, ropeDrop,
+  chewHit, shakeHit, ropeDrop, hush,
   kibbleHit(inBowl, pos, fill = 0) { const dull = Math.random() < fill; play(inBowl ? 'kibble_hit' : 'kibble_floor', { pos, ...(inBowl ? { vlo: dull ? 4 : 0, vhi: dull ? 8 : 4 } : {}), why: 'kibble' }); },
   exportWav(name, v = 0) { return new Blob([wav(render(name, v, 48000), 48000)], { type: 'audio/wav' }); },
   _fake(on = true) { fake = on; }, // 점검용: 소리 장치 없이 기록만

@@ -84,7 +84,6 @@ h1 {
 .snd { appearance: none; margin-left: auto; width: 44px; height: 44px; border-radius: 50%; font-size: 19px; line-height: 1; cursor: pointer; display: grid; place-items: center; padding: 0; color: inherit; position: relative; }
 .snd[hidden] { display: none; }
 .snd.off { color: var(--muted); border-style: dashed; }
-.snd.off::after { content: ''; position: absolute; left: 50%; top: 50%; width: 30px; height: 2px; border-radius: 2px; background: currentColor; transform: translate(-50%, -50%) rotate(-45deg); box-shadow: 0 0 0 1px rgba(0, 0, 0, .35); }
 .sel-snd { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 16px); right: max(16px, env(safe-area-inset-right, 0px)); }
 .room-bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .hint { margin: 0; font-size: 12.5px; color: var(--muted); text-shadow: 0 1px 8px rgba(0, 0, 0, .7); transition: opacity .8s; }
