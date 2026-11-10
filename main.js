@@ -94,7 +94,7 @@ const POSES = {
   stand: { bodyY: 0.3, bodyZ: 0, pitch: 0, roll: 0, yawOff: -0.5, gaze: 1, headPitch: 0.12, headTilt: 0, tail: -1.8, level: 1, free: 0,
     lean: [0.2, 0.2, 0.42, 0.42], paws: [P(0.066, 0.03, 0.225), P(-0.066, 0.03, 0.225), P(0.072, 0.03, -0.188), P(-0.072, 0.03, -0.188)] }, // 짧고 튼튼한 다리 위의 깊은 가슴: 뒷다리는 엉덩이 조금 뒤, 비절(hock)이 발 뒤에 선다
   // 앉기: 엉덩이는 바닥, 등은 50°쯤 기울고, 가슴은 곧게 선 앞다리 바로 위. 뒷다리는 무릎이 앞 위로 나오고 뒤꿈치가 바닥에 닿아 뒷발이 앞발 바로 옆·뒤에 놓인다
-  sit: { bodyY: 0.17, bodyZ: -0.02, pitch: -0.9, roll: 0, yawOff: -0.6, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.75, level: 1, free: 0, splay: 0.3,
+  sit: { bodyY: 0.17, bodyZ: -0.02, pitch: -0.9, roll: 0, yawOff: -0.6, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.75, level: 1, free: 0, splay: 0.3, neck: 0.8,
     lean: [0.1, 0.1, 1.05, 1.05], paws: [P(0.07, 0.03, 0.172), P(-0.07, 0.03, 0.172), P(0.082, 0.03, 0.04), P(-0.082, 0.03, 0.04)] }, // 세운 삼각형: 엉덩이 바닥, 뒷다리는 살짝 벌어져(splay) 앞발 옆에 뒷발이 보인다
   down: { bodyY: 0.14, bodyZ: -0.02, pitch: 0.02, roll: 0, yawOff: -0.7, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.75, level: 1, free: 0,
     lean: [1.5, 1.5, 1.2, 1.2], paws: [P(0.068, 0.03, 0.415), P(-0.068, 0.03, 0.415), P(0.095, 0.03, -0.0), P(-0.095, 0.03, -0.0)] },
@@ -104,7 +104,7 @@ const POSES = {
     lean: [0.6, 0.6, 0.4, 0.4], paws: [P(0.22, 0.38, 0.295), P(0.13, 0.4, 0.205), P(0.24, 0.35, -0.17), P(0.15, 0.38, -0.24)] },
   eat: { bodyY: 0.25, bodyZ: 0.05, pitch: 0.3, roll: 0, yawOff: 0, gaze: 0, headPitch: 0.85, headTilt: 0, tail: -1.7, level: 1, free: 0,
     lean: [0.35, 0.35, 0.3, 0.3], paws: [P(0.058, 0.03, 0.293), P(-0.058, 0.03, 0.293), P(0.068, 0.03, -0.18), P(-0.068, 0.03, -0.18)] },
-  held: { bodyY: 0.2, bodyZ: 0, pitch: -1.15, roll: 0, yawOff: 0, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.9, level: 0, free: 1,
+  held: { bodyY: 0.2, bodyZ: 0, pitch: -1.15, roll: 0, yawOff: 0, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.9, level: 0, free: 1, neck: 0.8,
     lean: [0.1, 0.1, 0.15, 0.15], paws: [P(0.08, 0.13, 0.214), P(-0.08, 0.13, 0.214), P(0.075, -0.17, 0.0), P(-0.075, -0.17, 0.0)] },
 };
 // 진돗개(푸푸): 예전 몸통·다리 기준 그대로
@@ -124,11 +124,11 @@ const POSES_J = {
   held: { bodyY: 0.2, bodyZ: 0, pitch: -1.15, roll: 0, yawOff: 0, gaze: 1, headPitch: 0, headTilt: 0, tail: -1.9, level: 0, free: 1,
     lean: [0.1, 0.1, 0.15, 0.15], paws: [P(0.09, 0.15, 0.17), P(-0.09, 0.15, 0.17), P(0.08, -0.15, 0.02), P(-0.08, -0.15, 0.02)] },
 };
-const POSE_KEYS = ['bodyY', 'bodyZ', 'pitch', 'roll', 'yawOff', 'gaze', 'headPitch', 'headTilt', 'tail', 'level', 'free', 'splay']; // splay: 뒷다리를 옆으로 벌리는 각(앉기)
+const POSE_KEYS = ['bodyY', 'bodyZ', 'pitch', 'roll', 'yawOff', 'gaze', 'headPitch', 'headTilt', 'tail', 'level', 'free', 'splay', 'neck']; // splay: 뒷다리를 옆으로 벌리는 각(앉기) · neck: 목을 앞으로 굽히는 각(앉기 — 몸이 뒤로 기울어도 머리는 가슴 앞 위에)
 
 function poseFor(name, d) {
   const p = (d.J ? POSES_J : POSES)[name];
-  const o = { ...p, name, splay: p.splay ?? 0, lean: [...p.lean], paws: p.paws.map((v) => v.clone()) };
+  const o = { ...p, name, splay: p.splay ?? 0, neck: p.neck ?? 0, lean: [...p.lean], paws: p.paws.map((v) => v.clone()) };
   if (d.J && (name === 'stand' || name === 'eat')) o.bodyY += 0.035;
   return o;
 }
@@ -559,7 +559,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
         let y0 = 0;
         for (const [col, fr] of [['#884a43', 0.3], ['#d8cfc1', 0.14], ['#3a4257', 0.12], ['#d8cfc1', 0.14], ['#884a43', 0.3]]) { x.fillStyle = col; x.fillRect(0, Math.floor(y0 * h), w, Math.ceil(fr * h) + 1); y0 += fr; }
       });
-      put(body, ring.geo, null, null, null, null, new THREE.MeshStandardMaterial({ map: ribbonTex, roughness: 0.85, side: THREE.DoubleSide }));
+      d.collarMesh = put(body, ring.geo, null, null, null, null, new THREE.MeshStandardMaterial({ map: ribbonTex, roughness: 0.85, side: THREE.DoubleSide }));
     } else put(body, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ring.pts, true), 72, 0.011, 10, true), null, null, null, null, M(C.collar, { roughness: 0.5 }));
     if (C.medal) {
       // 메달: 리본 앞 가장 낮은 점에 고리로 매달린 둥근 어두운 청동 판(녹청). 자세에 따라 가슴에 눕는 기울기는 updateDog에서 잡는다
@@ -575,6 +575,21 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
 
   // 머리: 목이 45°로 올라간 끝, 등선보다 위에 얹힌다
   const hp = new THREE.Group(); hp.rotation.order = 'YXZ'; hp.position.set(0, J ? 0.13 : 0.146, J ? 0.205 : 0.208); body.add(hp); d.hp = hp; // 비글: 머리를 목 위로 올려 머리와 가슴 사이에 목이 보인다
+  if (!J) {
+    // 목 관절: 목은 몸통 메시의 일부라, 앉아서 몸이 뒤로 기울면 목도 같이 뒤로 넘어가 머리가 등 위로 간다.
+    // 목 부분 정점만 목뿌리(기갑 앞) 축을 중심으로 앞으로 굽혀(가중치로 부드럽게) 머리가 가슴 앞 위에 오게 한다.
+    const NP = V3(0, 0.07, 0.11), ny = 0.953, nz = 0.302;
+    const nw = (x, y, z) => ss(-0.01, 0.05, (y - NP.y) * ny + (z - NP.z) * nz) * ss(0.06, 0.12, z);
+    const R = d.neckRig = { P: NP, nw, meshes: [], theta: 0, hp0: hp.position.clone(), hpW: nw(0, hp.position.y, hp.position.z) };
+    const addNeckMesh = (geo) => {
+      const pos = geo.attributes.position, n = geo.attributes.normal, idx = [], w = [];
+      for (let i = 0; i < pos.count; i++) { const wi = nw(pos.getX(i), pos.getY(i), pos.getZ(i)); if (wi > 0.001) { idx.push(i); w.push(wi); } }
+      R.meshes.push({ geo, rest: pos.array.slice(), nrest: n ? n.array.slice() : null, idx: Int32Array.from(idx), w: Float32Array.from(w) });
+    };
+    addNeckMesh(d.torso.geometry);
+    if (d.collarMesh) addNeckMesh(d.collarMesh.geometry);
+    if (d.medal) { R.md0 = d.medal.position.clone(); R.mdW = nw(R.md0.x, R.md0.y, R.md0.z); }
+  }
   const head = new THREE.Group(); head.scale.setScalar(J ? 1.3 : 1.42); hp.add(head); d.head = head; // 비글: 머리를 크게(귀여움) — 귀 포함 머리 폭이 가슴보다 확실히 넓게
   const skull = put(head, sdfGeo(J ? 'jh' : 'bh', headSDF(J), J ? [-0.135, -0.08, -0.13] : [-0.075, -0.055, -0.095], J ? [0.135, 0.175, 0.25] : [0.075, 0.135, 0.165], J ? 0.004 : 0.0025, 1), null, null, null, headPaint);
   if (J) skull.userData.fur = [2, 0.0015, 1600];
@@ -702,6 +717,28 @@ function solveLeg(L, A, Pw, level, bodyPitch) {
   L.hip.rotation.x = tu; L.knee.rotation.x = tl - tu; L.ank.rotation.x = t3 - tl; L.foot.rotation.x = -(t3 + bodyPitch) * level;
 }
 
+// 목 굽힘: 목 정점(가중치)과 머리·리본·메달을 목뿌리 축(x축) 둘레로 th만큼 앞으로 돌린다. 각이 바뀔 때만 다시 계산
+function bendNeck(d, th) {
+  const R = d.neckRig;
+  if (Math.abs(th - R.theta) < 0.002) return;
+  R.theta = th;
+  const Py = R.P.y, Pz = R.P.z;
+  for (const m of R.meshes) {
+    const pos = m.geo.attributes.position, pa = pos.array, nAttr = m.geo.attributes.normal, na = nAttr ? nAttr.array : null;
+    for (let k = 0; k < m.idx.length; k++) {
+      const j = m.idx[k] * 3, a = th * m.w[k], c = Math.cos(a), s = Math.sin(a);
+      const y = m.rest[j + 1] - Py, z = m.rest[j + 2] - Pz;
+      pa[j + 1] = Py + y * c - z * s; pa[j + 2] = Pz + y * s + z * c;
+      if (na && m.nrest) { const ny = m.nrest[j + 1], nz = m.nrest[j + 2]; na[j + 1] = ny * c - nz * s; na[j + 2] = ny * s + nz * c; }
+    }
+    pos.needsUpdate = true; if (nAttr) nAttr.needsUpdate = true;
+    m.geo.computeBoundingSphere();
+  }
+  const rot = (v0, w, out) => { const a = th * w, c = Math.cos(a), s = Math.sin(a), y = v0.y - Py, z = v0.z - Pz; out.set(v0.x, Py + y * c - z * s, Pz + y * s + z * c); };
+  rot(R.hp0, R.hpW, d.hp.position);
+  if (d.medal && R.md0) rot(R.md0, R.mdW, d.medal.position);
+}
+
 function updateDog(d, dt, t, camPos) {
   const c = d.cur, g = d.tgt, k = 1 - Math.exp(-d.poseRate * dt);
   for (const key of POSE_KEYS) c[key] += (g[key] - c[key]) * k;
@@ -749,6 +786,7 @@ function updateDog(d, dt, t, camPos) {
   d.body.position.set(0, c.bodyY + br + bob, c.bodyZ);
   d.body.rotation.set(c.pitch, 0, c.roll);
   d.torso.scale.set(1 + br * 2.5, 1 + br * 2.5, 1);
+  if (d.neckRig) bendNeck(d, c.neck || 0);
   if (d.medal) {
     // 메달은 아래로 늘어지되, 판 중심이 가슴 속에 파묻히면(앉기처럼 몸이 뒤로 기울 때) 가슴에 눕도록 앞으로 기울인다
     const md = d.medal; let rx = -c.pitch * 0.95 + Math.sin(d.phase * 2) * 0.12 * d.gait + Math.sin(t * 1.3) * 0.03;
