@@ -85,8 +85,8 @@ h1 {
 .hint { margin: 0; font-size: 12.5px; color: var(--muted); text-shadow: 0 1px 8px rgba(0, 0, 0, .7); transition: opacity .8s; }
 .hint.gone { opacity: 0; }
 .actions {
-  display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px;
-  width: min(100%, 56rem); border-radius: 24px; padding: 6px;
+  display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px;
+  width: min(100%, 60rem); border-radius: 24px; padding: 6px;
 }
 @media (max-width: 760px) { .actions { grid-template-columns: repeat(5, minmax(0, 1fr)); width: min(100%, 30rem); } }
 .actions button {
