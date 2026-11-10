@@ -512,13 +512,15 @@ function furShells(mesh, count = 2, len = 0.002, den = 1600) {
 // 털끝은 살짝 처지고 헝클어지며, 뿌리 쪽은 어둡고 끝은 밝다. aFur(정점 속성) = 그 자리의 털 길이 비율
 // 가까이 다가가면 낱낱의 털이 보이고, 멀거나 비스듬해서 털 한 가닥이 한 픽셀보다 작아지면 가닥 대신 반투명한 솜털로 겹쳐 그린다(가장자리가 소금·후추처럼 지글거리지 않고 보송하게 번진다).
 // uOA–uOB(몸통), uOH(머리): 핑키가 누워 있는 자리 — 그 둘레의 털은 그늘진다(uOcc)
-const plushU = { uOA: { value: V3() }, uOB: { value: V3() }, uOH: { value: V3() }, uOcc: { value: 0 } };
+// uAmb: 방 안에서 사방으로 되비치는 빛(다른 재질은 환경맵으로 받는 빛)을 방석 털도 같은 만큼 받게 한다
+const plushU = { uOA: { value: V3() }, uOB: { value: V3() }, uOH: { value: V3() }, uOcc: { value: 0 }, uAmb: { value: new THREE.Color(0, 0, 0) } };
 // 두툼한 털은 빛을 머금는다: 법선을 위로 조금 눕혀 밝고 어두운 경계를 완만하게 하고(wrap), 그림자도 털 사이로 빛이 새어 조금 옅다
 const plushSoft = (frag) => frag
   .replace('#include <shadowmap_pars_fragment>', '#include <shadowmap_pars_fragment>\n#ifdef USE_SHADOWMAP\nfloat plushShadow(sampler2D m, vec2 sz, float bias, float rad, vec4 c){ return mix(getShadow(m, sz, bias, rad, c), 1.0, 0.3); }\n#endif')
   .replace('#include <lights_fragment_begin>', THREE.ShaderChunk.lights_fragment_begin.replace(/getShadow\(/g, 'plushShadow('))
-  .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(normal + (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz * 0.38);');
-const PLUSH_OCC = 'uniform vec3 uOA; uniform vec3 uOB; uniform vec3 uOH; uniform float uOcc;\nfloat plushOcc(vec3 p){ vec3 pa = p - uOA, ba = uOB - uOA; float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-5), 0.0, 1.0); return uOcc * max(smoothstep(0.25, 0.085, length(pa - ba * h)), smoothstep(0.19, 0.07, length(p - uOH))); }\n';
+  .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(normal + (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz * 0.38);')
+  .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += uAmb * diffuseColor.rgb;');
+const PLUSH_OCC = 'uniform vec3 uOA; uniform vec3 uOB; uniform vec3 uOH; uniform float uOcc; uniform vec3 uAmb;\nfloat plushOcc(vec3 p){ vec3 pa = p - uOA, ba = uOB - uOA; float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-5), 0.0, 1.0); return uOcc * max(smoothstep(0.25, 0.085, length(pa - ba * h)), smoothstep(0.19, 0.07, length(p - uOH))); }\n';
 function plushBase(mat) {
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, plushU);
@@ -1508,6 +1510,7 @@ function buildRoom(S) {
       shells.forEach((m, i) => { m.visible = !far || (shells.length - i) % 2 === 1; });
       const on = Math.hypot(pinky.x - CUSH.x, pinky.z - CUSH.z) < 0.3 ? clamp((0.34 - pinky.cur.bodyY) / 0.19, 0.25, 1) : 0; // 서 있을 때는 옅게, 누우면 짙게
       occ += (on - occ) * (1 - Math.exp(-3 * (dt || 0.016))); plushU.uOcc.value = occ;
+      if (roomScene.environment) plushU.uAmb.value.copy(plushAmb); else plushU.uAmb.value.setRGB(0, 0, 0);
       if (occ > 0.01) {
         cush.worldToLocal(pinky.body.localToWorld(_a.set(0, -0.02, 0.13))); cush.worldToLocal(pinky.tail.getWorldPosition(_b)); cush.worldToLocal(pinky.head.localToWorld(_h.set(0, 0, 0.05)));
         _b.lerp(_a, 0.2); plushU.uOA.value.copy(_a); plushU.uOB.value.copy(_b); plushU.uOH.value.copy(_h);
@@ -1619,6 +1622,15 @@ function buildRoom(S) {
   S.add(spot, spot.target);
 }
 buildRoom(roomScene);
+const plushAmb = new THREE.Color(0, 0, 0);
+{ // 방석 자리에서 사방을 한 번 찍어 평균 밝기를 잰다(위쪽과 옆만): 환경맵 대신 방석 털이 받는 둘레빛
+  const rt = new THREE.WebGLCubeRenderTarget(16), cc = new THREE.CubeCamera(0.05, 20, rt), px = new Uint8Array(16 * 16 * 4);
+  cc.position.set(CUSH.x, 0.45, CUSH.z); roomScene.add(cc); cc.update(renderer, roomScene); roomScene.remove(cc);
+  let r = 0, g = 0, b = 0, n = 0;
+  for (const f of [0, 1, 2, 2, 2, 4, 5]) { renderer.readRenderTargetPixels(rt, 0, 0, 16, 16, px, f); for (let i = 0; i < px.length; i += 4) { r += px[i]; g += px[i + 1]; b += px[i + 2]; n += 255; } } // 방석은 위를 보고 있으니 위쪽을 더 친다
+  if (n && r + g + b > 0) plushAmb.setRGB(r / n, g / n, b / n).multiplyScalar(0.8);
+  rt.dispose();
+}
 {
   const pm = new THREE.PMREMGenerator(renderer), holder = new THREE.Group(), kids = [...roomScene.children];
   kids.forEach((k) => holder.add(k)); holder.position.set(-0.1, -1.1, -0.4); roomScene.add(holder); holder.updateMatrixWorld(true);
@@ -2013,7 +2025,7 @@ function startCommand(name, fn, keepCam = false) {
   if (!['touch', 'cushion'].includes(name)) pinky.napEnd = 0;
   if (pinky.tgt.name === 'curl' || pinky.curlK > 0.3) { // 방석에서 자다가: 쓰다듬거나 계속 재울 때는 눈을 번쩍 뜨지 않고, 불리면 차례로 천천히 일어난 다음에 한다
     if (['touch', 'cushion', 'roam'].includes(name)) Object.assign(pinky, { eyeOpen: Math.min(pinky.eyeY, 0.3), face: null, wagAmpT: 0.05 });
-    else { Object.assign(pinky, { eyeOpen: pinky.eyeY, face: null, wagAmpT: 0.1, wagSpeedT: 5 }); run = async (tk) => { await wakeUp(tk, name); return fn(tk); }; }
+    else { Object.assign(pinky, { eyeOpen: pinky.eyeY, face: null, wagAmpT: 0.1, wagSpeedT: 5 }); run = async (tk) => { await wakeUp(tk, name); if (!keepCam) camHome(); return fn(tk); }; keepCam = true; } // 일어나는 모습을 지켜본 다음에 시점이 물러난다
   }
   if (!keepCam) camHome();
   run(tok).then(() => { if (active === tok) { active = null; setActiveBtn(null); idleT = 4; } })
@@ -2077,7 +2089,7 @@ async function cushionNap(tok, sec = 16, cam = false) {
     if (turn < 3.3 || (turn < 4.6 && Math.random() < 0.4)) turn += Math.PI * 2; // 한 바퀴 남짓 ~ 한 바퀴 반
     const half = turn > 7 ? 0.5 : 0.58;
     // 나이 든 강아지답게 느릿느릿: 천천히 돌기 시작해 천천히 멈추고, 도는 쪽으로 허리가 휘며 발을 조금씩 옮겨 딛는다
-    const spin = (from, to) => tween(tok, (Math.abs(to - from) * turn) / 1.2 + 0.5, (k) => {
+    const spin = (from, to) => tween(tok, (Math.abs(to - from) * turn) / 1.35 + 0.5, (k) => {
       const w = Math.sin(Math.PI * k), a = a0 + turn * lerp(from, to, k * k * (3 - 2 * k)), r = 0.035 * w;
       pinky.x = C.x - r * Math.cos(a); pinky.z = C.z + r * Math.sin(a); pinky.yaw = a;
       pinky.shuffle = 0.25 + 0.4 * w; pinky.tgt.bendY = -0.38 * w; pinky.tgt.headTilt = 0.1 * w;
@@ -2346,10 +2358,10 @@ const CMDS = {
 };
 
 // 혼자 있을 때: 집 안을 돌아다니기
-const ROAM_CUSH = 0.23;
+const ROAM_CUSH = 0.22;
 async function roam(tok) {
   const acts = [
-    async () => { await cushionNap(tok, 10 + Math.random() * 7); }, // 방석(애착 공간)에서 낮잠
+    async () => { await cushionNap(tok, 11 + Math.random() * 7); }, // 방석(애착 공간)에서 낮잠
     async () => { pinky.walkSpeed = 0.4; await sniffAt(tok, SPOTS.gifts, '선물 냄새…'); },
     async () => {
       pinky.walkSpeed = 0.4; await sniffAt(tok, { x: EAT.x, z: EAT.z, fx: BOWL.x, fz: BOWL.z }, '밥그릇 비었네…');
@@ -2563,7 +2575,7 @@ let last = performance.now(), booted = false;
 let dbgPause = false; // 점검용: 화면 그리기를 멈추고 시간을 손으로 넘긴다
 function frame(now) {
   if (dbgPause) { last = now; requestAnimationFrame(frame); return; }
-  const dt = Math.min(0.05, (now - last) / 1000); last = now; clock += dt;
+  const dt = clamp((now - last) / 1000, 0, 0.05); last = now; clock += dt; // 첫 프레임의 시각이 불러오기 전일 수도 있다: 시간은 거꾸로 가지 않는다
   stepTimers();
   if (mode === 'select') { updateSelect(dt, clock); drawFrame(selScene, selCam); stepBubbles(dt, selCam); }
   else { updateRoom(dt, clock); drawFrame(roomScene, roomCam); stepBubbles(dt, roomCam); }
@@ -2576,4 +2588,6 @@ requestAnimationFrame(frame);
 if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCommand, CMDS, look, cam, ball, goRoom, goSelect, roomCam, CUSH, POSES, CURL, fitCurl, OBST, roomScene, renderer, ballToWorld,
   get clock() { return clock; }, get active() { return active; }, get idleT() { return idleT; }, set idleT(v) { idleT = v; }, pause(v) { dbgPause = v; },
   step(dt) { clock += dt; stepTimers(); updateRoom(dt, clock); }, draw() { drawFrame(roomScene, roomCam); stepBubbles(0, roomCam); },
+  plushAmb, plushU,
+  cushionNapForTest: (tok) => cushionNap(tok, 6),
   NAP: (pk) => { Object.assign(pk, { x: SPOTS.cushion.x, z: SPOTS.cushion.z, yaw: CUSH.yaw, face: null, lift: cushLift(Math.hypot(CUSH.px, CUSH.pz)), eyeOpen: 0.04, wagAmpT: 0.03, curlK: 1 }); setPose(pk, 'curl', 50); } };
