@@ -99,6 +99,33 @@ h1 {
 .actions button:active { transform: scale(.95); }
 .actions button.on { background: var(--ember); color: var(--ink); }
 @media (max-width: 400px) { .actions button { font-size: 12.5px; } .actions button .ic { font-size: 18px; } }
+.actions button.open { box-shadow: inset 0 0 0 2px var(--ember); background: rgba(243, 180, 102, .12); }
+.actions button.on.open { background: var(--ember); box-shadow: inset 0 0 0 2px var(--cream); }
+
+/* 고르기 메뉴: 간식 · 장난감 (버튼 바로 위에 뜬다. 폰에서는 버튼 줄 폭만큼) */
+.room-head, .room-bottom { position: relative; z-index: 1; }
+#pickBack { position: fixed; inset: 0; pointer-events: auto; }
+.picker {
+  position: fixed; z-index: 2; display: flex; gap: 6px; padding: 6px; border-radius: 22px;
+  background: rgba(30, 21, 16, .86); box-shadow: 0 10px 30px rgba(0, 0, 0, .4); animation: pick-in .12s ease-out;
+}
+.picker::after {
+  content: ""; position: absolute; left: var(--caret, 50%); bottom: -6px; width: 12px; height: 12px; margin-left: -6px;
+  background: rgba(30, 21, 16, .92); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: rotate(45deg);
+}
+.picker button {
+  appearance: none; border: 0; border-radius: 16px; background: rgba(248, 237, 221, .06); cursor: pointer;
+  flex: 1 1 0; min-width: 88px; min-height: 62px; padding: 9px 12px 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-size: 13.5px; font-weight: 700; white-space: nowrap; transition: background .2s, transform .1s;
+}
+.picker button .ic { font-size: 24px; line-height: 1; }
+.picker button:hover, .picker button:focus-visible { background: rgba(243, 180, 102, .2); }
+.picker button:active { transform: scale(.95); }
+.picking .hint { opacity: 0; }
+@keyframes pick-in { from { opacity: 0; transform: translateY(6px); } }
+@media (max-width: 760px) { .picker button { min-width: 0; padding: 9px 4px 8px; } }
+@media (max-width: 400px) { .picker button { font-size: 12.5px; } }
 
 #bubbles { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .bubble {
@@ -125,4 +152,4 @@ h1 {
   font-family: var(--display); font-size: 18px; color: var(--muted); transition: opacity .7s;
 }
 #boot.gone { opacity: 0; pointer-events: none; }
-@media (prefers-reduced-motion: reduce) { #fade, #boot, #toast, .hint { transition: none; } }
+@media (prefers-reduced-motion: reduce) { #fade, #boot, #toast, .hint { transition: none; } .picker { animation: none; } }
