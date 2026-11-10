@@ -644,7 +644,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0 }) 
     const ep = new THREE.Group(); head.add(ep);
     if (J) { ep.position.set(sx * 0.056, 0.128, 0); put(ep, new THREE.ConeGeometry(0.042, 0.1, 16), [0, 0.044, 0], null, [1, 1, 0.55], earPaint(sx)).userData.fur = [2, 0.004, 480]; ep.rotation.z = sx * -0.22; }
     else {
-      ep.position.set(sx * 0.05, 0.092, -0.02); // 귀는 눈과 정수리 사이 높이에서 두개골 '위에' 접혀 시작해(옆에 붙은 혹이 아니다) 볼 위로 늘어진다 — 귀 위로 둥근 정수리가 보인다
+      ep.position.set(sx * 0.055, 0.1, -0.006); // 귀 뿌리를 정수리 모서리(눈썹 높이 위)로 올리고 조금 앞으로 — 귀가 얼굴 양옆을 감싸며 내려온다. 귀는 눈과 정수리 사이 높이에서 두개골 '위에' 접혀 시작해(옆에 붙은 혹이 아니다) 볼 위로 늘어진다 — 귀 위로 둥근 정수리가 보인다
       put(ep, sdfGeo('be' + sx, earSDF(sx), sx > 0 ? [-0.03, -0.18, -0.085] : [-0.125, -0.18, -0.085], sx > 0 ? [0.125, 0.03, 0.1] : [0.03, 0.03, 0.1], 0.0026, 1), null, null, null, earPaint(sx));
     }
     d.ears.push({ g: ep, side: sx, ax: 0, vx: 0, az: 0, vz: 0 });
