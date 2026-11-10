@@ -469,7 +469,9 @@ function play(name, o = {}) {
   Object.defineProperty(e, 'vo', { value: vo, enumerable: false });
   return e;
 }
-const later = (delay, fn) => { queue.push({ at: T + delay, fn }); };
+const later = (delay, fn, tag) => { queue.push({ at: T + delay, fn, tag }); };
+/** 하다 만 소리 묶음(엄마다! · 찾았다)의 남은 소리를 거둔다 — 명령이 끊기면 뒤따르던 소리도 나지 않게 */
+function cancelPhrase(tag) { for (let i = queue.length - 1; i >= 0; i--) if (queue[i].tag === tag) queue.splice(i, 1); }
 /** 이어지는 소리(쏟아지는 사료 등)를 멈춘다. 짧은 소리는 끝까지 울리게 둔다 */
 function stopAll(fadeMs = 80, everything = false) {
   for (const v of voices) if (everything || v.loop) fadeOut(v, fadeMs);
@@ -490,16 +492,29 @@ function phrase(name, o = {}) {
     later(0.28, () => voice('woof', { force: 1, gain: o.gain ?? -6, why: 'greet' }));
     if (o.double) later(0.66 + Math.random() * 0.08, () => voice('woof', { force: 1, rate: 0.944, gain: (o.gain ?? -6) - 2, why: 'greet' }));
   } else if (name === 'mom') { // 엄마다! — 헉 → 낑(올라가며) → 멍 멍 → (가끔) 아루
+    // mode: 'entry' 방에 들어설 때는 놀라지 않게 작게(인식표 짤랑 → 낑 → 멍 한두 번, 아루 없음) · 'again' 돌아왔을 때 · 'quick' 다른 걸 하다가 알아보기만(낑 한 번) · 'busy' 입에 뭘 물고 있을 때(음~)
+    const m = o.mode, tag = 'mom'; cancelPhrase(tag);
+    if (m === 'busy') { voice('content', { gain: -2, rate: 1.1, why: 'mom' }); return; }
+    if (m === 'quick') { voice('whine', { force: 1, vlo: 0, vhi: 2, gain: -7, rate: 1.08, why: 'mom' }); return; }
+    if (m === 'entry' || m === 'again') {
+      const first = m === 'entry', g = first ? -5 : -3, two = first ? Math.random() < 0.5 : Math.random() < 0.6;
+      play('tag_jingle', { force: 1, gain: first ? 1 : -1, why: 'mom' });
+      if (!first && Math.random() < 0.6) later(0.1, () => play('gasp_alert', { gain: -3, why: 'mom' }), tag);
+      later(0.35, () => voice('whine', { force: 1, vlo: 0, vhi: 2, gain: g - 1, why: 'mom' }), tag);
+      later(1.05 + Math.random() * 0.1, () => voice(!first && Math.random() < 0.35 ? 'yip' : 'woof', { force: 1, gain: g, why: 'mom' }), tag);
+      if (two) later(1.5 + Math.random() * 0.12, () => voice('woof', { force: 1, rate: 0.944, gain: g - 2, why: 'mom' }), tag);
+      return;
+    }
     play('gasp_alert', { force: 1, why: 'mom' });
-    later(0.3, () => voice('whine', { force: 1, variant: 0, gain: 2, why: 'mom' }));
-    later(1.05, () => voice('woof', { force: 1, gain: 1, why: 'mom' }));
-    later(1.45, () => voice('woof', { force: 1, rate: 0.944, gain: -1, why: 'mom' }));
-    if (Math.random() < 0.25 && T - lastAroo > 60) { lastAroo = T; later(2.4, () => voice('aroo', { force: 1, gain: -2, why: 'mom' })); }
+    later(0.3, () => voice('whine', { force: 1, variant: 0, gain: 2, why: 'mom' }), tag);
+    later(1.05, () => voice('woof', { force: 1, gain: 1, why: 'mom' }), tag);
+    later(1.45, () => voice('woof', { force: 1, rate: 0.944, gain: -1, why: 'mom' }), tag);
+    if (Math.random() < 0.25 && T - lastAroo > 60) { lastAroo = T; later(2.4, () => voice('aroo', { force: 1, gain: -2, why: 'mom' }), tag); }
   } else if (name === 'found') { // 떨어진 간식 발견 — 킁킁이 빨라지다 헉 → 덥석 → 와작 (그 뒤 촵촵은 씹는 동안 저절로)
     if (st) { st.sniffFast = T + 0.8; st.sniffRest = 0; st.foundT = T; }
-    later(0.8, () => play('gasp_alert', { force: 1, why: 'found' }));
-    later(1.1, () => play('treat_take', { force: 1, why: 'found' }));
-    later(1.25, () => { play('crunch_big', { force: 1, why: 'found' }); if (st) { st.foundT = T; st.gulpAfter = true; } });
+    later(0.8, () => play('gasp_alert', { force: 1, why: 'found' }), 'found');
+    later(1.1, () => play('treat_take', { force: 1, why: 'found' }), 'found');
+    later(1.25, () => { play('crunch_big', { force: 1, why: 'found' }); if (st) { st.foundT = T; st.gulpAfter = true; } }, 'found');
   } else if (name === 'beg') { voice('whine', { force: 1, vlo: 2, vhi: 4, why: 'beg' }); later(1.0, () => voice('whine', { force: 1, vlo: 0, vhi: 2, gain: -3, why: 'beg' })); }
 }
 
@@ -512,6 +527,17 @@ function onSay(text) {
   st.lastSay = s; st.lastSayT = T;
   if (s === '' && String(text).includes('!')) return void play('gasp_alert', { why: text });
   if (has(s, '엄마다', '엄마당')) return void phrase('mom');
+  // 핑키의 마음(엉뚱한 짓 · 주워 먹기 · 남긴 밥)에서 뜨는 말풍선
+  if (has(s, '내꺼야')) return void voice('growl', { gain: -1, rate: 1.18, why: text }); // 장난스럽게 으르릉
+  if (has(s, '놀아줘', '왔어', '왔다왔다', '엄마~')) return void voice('content', { gain: -1, rate: 1.08, why: text }); // 반가워서 음~ (조르는 낑이 아니다)
+  if (has(s, '음엄마')) return void voice('content', { gain: -4, rate: 0.9, why: text + ' (sleepy)' });
+  if (has(s, '간식주면', '바꿀래', '같이할래')) { if (Math.random() < 0.5) voice('content', { gain: -2, rate: 1.12, why: text }); else play('pant_out', { gain: -2, rate: 0.9, why: text + ' (huff)' }); return; } // 흥정할 때: 기대에 찬 음? / 흥
+  if (has(s, '안들려')) return void play('snort', { gain: -3, why: text });
+  if (has(s, '이번만')) return void voice('content', { gain: -3, rate: 0.92, why: text });
+  if (has(s, '자,여기')) return void voice('yip', { gain: -6, why: text });
+  if (has(s, '이제줄게')) return void voice('yip', { gain: -4, why: text });
+  if (has(s, '밥남았지')) return void play('gasp_alert', { why: text });
+  if (has(s, '찾았다', '주웠다', '횡재', '맛있다', '다먹었다', '배불러')) return void voice('content', { gain: -1, why: text });
   if (has(s, '간식이다', '요거트다', '고구마다')) { play('gasp_alert', { why: text }); later(0.22, () => voice('whine', { vlo: 0, vhi: 2, gain: -3, rate: 1.12, why: text })); return; }
   if (has(s, '왈')) return void voice('yip', { why: text });
   if (has(s, '멍')) { if (T - (st.greetT ?? -9) > 1.5) voice('woof', { why: text }); return; } // 인사할 때의 '멍!'은 phrase('greet')가 이미 소리를 냈다
@@ -725,7 +751,7 @@ export const sound = {
   setLickKind(k) { lickKind = k || 'auto'; },
   ballBounce(speed, pos, surface) { play('ball_bounce', { pos, gain: clamp(20 * Math.log10(Math.max(speed, 0.01) / 3), -16, 4) + (surface && surface !== 'wood' ? -4 : 0), why: 'bounce' }); },
   lap(kind = 'mouth') { if (live() && st) lap('lap (' + kind + ')', kind); }, // 'yogurt' · 'mouth' · 'bowl'
-  chewHit, shakeHit, ropeDrop, hush,
+  chewHit, shakeHit, ropeDrop, hush, cancelPhrase,
   kibbleHit(inBowl, pos, fill = 0) { const dull = Math.random() < fill; play(inBowl ? 'kibble_hit' : 'kibble_floor', { pos, ...(inBowl ? { vlo: dull ? 4 : 0, vhi: dull ? 8 : 4 } : {}), why: 'kibble' }); },
   exportWav(name, v = 0) { return new Blob([wav(render(name, v, 48000), 48000)], { type: 'audio/wav' }); },
   _fake(on = true) { fake = on; }, // 점검용: 소리 장치 없이 기록만
