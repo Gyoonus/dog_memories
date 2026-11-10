@@ -157,3 +157,8 @@ h1 {
 }
 #boot.gone { opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { #fade, #boot, #toast, .hint { transition: none; } .picker { animation: none; } }
+
+/* "간식 주면…" 할 때 간식 버튼이 살짝 들썩인다 */
+#actions button.nudge { animation: nudge 0.8s ease-in-out 3; }
+@keyframes nudge { 50% { transform: translateY(-4px) scale(1.06); box-shadow: 0 0 0 3px rgba(255, 190, 110, 0.6); } }
+@media (prefers-reduced-motion: reduce) { #actions button.nudge { animation: none; box-shadow: 0 0 0 3px rgba(255, 190, 110, 0.6); } }
