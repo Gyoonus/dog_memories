@@ -1815,6 +1815,415 @@ function stepCrumbs(dt) {
 }
 
 // ================================================================
+// 로프 장난감 (세 가닥으로 꼰 면 로프 두 줄 · 손잡이 고리끼리 걸려 있다)
+// 점 14개짜리 줄 두 개를 매 프레임 흔들어 보고(verlet) 그 위에 꼰 줄 모양을 다시 입힌다.
+// 점 이름: 'A0'~'A13', 'B0'~'B13' 또는 'A.tip'(고리 끝) · 'A.knot'(고리 매듭) · 'A.s1'~'A.s6'(외줄) · 'A.bite'(통매듭 바로 위) · 'A.barrel'(통매듭 윗끝) · 'A.end'(통매듭 아랫끝)
+// ================================================================
+const ROPE_REST = { x: 0.16, z: -1.32, yaw: -0.95 }; // 두 고리가 걸린 곳 · 줄이 뻗는 방향(0 = +z, 시계 반대 방향이 +)
+const rope = (() => {
+  const K = 1.15; // 사진 비율은 그대로 두고 전체 크기만 조금 키웠다 (멀리서도 보이게)
+  const R = 0.0055 * K, SEG = 0.0207 * K, LOOP = 0.095 * K, BAR = 0.062 * K, BARR = 0.011 * K, TS = 0.024 * K, TAILR = 0.0074 * K, EXT = 0.012 * K, LAY = 0.022 * K;
+  const NP = 14, N = NP * 2, H = 1 / 120, ITER = LITE ? 4 : 6, RING = (LITE ? 0.008 : 0.0035) * K, RAD = LITE ? 9 : 12, TAU = Math.PI * 2;
+  const LOOK = [
+    { ply: ['#EE3C78', '#FFE03A', '#B4EE3C'], tuft: [['#FFBE2A', 0.6], ['#FFE052', 0.4]], tass: [['#FFC62E', 0.5], ['#EE3C78', 0.3], ['#B4EE3C', 0.2]] },
+    { ply: ['#1E9ACB', '#EE3C78', '#B4EE40'], tuft: [['#D83E78', 0.6], ['#EE6B98', 0.4]], tass: [['#2AA7D6', 0.45], ['#EE3C78', 0.3], ['#B4EE40', 0.25]] },
+  ];
+  // 꼰 줄 무늬: 가닥 색 세 줄, 가닥 사이 골은 어둡게, 가는 실 결
+  const plyTex = (cols) => canvasTex(192, 64, (x, w, h) => {
+    for (let i = 0; i < w; i++) {
+      const q = ((i + 0.5) / w + 1 / 6) * 3, f = Math.abs((q % 1) - 0.5) * 2;
+      x.fillStyle = cols[Math.floor(q) % 3]; x.fillRect(i, 0, 1, h);
+      x.fillStyle = `rgba(40,10,20,${0.36 * Math.pow(f, 2.6)})`; x.fillRect(i, 0, 1, h);
+      x.fillStyle = `rgba(255,255,255,${0.1 * Math.pow(1 - f, 2)})`; x.fillRect(i, 0, 1, h);
+    }
+    const rnd = rng(11); x.lineWidth = 1;
+    for (let i = 0; i < 110; i++) {
+      const px = rnd() * w, py = rnd() * h, l = 5 + rnd() * 9;
+      x.strokeStyle = rnd() < 0.5 ? 'rgba(255,255,255,.13)' : 'rgba(30,10,10,.1)';
+      for (const oy of [0, -h, h]) { x.beginPath(); x.moveTo(px, py + oy); x.lineTo(px - l * 0.9, py + oy + l); x.stroke(); }
+    }
+  }, [1, 1]);
+
+  // ── 줄 모양 입히기: 중심선(C)을 따라 세 가닥 단면을 돌려 가며 두른다 ──
+  function makeTube(defs, dyn) { // defs: [{ n 고리 수, r 굵기, lay 한 바퀴 꼬이는 길이, tre 가닥 골 깊이, len 길이, s0, taper(u) }]
+    let rings = 0; for (const d of defs) { d.off = rings; rings += d.n; d.C = new Float32Array(d.n * 3); d.n0 = V3(0, 1, 0); }
+    const nr = RAD + 1, pos = new Float32Array(rings * nr * 3), nor = new Float32Array(rings * nr * 3), uv = new Float32Array(rings * nr * 2), idx = [];
+    for (const d of defs) for (let k = 0; k < d.n; k++) {
+      const s = (d.len * k) / (d.n - 1) + (d.s0 || 0);
+      for (let j = 0; j < nr; j++) { const o = ((d.off + k) * nr + j) * 2; uv[o] = j / RAD - s / d.lay; uv[o + 1] = s / (0.022 * K); }
+      if (k < d.n - 1) for (let j = 0; j < RAD; j++) { const a = (d.off + k) * nr + j, b = a + nr; idx.push(a, a + 1, b, a + 1, b + 1, b); }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(idx);
+    if (dyn) { geo.attributes.position.setUsage(THREE.DynamicDrawUsage); geo.attributes.normal.setUsage(THREE.DynamicDrawUsage); }
+    const skin = () => {
+      for (const d of defs) {
+        const C = d.C, n = d.n; let nx = d.n0.x, ny = d.n0.y, nz = d.n0.z;
+        for (let k = 0; k < n; k++) {
+          const a = Math.max(k - 1, 0) * 3, b = Math.min(k + 1, n - 1) * 3;
+          let tx = C[b] - C[a], ty = C[b + 1] - C[a + 1], tz = C[b + 2] - C[a + 2]; const tl = Math.hypot(tx, ty, tz) || 1; tx /= tl; ty /= tl; tz /= tl;
+          const dn = nx * tx + ny * ty + nz * tz; nx -= dn * tx; ny -= dn * ty; nz -= dn * tz; let nl = Math.hypot(nx, ny, nz);
+          if (nl < 1e-4) { if (Math.abs(ty) < 0.9) { nx = -tx * ty; ny = 1 - ty * ty; nz = -tz * ty; } else { nx = 1 - tx * tx; ny = -ty * tx; nz = -tz * tx; } nl = Math.hypot(nx, ny, nz); }
+          nx /= nl; ny /= nl; nz /= nl; if (k === 0) d.n0.set(nx, ny, nz);
+          const bx = ty * nz - tz * ny, by = tz * nx - tx * nz, bz = tx * ny - ty * nx;
+          const u = k / (n - 1), s = d.len * u + (d.s0 || 0), ph = (TAU * s) / d.lay, r0 = d.r * (d.taper ? d.taper(u) : 1), cx = C[k * 3], cy = C[k * 3 + 1], cz = C[k * 3 + 2];
+          for (let j = 0; j < nr; j++) {
+            const th = (TAU * j) / RAD, c = Math.cos(th), sn = Math.sin(th), q = 1.5 * (th - ph), cq = Math.cos(q);
+            const rr = r0 * (1 - d.tre + d.tre * Math.abs(cq)), dr = d.tre ? -r0 * d.tre * 1.5 * Math.sin(q) * Math.sign(cq) : 0;
+            const rx = c * nx + sn * bx, ry = c * ny + sn * by, rz = c * nz + sn * bz, ux = -sn * nx + c * bx, uy = -sn * ny + c * by, uz = -sn * nz + c * bz;
+            const o = ((d.off + k) * nr + j) * 3; pos[o] = cx + rx * rr; pos[o + 1] = cy + ry * rr; pos[o + 2] = cz + rz * rr;
+            const mx = rx * rr - ux * dr, my = ry * rr - uy * dr, mz = rz * rr - uz * dr, ml = Math.hypot(mx, my, mz) || 1; nor[o] = mx / ml; nor[o + 1] = my / ml; nor[o + 2] = mz / ml;
+          }
+        }
+      }
+      geo.attributes.position.needsUpdate = true; geo.attributes.normal.needsUpdate = true;
+    };
+    return { geo, defs, skin };
+  }
+  const TRE = LITE ? 0 : 0.2;
+  // 점 몇 개(flat [x,y,z,...])를 부드럽게 잇는 곡선으로 중심선을 채운다 (Catmull-Rom)
+  function crFill(d, q, m) {
+    const C = d.C, n = d.n;
+    for (let k = 0; k < n; k++) {
+      const g = (k / (n - 1)) * (m - 1), i = Math.min(Math.floor(g), m - 2), t = g - i, t2 = t * t, t3 = t2 * t;
+      const i0 = Math.max(i - 1, 0) * 3, i1 = i * 3, i2 = (i + 1) * 3, i3 = Math.min(i + 2, m - 1) * 3;
+      for (let c = 0; c < 3; c++) C[k * 3 + c] = 0.5 * (2 * q[i1 + c] + (q[i2 + c] - q[i0 + c]) * t + (2 * q[i0 + c] - 5 * q[i1 + c] + 4 * q[i2 + c] - q[i3 + c]) * t2 + (3 * q[i1 + c] - q[i0 + c] - 3 * q[i2 + c] + q[i3 + c]) * t3);
+    }
+  }
+  // 손잡이 고리: 매듭에서 나가 끝을 돌아 다시 매듭으로 (x: 매듭에서 끝 쪽, y: 옆)
+  const loopXY = (ph, L, Wd, out) => { const x = (L * (1 - Math.cos(ph))) / 2, s = Math.sin(ph); out[0] = x; out[1] = (Wd / 2) * Math.sign(s) * Math.pow(Math.abs(s), 0.62) * (0.5 + 0.5 * ss(0, 0.55, x / L)); };
+  const NLOOP = Math.round((2.25 * (LOOP + EXT)) / RING), LOOP_LEN = 2.2 * (LOOP + EXT);
+  const loopPh = (() => { // 고리를 따라 같은 간격이 되는 각도 표
+    const M = 600, cum = [0], o = [0, 0]; let px = 0, py = 0;
+    for (let i = 1; i <= M; i++) { loopXY((TAU * i) / M, LOOP + EXT, 0.026 * K, o); cum.push(cum[i - 1] + Math.hypot(o[0] - px, o[1] - py)); px = o[0]; py = o[1]; }
+    const out = []; let j = 0;
+    for (let k = 0; k < NLOOP; k++) { const want = (cum[M] * k) / (NLOOP - 1); while (j < M - 1 && cum[j + 1] < want) j++; out.push((TAU * (j + (want - cum[j]) / Math.max(cum[j + 1] - cum[j], 1e-9))) / M); }
+    return out;
+  })();
+  const NSTR = Math.round((7 * SEG + 0.012) / RING) + 1, NTAIL = Math.max(5, Math.round((2 * TS) / RING) + 1);
+
+  // ── 굳은 부분: 통매듭 · 고리 매듭 · 술 ──
+  function barrelGeo() { // 줄을 여섯 바퀴 비스듬히 감은 통매듭 (y: 0 → BAR)
+    const T = 5.6, len = T * TAU * BARR * 1.03, n = Math.round(len / RING / (LITE ? 1 : 1.25)), nc = 5;
+    const t = makeTube([{ n, r: R * 1.04, lay: LAY, tre: TRE, len }, { n: nc, r: BARR * 0.98, lay: LAY, tre: 0, len: BAR * 0.8 }], false);
+    for (let k = 0; k < n; k++) {
+      const g = k / (n - 1), th = TAU * T * g, rad = BARR * (0.25 + 0.75 * ss(0, 0.05, g) * ss(1, 0.95, g));
+      t.defs[0].C.set([Math.sin(th) * rad, BAR * (0.1 + 0.8 * g) + rad * 0.42 * Math.cos(th + 0.6), Math.cos(th) * rad], k * 3);
+    }
+    for (let k = 0; k < nc; k++) t.defs[1].C.set([0, BAR * (0.1 + (0.8 * k) / (nc - 1)), 0], k * 3);
+    t.skin(); return t.geo;
+  }
+  function knotGeo() { // 고리를 묶은 외벌 매듭: 세잎 매듭 모양으로 한 번 감긴 줄 (y: 고리 면의 법선)
+    const Rk = 0.0068 * K, rk = 0.0042 * K, n = LITE ? 22 : 44, t = makeTube([{ n, r: R * 1.12, lay: LAY, tre: TRE, len: 0.118 * K }], false);
+    for (let k = 0; k < n; k++) { const ph = (TAU * k) / (n - 1), rr = Rk + rk * Math.cos(3 * ph); t.defs[0].C.set([rr * Math.cos(2 * ph), rk * 1.5 * Math.sin(3 * ph), rr * Math.sin(2 * ph)], k * 3); }
+    t.skin(); return t.geo;
+  }
+  function fibreGeo(n, len, baseR, spread, mix, seed) { // 풀린 실 뭉치 (y 방향으로 퍼진다) · 가운데에 도톰한 속
+    const rnd = rng(seed), pos = [], nor = [], col = [], idx = [], c = new THREE.Color(), SG = LITE ? 2 : 4;
+    const pick = () => { let r = rnd(), i = 0; while (i < mix.length - 1 && r > mix[i][1]) { r -= mix[i][1]; i++; } return mix[i][0]; };
+    const flare = baseR + len * Math.tan(spread * 0.55) * 0.75, cr = [[baseR * 1.05, 0], [lerp(baseR, flare, 0.5), len * 0.3], [flare * 0.85, len * 0.62], [flare * 0.5, len * 0.8], [0, len * 0.86]];
+    c.set(mix[0][0]).multiplyScalar(0.95);
+    cr.forEach(([rr, y], k) => { for (let j = 0; j < 7; j++) { const a = (TAU * j) / 7, w = 1 + 0.18 * Math.sin(j * 2.3 + k); pos.push(Math.cos(a) * rr * w, y, Math.sin(a) * rr * w); nor.push(Math.cos(a) * 0.9, 0.44, Math.sin(a) * 0.9); col.push(c.r, c.g, c.b); if (k < cr.length - 1) { const p = k * 7 + j, q = k * 7 + ((j + 1) % 7); idx.push(p, p + 7, q, q, p + 7, q + 7); } } });
+    for (let f = 0; f < n; f++) {
+      const az = rnd() * TAU, rad = Math.sqrt(rnd()), al = spread * (0.2 + 0.8 * rad), L = len * (0.7 + 0.45 * rnd()), th = 0.0012 * K * (0.8 + 0.7 * rnd()), curl = (rnd() - 0.3) * 0.7;
+      c.set(pick()).multiplyScalar(0.95 + 0.3 * rnd());
+      let x = Math.cos(az) * baseR * rad, y = 0, z = Math.sin(az) * baseR * rad; const v0 = pos.length / 3;
+      for (let s = 0; s <= SG; s++) {
+        const w = th * (1 - (0.45 * s) / SG);
+        for (let j = 0; j < 3; j++) { const q = az + j * 2.094, ox = Math.cos(q), oz = Math.sin(q), mx = Math.cos(az) * 0.55 + ox * 0.45, mz = Math.sin(az) * 0.55 + oz * 0.45, ml = Math.hypot(mx, 0.35, mz); pos.push(x + ox * w, y, z + oz * w); nor.push(mx / ml, 0.35 / ml, mz / ml); col.push(c.r, c.g, c.b); }
+        if (s < SG) {
+          const a = al * (0.35 + (0.65 * (s + 1)) / SG) + (curl * (s + 1)) / SG + (rnd() - 0.5) * 0.5, dl = L / SG; x += Math.sin(a) * Math.cos(az) * dl; y += Math.cos(a) * dl; z += Math.sin(a) * Math.sin(az) * dl;
+          for (let j = 0; j < 3; j++) { const p = v0 + s * 3 + j, q = v0 + s * 3 + ((j + 1) % 3); idx.push(p, p + 3, q, q, p + 3, q + 3); }
+        }
+      }
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); return g;
+  }
+
+  // ── 점 · 묶음 ──
+  const P = new Float32Array(N * 3), Q = new Float32Array(N * 3), fr = new Float32Array(N), crad = new Float32Array(N), wgt = new Float32Array(N), cons = [], pairs = [];
+  const eq = (i, j, d) => cons.push([i, j, d, 1, 0]), mn = (i, j, d, k) => cons.push([i, j, d, k, 1]);
+  for (let r = 0; r < 2; r++) {
+    const o = r * NP;
+    eq(o, o + 1, LOOP); for (let i = 1; i < 8; i++) eq(o + i, o + i + 1, SEG); eq(o + 8, o + 9, BAR);
+    eq(o + 9, o + 10, TS); eq(o + 10, o + 11, TS); eq(o + 9, o + 12, TS); eq(o + 12, o + 13, TS);
+    mn(o, o + 2, (LOOP + SEG) * 0.6, 0.06); for (let i = 1; i < 7; i++) mn(o + i, o + i + 2, SEG * 1.5, 0.3);
+    mn(o + 7, o + 9, (SEG + BAR) * 0.93, 0.5); mn(o + 8, o + 10, (BAR + TS) * 0.93, 0.4); mn(o + 8, o + 12, (BAR + TS) * 0.93, 0.4);
+    mn(o + 9, o + 11, TS * 1.6, 0.3); mn(o + 9, o + 13, TS * 1.6, 0.3); mn(o + 10, o + 12, 0.013 * K, 0.5); mn(o + 11, o + 13, 0.024 * K, 0.3);
+    for (let i = 0; i < NP; i++) { crad[o + i] = i === 1 ? 0.012 * K : i === 8 || i === 9 ? BARR + R * 0.7 : i > 9 ? TAILR : R; fr[o + i] = 0.006 + (i === 1 ? 0.0095 * K : i === 8 || i === 9 ? BARR + R : i > 9 ? TAILR : R); wgt[o + i] = i === 8 || i === 9 ? 0.4 : i === 1 ? 0.6 : 1; }
+  }
+  fr[NP] += R * 1.6; // B의 고리 끝은 A의 고리 위에 얹힌다
+  cons.push([0, NP, 0.004 * K, 1, 2]); // 고리끼리 걸린 곳
+  { const near = new Set(cons.map((c) => c[0] * 100 + c[1])); for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) if (i % NP && j % NP && !near.has(i * 100 + j)) pairs.push([i, j, crad[i] + crad[j]]); }
+  const NAMES = { tip: 0, knot: 1, s1: 2, s2: 3, s3: 4, s4: 5, s5: 6, s6: 7, mid: 5, bite: 7, barrel: 8, end: 9 };
+  const idx = (key) => {
+    if (typeof key === 'number') return key;
+    const o = key[0] === 'B' ? NP : 0, rest = key.slice(key[1] === '.' ? 2 : 1), i = rest in NAMES ? NAMES[rest] : +rest;
+    if (!(i >= 0 && i < NP)) throw new Error('rope: 모르는 점 ' + key); return o + i;
+  };
+  const pins = new Map(); // 점 번호 → { fn, cur, prev, from, t }
+  const S = { asleep: true, still: 0, acc: 0, tension: 0 };
+
+  // ── 그리는 것 ──
+  const g = new THREE.Group(); g.name = 'rope'; roomScene.add(g);
+  const fibMat = M(0xffffff, { vertexColors: true, roughness: 1, side: THREE.DoubleSide }), Y = V3(0, 1, 0), bGeo = barrelGeo(), kGeo = knotGeo();
+  const vis = LOOK.map((look, r) => {
+    const tex = plyTex(look.ply), mat = M(0xffffff, { map: tex, roughness: 1, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.2 }); // 어둑한 방에서도 장난감 색이 살게 살짝 밝힌다
+    const tube = makeTube([
+      { n: NLOOP, r: R, lay: LAY, tre: TRE, len: LOOP_LEN },
+      { n: NSTR, r: R, lay: LAY, tre: TRE, len: 7 * SEG + 0.012, s0: 0.004 },
+      { n: NTAIL, r: TAILR, lay: LAY * 2.6, tre: TRE * 0.8, len: 2 * TS, taper: (u) => 0.92 + 0.2 * u },
+      { n: NTAIL, r: TAILR, lay: LAY * 2.6, tre: TRE * 0.8, len: 2 * TS, s0: 0.02, taper: (u) => 0.92 + 0.2 * u },
+    ], true);
+    const mk = (geo, m, cast = !LITE) => { const x = new THREE.Mesh(geo, m); x.castShadow = cast; x.receiveShadow = true; x.frustumCulled = false; g.add(x); return x; };
+    const mesh = mk(tube.geo, mat), barrel = mk(bGeo, mat), knot = mk(kGeo, mat);
+    const tuft = new THREE.Mesh(fibreGeo(LITE ? 16 : 64, 0.02 * K, 0.005 * K, 0.8, look.tuft, 31 + r), fibMat); tuft.frustumCulled = false; knot.add(tuft);
+    tuft.position.set((r ? 1 : -1) * 0.007 * K, 0.002, -0.004 * K); tuft.quaternion.setFromUnitVectors(Y, V3(r ? 1 : -1, 0.12, -0.45).normalize());
+    const tass = [0, 1].map((i) => mk(fibreGeo(LITE ? 18 : 72, 0.03 * K, TAILR * 1.05, 0.55, look.tass, 51 + r * 2 + i), fibMat, false));
+    return { tube, mesh, barrel, knot, tass, ln: V3(0, 1, 0), td: [V3(0, 0, 1), V3(0, 0, 1)], bq: new THREE.Quaternion() };
+  });
+  const _a = V3(), _b = V3(), _c = V3(), _d = V3(), _e = V3(), _q = new THREE.Quaternion(), _mm = new THREE.Matrix4(), flat = new Float32Array(30), o2 = [0, 0];
+  const gp = (i, v) => v.set(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]);
+  const putF = (k, v) => { flat[k * 3] = v.x; flat[k * 3 + 1] = v.y; flat[k * 3 + 2] = v.z; };
+  function skin(dt = 0.016, snap = false) {
+    const ten = clamp((gp(1, _a).distanceTo(gp(NP + 1, _b)) - 1.72 * LOOP) / (0.26 * LOOP), 0, 1), kk = snap ? 1 : 1 - Math.exp(-10 * dt);
+    S.tension += (ten - S.tension) * kk;
+    const Wd = lerp(0.03, 0.015, S.tension) * K;
+    for (let r = 0; r < 2; r++) {
+      const o = r * NP, v = vis[r], D = v.tube.defs;
+      // 고리
+      gp(o + 1, _a); gp(o, _b); _c.subVectors(_b, _a); const L = _c.length() || 1e-6; _c.multiplyScalar(1 / L); // _c: 고리 축
+      _d.copy(Y).addScaledVector(_c, -_c.y); // 눕힌 면의 법선
+      if (_d.lengthSq() < 0.03) _d.copy(v.ln).addScaledVector(_c, -v.ln.dot(_c)); if (_d.lengthSq() < 1e-6) _d.set(1, 0, 0); _d.normalize();
+      if (r) { _e.crossVectors(_c, _d); const a = (S.tension * Math.PI) / 2; _d.multiplyScalar(Math.cos(a)).addScaledVector(_e, Math.sin(a)); } // 당기면 B의 고리는 A의 고리와 엇갈려 선다
+      v.ln.lerp(_d, kk).addScaledVector(_c, -v.ln.dot(_c)); if (v.ln.lengthSq() < 1e-6) v.ln.copy(_d); v.ln.normalize();
+      _e.crossVectors(v.ln, _c); // 고리의 옆 방향
+      const C = D[0].C, Lt = L + EXT;
+      for (let k = 0; k < NLOOP; k++) { loopXY(loopPh[k], Lt, Wd, o2); C[k * 3] = _a.x + _c.x * o2[0] + _e.x * o2[1]; C[k * 3 + 1] = _a.y + _c.y * o2[0] + _e.y * o2[1]; C[k * 3 + 2] = _a.z + _c.z * o2[0] + _e.z * o2[1]; }
+      D[0].n0.copy(v.ln);
+      _mm.makeBasis(_b.crossVectors(v.ln, _c), v.ln, _c); v.knot.quaternion.setFromRotationMatrix(_mm); v.knot.position.copy(_a);
+      // 외줄 (끝은 통매듭 속으로)
+      for (let i = 1; i <= 8; i++) putF(i - 1, gp(o + i, _a));
+      gp(o + 8, _a); gp(o + 9, _b); _c.subVectors(_b, _a).normalize(); putF(8, _d.copy(_a).addScaledVector(_c, 0.012)); crFill(D[1], flat, 9);
+      // 통매듭
+      _d.copy(Y).applyQuaternion(v.bq); _q.setFromUnitVectors(_d, _c); v.bq.premultiply(_q).normalize(); v.barrel.quaternion.copy(v.bq); v.barrel.position.copy(_a);
+      // 꼬리 둘 + 술
+      gp(o + 10, _d); gp(o + 12, _e); _e.sub(_d).addScaledVector(_c, -_e.dot(_c)); if (_e.lengthSq() < 1e-8) _e.set(1, 0, 0); _e.normalize(); // 꼬리끼리 벌어지는 방향
+      for (let i = 0; i < 2; i++) {
+        const ia = o + 10 + i * 2, td = v.td[i];
+        putF(0, _a.copy(_b).addScaledVector(_c, -0.008 * K).addScaledVector(_e, (i ? 1 : -1) * 0.0045 * K)); putF(1, gp(ia, _a)); putF(2, gp(ia + 1, _d)); crFill(D[2 + i], flat, 3);
+        _a.subVectors(_d, _a); if (_a.lengthSq() < 1e-10) _a.copy(_c); _a.normalize(); td.lerp(_a, snap ? 1 : 1 - Math.exp(-dt / 0.1)).normalize();
+        v.tass[i].position.copy(_d).addScaledVector(td, -0.005 * K); v.tass[i].quaternion.setFromUnitVectors(Y, td);
+      }
+      v.tube.skin();
+    }
+  }
+
+  // ── 움직임 ──
+  function sub(h, f) {
+    for (let i = 0; i < N; i++) if (!pins.has(i)) { const a = i * 3; for (let c = 0; c < 3; c++) { const v = (P[a + c] - Q[a + c]) * 0.985; Q[a + c] = P[a + c]; P[a + c] += v; } P[a + 1] -= 9.8 * h * h; }
+    for (let it = 0; it < ITER; it++) {
+      for (const [i, p] of pins) { const a = i * 3; P[a] = lerp(p.prev.x, p.cur.x, f); P[a + 1] = lerp(p.prev.y, p.cur.y, f); P[a + 2] = lerp(p.prev.z, p.cur.z, f); }
+      for (let n = 0; n < cons.length + pairs.length; n++) {
+        const c = n < cons.length ? cons[n] : pairs[n - cons.length], i = c[0], j = c[1], a = i * 3, b = j * 3, mode = n < cons.length ? c[4] : 1, st = n < cons.length ? c[3] : 0.5;
+        const dx = P[b] - P[a], dy = P[b + 1] - P[a + 1], dz = P[b + 2] - P[a + 2], d2 = dx * dx + dy * dy + dz * dz;
+        if (mode === 1 ? d2 >= c[2] * c[2] : mode === 2 && d2 <= c[2] * c[2]) continue;
+        const wi = pins.has(i) ? 0 : wgt[i], wj = pins.has(j) ? 0 : wgt[j], ws = wi + wj; if (!ws) continue;
+        const d = Math.sqrt(d2) || 1e-6, k = ((d - c[2]) / d) * st / ws;
+        P[a] += dx * k * wi; P[a + 1] += dy * k * wi; P[a + 2] += dz * k * wi; P[b] -= dx * k * wj; P[b + 1] -= dy * k * wj; P[b + 2] -= dz * k * wj;
+      }
+      for (let i = 0; i < N; i++) { const a = i * 3; if (P[a + 1] < fr[i]) P[a + 1] = fr[i]; P[a] = clamp(P[a], -3.0, 2.45); P[a + 2] = clamp(P[a + 2], -2.3, 2.7); }
+    }
+    let vmax = 0;
+    for (let i = 0; i < N; i++) {
+      const a = i * 3;
+      if (pins.has(i)) { Q[a] = P[a]; Q[a + 1] = P[a + 1]; Q[a + 2] = P[a + 2]; continue; }
+      if (P[a + 1] <= fr[i] + 1e-5) { Q[a] = P[a] - (P[a] - Q[a]) * 0.55; Q[a + 2] = P[a + 2] - (P[a + 2] - Q[a + 2]) * 0.55; if (Q[a + 1] > P[a + 1]) Q[a + 1] = P[a + 1]; } // 면 줄은 마루에서 미끄러지지 않고 끌린다
+      vmax = Math.max(vmax, Math.hypot(P[a] - Q[a], P[a + 1] - Q[a + 1], P[a + 2] - Q[a + 2]) / h);
+    }
+    return vmax;
+  }
+  function step(dt) {
+    if (dt > 0.1 || (S.asleep && !pins.size)) return;
+    S.asleep = false;
+    for (const p of pins.values()) { p.prev.copy(p.cur); p.t = Math.min(1, p.t + dt / 0.12); p.cur.copy(p.from).lerp(p.fn(), ease(p.t)); }
+    S.acc += dt; const n = Math.min(4, Math.floor(S.acc / H)); S.acc -= n * H; if (S.acc > H) S.acc = 0;
+    let vmax = 0; for (let i = 0; i < n; i++) vmax = Math.max(vmax, sub(H, (i + 1) / n));
+    skin(dt);
+    if (!pins.size && n && vmax < 0.03) { S.still += dt; if (S.still > 1) S.asleep = true; } else if (n) S.still = 0;
+  }
+  function wake() { S.asleep = false; S.still = 0; }
+  function place(x = ROPE_REST.x, z = ROPE_REST.z, yaw = ROPE_REST.yaw) { // 바닥에 사진처럼 느슨한 V자로 내려놓는다 ((x, z): 두 고리가 걸린 곳)
+    pins.clear();
+    for (let r = 0; r < 2; r++) {
+      const o = r * NP, bend = r ? -1.3 : -0.7; let hd = yaw + (r ? 0.17 : -0.17), px = x + (r ? 0.003 : 0), pz = z, i = 0;
+      const put = (k, qx, qz) => { P[k * 3] = qx; P[k * 3 + 1] = fr[k]; P[k * 3 + 2] = qz; };
+      const go = (d) => { px += Math.sin(hd) * d; pz += Math.cos(hd) * d; hd += bend * d; };
+      put(o, px, pz); go(LOOP); put(o + 1, px, pz); for (i = 2; i <= 8; i++) { go(SEG); put(o + i, px, pz); } go(BAR); put(o + 9, px, pz);
+      for (const [k, s] of [[10, -1], [12, 1]]) { const h2 = hd + s * 0.3; put(o + k, px + Math.sin(h2) * TS, pz + Math.cos(h2) * TS); put(o + k + 1, px + Math.sin(h2) * TS + Math.sin(h2 + s * 0.25) * TS, pz + Math.cos(h2) * TS + Math.cos(h2 + s * 0.25) * TS); }
+    }
+    Q.set(P); for (const v of vis) { v.ln.set(0, 1, 0); v.bq.identity(); } S.tension = 0;
+    for (let i = 0; i < 90; i++) sub(H, 1);
+    Q.set(P); skin(0.016, true); S.asleep = true; S.still = 0; S.acc = 0;
+  }
+  // 두 점 사이를 줄을 따라 잰 길이 (당기기 놀이에서 손과 입 사이 거리)
+  function span(k1, k2) {
+    const a = idx(k1), b = idx(k2), dist = new Array(N).fill(Infinity); dist[a] = 0;
+    for (let it = 0; it < N; it++) for (const c of cons) if (c[4] !== 1) { if (dist[c[0]] + c[2] < dist[c[1]]) dist[c[1]] = dist[c[0]] + c[2]; if (dist[c[1]] + c[2] < dist[c[0]]) dist[c[0]] = dist[c[1]] + c[2]; }
+    return dist[b];
+  }
+  const api = {
+    g, K, R, NP, N, state: S, idx,
+    pin(key, fn, soft = true) { const i = idx(key), now = gp(i, V3()); pins.set(i, { fn, from: now, cur: now.clone(), prev: now.clone(), t: soft ? 0 : 1 }); wake(); }, // fn(): 월드 좌표 V3 · soft: 0.12초에 걸쳐 끌려간다(뚝 튀지 않게)
+    pinTo(key, obj, local, soft = true) { const l = local.clone(); api.pin(key, () => { obj.updateWorldMatrix(true, false); return _pin.copy(l).applyMatrix4(obj.matrixWorld); }, soft); }, // obj의 로컬 좌표 local에 묶는다 (손 · 턱)
+    unpin(key) { if (!pins.size) return; if (key == null) pins.clear(); else pins.delete(idx(key)); wake(); }, // 놓는다 (key 없이 부르면 전부) · 줄은 그 자리에 떨어져 남는다
+    pinned: (key) => (key == null ? pins.size > 0 : pins.has(idx(key))),
+    pos: (key, out = V3()) => gp(idx(key), out),
+    center: (out = V3()) => { out.set(0, 0, 0); for (let i = 0; i < N; i++) { out.x += P[i * 3] / N; out.y += P[i * 3 + 1] / N; out.z += P[i * 3 + 2] / N; } return out; },
+    span, taut: (k1, k2) => gp(idx(k1), _a).distanceTo(gp(idx(k2), _b)) / span(k1, k2), // 1에 가까우면 팽팽
+    kick(v, key) { const a = key == null ? 0 : idx(key), b = key == null ? N : a + 1; for (let i = a; i < b; i++) { Q[i * 3] -= v.x * H; Q[i * 3 + 1] -= v.y * H; Q[i * 3 + 2] -= v.z * H; } wake(); }, // 속도를 더한다 (m/s)
+    move(dx, dy, dz) { for (let i = 0; i < N; i++) { P[i * 3] += dx; P[i * 3 + 1] += dy; P[i * 3 + 2] += dz; Q[i * 3] += dx; Q[i * 3 + 1] += dy; Q[i * 3 + 2] += dz; } wake(); },
+    place, reset: () => place(), wake, step, skin,
+  };
+  const _pin = V3();
+  place();
+  return api;
+})();
+function stepRope(dt) { rope.step(dt); }
+
+// ================================================================
+// 간식: 요거트 · 고구마 말랑이
+// ================================================================
+// 강아지 요거트 컵 (원점: 컵 바닥 가운데 · +y: 입구 · +z: 뚜껑 손잡이 쪽, 뚜껑은 -z 쪽 테두리에 붙은 채 젖혀진다)
+function buildYogurt() {
+  const g = new THREE.Group(), Hc = 0.042, wallR = (y) => lerp(0.0212, 0.0288, clamp((y - 0.003) / 0.037, 0, 1)), v2 = (a, b) => new THREE.Vector2(a, b);
+  const cup = add(g, new THREE.LatheGeometry([[0, 0], [0.0205, 0], [0.022, 0.0015], [0.0298, 0.0405], [0.0312, 0.0408], [0.0317, 0.0416], [0.031, 0.0424], [0.0294, 0.042], [0.0288, 0.04], [0.0212, 0.003], [0, 0.003]].map(([a, b]) => v2(a, b)), 32), M(0xf7f3ea, { roughness: 0.45, side: THREE.DoubleSide, emissive: 0x2e2a24 }));
+  const labelTex = canvasTex(512, 96, (x, w, h) => {
+    x.fillStyle = '#BFDDEB'; x.fillRect(0, 0, w, h); x.fillStyle = 'rgba(255,255,255,.75)'; x.fillRect(0, 7, w, 3); x.fillRect(0, h - 10, w, 3);
+    x.fillStyle = '#ffffff';
+    for (const cx of [w * 0.25, w * 0.75]) { // 작은 흰 발바닥 무늬 (글자 · 상표 없음)
+      x.beginPath(); x.ellipse(cx, h * 0.6, 15, 12, 0, 0, 7); x.fill();
+      for (const [dx, dy] of [[-17, -15], [-6, -24], [6, -24], [17, -15]]) { x.beginPath(); x.ellipse(cx + dx, h * 0.6 + dy, 5.5, 7, dx * 0.02, 0, 7); x.fill(); }
+    }
+  });
+  add(g, new THREE.LatheGeometry([[0.0238, 0.0085], [0.0289, 0.0335]].map(([a, b]) => v2(a + 0.0004, b)), 32), M(0xffffff, { map: labelTex, roughness: 0.6, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: labelTex, emissiveIntensity: 0.18 }), null, null, null, false);
+  // 안쪽 벽에 묻은 요거트 (줄어들수록 드러난다)
+  const smearTex = canvasTex(128, 64, (x, w, h) => {
+    const rnd = rng(5); x.clearRect(0, 0, w, h);
+    for (let i = 0; i < w; i += 2) { const top = h * (0.05 + 0.5 * rnd() * rnd()); const gr = x.createLinearGradient(0, top, 0, h); gr.addColorStop(0, 'rgba(255,253,246,0)'); gr.addColorStop(0.35, 'rgba(255,253,246,.75)'); gr.addColorStop(1, 'rgba(255,253,246,.95)'); x.fillStyle = gr; x.fillRect(i, top, 2, h - top); }
+  });
+  const smear = add(g, new THREE.LatheGeometry([[wallR(0.004) - 0.0004, 0.004], [wallR(0.037) - 0.0004, 0.037]].map(([a, b]) => v2(a, b)), 32), M(0xffffff, { map: smearTex, transparent: true, roughness: 0.3, side: THREE.DoubleSide, depthWrite: false }), null, null, null, false);
+  // 요거트 (살짝 봉긋하고 핥은 자국이 패인 면)
+  const yg = (() => {
+    const NRG = 7, pos = [], idx = [];
+    pos.push(0, 0.9, 0);
+    for (let r = 1; r <= NRG; r++) for (let j = 0; j < 40; j++) { const q = r / NRG, a = (j / 40) * Math.PI * 2, x = Math.sin(a) * q, z = Math.cos(a) * q; pos.push(x, (1 - q * q) * 0.9 + 0.5 * Math.sin(a * 2 + q * 5) * q * (1 - q) - 1.1 * Math.exp(-((x - 0.2) ** 2 + (z - 0.3) ** 2) / 0.07) * (1 - q * q), z); }
+    for (let j = 0; j < 40; j++) idx.push(0, 1 + j, 1 + ((j + 1) % 40));
+    for (let r = 0; r < NRG - 1; r++) for (let j = 0; j < 40; j++) { const a = 1 + r * 40 + j, b = 1 + r * 40 + ((j + 1) % 40); idx.push(a, a + 40, b, b, a + 40, b + 40); }
+    const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); gg.setIndex(idx); gg.computeVertexNormals(); return gg;
+  })();
+  const surf = add(g, yg, new THREE.MeshPhysicalMaterial({ color: 0xfffdf6, roughness: 0.25, clearcoat: 0.4, clearcoatRoughness: 0.3, side: THREE.DoubleSide }), null, null, null, false);
+  // 은박 뚜껑
+  const RL = 0.0318, NRr = 8, NSg = 32, lp = new Float32Array((1 + NRr * NSg) * 3), rest = [[0, 0]], li = [];
+  for (let r = 1; r <= NRr; r++) for (let j = 0; j < NSg; j++) { let a = (j / NSg) * Math.PI * 2; if (a > Math.PI) a -= Math.PI * 2; const rr = (r / NRr) * RL * (1 + 0.32 * Math.exp(-((a / 0.26) ** 2))); rest.push([Math.sin(a) * rr, Math.cos(a) * rr]); }
+  for (let j = 0; j < NSg; j++) li.push(0, 1 + j, 1 + ((j + 1) % NSg));
+  for (let r = 0; r < NRr - 1; r++) for (let j = 0; j < NSg; j++) { const a = 1 + r * NSg + j, b = 1 + r * NSg + ((j + 1) % NSg); li.push(a, a + NSg, b, b, a + NSg, b + NSg); }
+  const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(lp, 3)); lg.setIndex(li);
+  const lidTop = add(g, lg, M(0xe4e6ea, { metalness: 0.55, roughness: 0.38, emissive: 0x22242a }), [0, Hc + 0.0008, 0], null, null, false);
+  const lidUnder = add(g, lg, M(0xf4f4f0, { roughness: 0.6, side: THREE.BackSide }), [0, Hc + 0.0008, 0], null, null, false);
+  lidTop.frustumCulled = lidUnder.frustumCulled = false;
+  const Y = {
+    g, cup, lid: 0, level: 1, H: Hc, mouth: V3(0, Hc, 0), // mouth: 입구 한가운데(컵 로컬)
+    setLid(k) { // 0 = 닫힘 · 1 = 다 젖힘 (손잡이 쪽에서 말려 올라가 뒤로 넘어간다)
+      Y.lid = k = clamp(k, 0, 1);
+      const zc = lerp(RL * 1.36, -RL * 0.82, ease(k)), rc = 0.011, am = 2.1;
+      for (let i = 0; i < rest.length; i++) {
+        const [x, z] = rest[i]; let y = 0.0005 * Math.sin(x * 95 + 1) * Math.sin(z * 80) * Math.min(1, k * 4), zz = z; // 젖히면 은박이 살짝 구겨진다
+        if (z > zc) { const d = z - zc, a = Math.min(d / rc, am), rem = d - a * rc; zz = zc + rc * Math.sin(a) + rem * Math.cos(a); y += rc * (1 - Math.cos(a)) + rem * Math.sin(a); }
+        lp[i * 3] = x; lp[i * 3 + 1] = y; lp[i * 3 + 2] = zz;
+      }
+      lg.attributes.position.needsUpdate = true; lg.computeVertexNormals();
+    },
+    setLevel(k) { // 1 = 가득 · 0.05 = 바닥만 남음
+      Y.level = k = clamp(k, 0.05, 1);
+      const y = lerp(0.008, 0.036, (k - 0.05) / 0.95), r = wallR(y) - 0.0002;
+      surf.position.y = y; surf.scale.set(r, 0.0022 * lerp(-0.7, 1, k), r); smear.visible = k < 0.97;
+    },
+    reset() { Y.setLid(0); Y.setLevel(1); },
+  };
+  Y.reset();
+  return Y;
+}
+const yogurt = buildYogurt(); yogurt.g.visible = false; roomScene.add(yogurt.g);
+// 코에 묻은 요거트 (머리에 붙어 있다 · setDab(0~1)로 나타났다 사라진다)
+const yogurtDab = (() => {
+  const g = new THREE.Group(), m = new THREE.MeshPhysicalMaterial({ color: 0xfffdf6, roughness: 0.25, clearcoat: 0.4 });
+  add(g, SPH, m, [0.004, 0.0168, 0.1412], [0.66, 0, 0.15], [0.0105, 0.0052, 0.0085], false);
+  add(g, SPH, m, [-0.0095, 0.0178, 0.1365], [0.4, 0, -0.5], [0.0048, 0.0032, 0.0055], false);
+  add(g, SPH, m, [0.006, -0.0125, 0.1285], [0.3, 0, 0], [0.0065, 0.004, 0.0045], false);
+  g.visible = false; pinky.head.add(g);
+  return { g, k: 0, set(k) { this.k = k = clamp(k, 0, 1); g.visible = k > 0.01; for (const c of g.children) { if (!c.userData.s) c.userData.s = c.scale.clone(); c.scale.copy(c.userData.s).multiplyScalar(Math.max(k, 0.001)); } } };
+})();
+// 고구마 말랑이: 쫀득하게 말린 고구마 한 줄 (메시 좌표 = g의 로컬. 월드 좌표로 쓰려면 g를 roomScene에 그대로 둔다)
+function buildGoguma(seed = 3) {
+  const L0 = 0.085, NL = LITE ? 12 : 22, NR = LITE ? 12 : 24, rnd = rng(seed), ph = [0, 0, 0, 0, 0, 0].map(() => rnd() * 6.28), wv = 0.9 + rnd() * 0.25;
+  const nv = (NL + 1) * NR, pos = new Float32Array(nv * 3), col = new Float32Array(nv * 3), loc = new Float32Array(nv * 2), idx = [];
+  const cCore = new THREE.Color('#E8982C'), cHi = new THREE.Color('#FBC457'), cEdge = new THREE.Color('#A85F1A'), cTip = new THREE.Color('#8A4A14'), c = new THREE.Color();
+  for (let i = 0; i <= NL; i++) {
+    const u = i / NL, e = Math.pow(Math.sin(Math.PI * clamp(u, 0.012, 0.988)), 0.38), hw = 0.0102 * wv * e * (1 + 0.08 * Math.sin(u * 21 + ph[0]) + 0.035 * Math.sin(u * 47 + ph[1])), ht = 0.0035 * Math.pow(e, 0.6) * (1 + 0.15 * Math.sin(u * 13 + ph[2]));
+    for (let j = 0; j < NR; j++) {
+      const a = (j / NR) * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a), cx = Math.sign(ca) * Math.pow(Math.abs(ca), 0.7);
+      const wr = Math.sin(cx * 5.6 + 1.3 * Math.sin(u * 8 + ph[3]) + ph[4]) + 0.4 * Math.sin(cx * 12.5 + u * 26 + ph[5]), body = 1 - Math.pow(Math.abs(cx), 4); // 길이 방향 주름
+      const o = i * NR + j; loc[o * 2] = hw * cx + 0.0008 * Math.sin(u * 60 + ph[1]) * e; loc[o * 2 + 1] = ht * sa * (1 + 0.25 * wr * body) + 0.0011 * wr * body * e;
+      const edge = Math.pow(Math.abs(cx), 3.5), end = clamp(1 - e * 1.12, 0, 1) * 2.4, tip = ss(0.86, 1, Math.abs(u - 0.5) * 2);
+      c.copy(cCore).lerp(cHi, clamp(0.5 + 0.55 * wr * Math.sign(sa || 1), 0, 1) * body).lerp(cEdge, clamp(Math.max(edge * 0.85, end) + 0.12 * Math.sin(u * 33 + cx * 4 + ph[0]), 0, 1)).lerp(cTip, tip * 0.85);
+      col[o * 3] = c.r; col[o * 3 + 1] = c.g; col[o * 3 + 2] = c.b;
+      if (i < NL) { const b = i * NR + ((j + 1) % NR); idx.push(o, b, o + NR, b, b + NR, o + NR); }
+    }
+  }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setIndex(idx);
+  const mat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.5, sheen: 0.4, sheenColor: new THREE.Color(0xffd9a0), sheenRoughness: 0.5, emissive: 0x9a4a04, emissiveIntensity: 0.3, clearcoat: 0.25, clearcoatRoughness: 0.5 }); // 속이 비치는 듯한 호박빛
+  const g = new THREE.Mesh(geo, mat); g.castShadow = true; g.receiveShadow = true; g.frustumCulled = false;
+  const _t = V3(), _w = V3(), _n = V3(), _c = V3(), _s = V3(), DOWN = V3(0, -1, 0);
+  const G = {
+    g, L0, k: 1, get len() { return L0 * G.k; }, a: V3(), b: V3(0, 0, L0), twist: 0.5 + rnd() * 0.5,
+    // a에서 b까지 걸친다. sag: 가운데가 처지는 깊이(안 주면 남는 길이만큼 저절로 처진다) · side: 넓은 면이 향할 옆 방향 · dir: 처지는 방향
+    setShape(a, b, sag = null, side = null, dir = DOWN) {
+      G.a.copy(a); G.b.copy(b);
+      const ch = a.distanceTo(b), l = G.len; if (sag == null) sag = ch < l ? Math.min(ch * Math.sqrt(0.375 * (l / Math.max(ch, 1e-4) - 1)), l * 0.5) : 0;
+      _c.copy(a).add(b).multiplyScalar(0.5).addScaledVector(dir, 2 * sag);
+      const arc = ch * (1 + (8 / 3) * (sag / Math.max(ch, 1e-4)) ** 2), thin = clamp(Math.sqrt(l / Math.max(arc, 1e-4)), 0.8, 1.12); // 늘어나면 가늘어진다
+      _t.subVectors(b, a).normalize(); if (side) _s.copy(side); else { _s.crossVectors(V3(0, 1, 0), _t); if (_s.lengthSq() < 0.05) _s.set(1, 0, 0); }
+      for (let i = 0; i <= NL; i++) {
+        const u = i / NL, v = 1 - u, px = v * v * a.x + 2 * v * u * _c.x + u * u * b.x, py = v * v * a.y + 2 * v * u * _c.y + u * u * b.y, pz = v * v * a.z + 2 * v * u * _c.z + u * u * b.z;
+        _t.set(2 * v * (_c.x - a.x) + 2 * u * (b.x - _c.x), 2 * v * (_c.y - a.y) + 2 * u * (b.y - _c.y), 2 * v * (_c.z - a.z) + 2 * u * (b.z - _c.z)).normalize();
+        _w.copy(_s).addScaledVector(_t, -_s.dot(_t)).normalize(); _n.crossVectors(_t, _w);
+        const tw = G.twist * (u - 0.5) + 0.12 * Math.sin(u * 7 + ph[2]), ct = Math.cos(tw), st = Math.sin(tw);
+        for (let j = 0; j < NR; j++) {
+          const o = i * NR + j, lx = loc[o * 2] * thin, ly = loc[o * 2 + 1] * thin, x = lx * ct - ly * st, y = lx * st + ly * ct;
+          pos[o * 3] = px + _w.x * x + _n.x * y; pos[o * 3 + 1] = py + _w.y * x + _n.y * y; pos[o * 3 + 2] = pz + _w.z * x + _n.z * y;
+        }
+      }
+      geo.attributes.position.needsUpdate = true; geo.computeVertexNormals();
+    },
+    setLen(k) { G.k = clamp(k, 0.05, 1); }, // 먹은 만큼 짧아진다 (다음 setShape · straight · hang부터 반영)
+    straight() { G.setShape(V3(0, 0, 0), V3(0, 0, G.len), 0, V3(1, 0, 0)); }, // g의 원점에서 +z로 곧게 (손 · 턱에 붙일 때)
+    hang(a, sx = 0, sz = 0) { const l = G.len; G.setShape(a, V3(a.x + sx * l, a.y - l * Math.sqrt(Math.max(0.05, 1 - sx * sx - sz * sz)), a.z + sz * l), -0.05 * l * Math.hypot(sx, sz), V3(1, 0, 0), V3(sx, 0, sz).normalize()); }, // 한쪽 끝(a)을 집어 늘어뜨린다 · (sx, sz): 흔들린 정도
+    lay(x, z, yaw = 0, y = 0.006) { const l = G.len / 2, sx = Math.sin(yaw) * l, sz = Math.cos(yaw) * l; G.setShape(V3(x - sx, y + 0.0045, z - sz), V3(x + sx, y + 0.0045, z + sz), 0); }, // 바닥(높이 y)에 납작하게 놓는다 (g가 월드에 있을 때)
+    reset() { G.k = 1; G.straight(); },
+  };
+  G.reset();
+  return G;
+}
+const goguma = buildGoguma(); goguma.g.visible = false; roomScene.add(goguma.g);
+// 새 소품을 손 · 입에서 떼어 제자리로 (releaseHands에서 부른다)
+function releaseProps() {
+  for (const o of [yogurt.g, goguma.g]) { o.visible = false; roomScene.add(o); o.position.set(0, 0, 0); o.rotation.set(0, 0, 0); o.scale.setScalar(1); }
+  rope.unpin();
+}
+function resetProps() { releaseProps(); yogurt.reset(); yogurtDab.set(0); goguma.reset(); rope.reset(); }
+
+// ================================================================
 // 말풍선 (킁킁 · 냠냠 · ♥)
 // ================================================================
 const bubbles = [], bubbleLayer = $('#bubbles'), _p = V3();
@@ -1884,7 +2293,7 @@ function cancelActive() { if (active) { active.cancelled = true; active.cleanups
 function resetTransient(d) {
   Object.assign(d, { stuckT: 0, lastD: undefined, detour: null, walkTarget: null, walkSpeed: 0.5, chew: false, lick: 0, tongueOut: 0, pant: false, sniff: 0, paddle: 0, lookFn: null, face: 'cam', eyeOpen: 1, tiltT: 0, jawOpen: 0, earPerk: 0, wagAmpT: 0.3, wagSpeedT: 6, liftT: 0 });
 }
-function releaseHands() { handR.want = null; handL.want = null; treat.visible = false; roomScene.add(treat); scoop.visible = false; pouring = false; }
+function releaseHands() { handR.want = null; handL.want = null; treat.visible = false; roomScene.add(treat); scoop.visible = false; pouring = false; releaseProps(); }
 function startCommand(name, fn, keepCam = false) {
   cancelActive();
   const tok = { cancelled: false, cleanups: [], name };
@@ -2291,6 +2700,7 @@ function resetRoom() {
   for (const k of POSE_KEYS) pinky.cur[k] = st[k];
   st.paws.forEach((v, i) => pinky.cur.paws[i].copy(v)); pinky.cur.lean = [...st.lean]; pinky.cur.abd = [...st.abd];
   mound.amount = 0; updateMound();
+  resetProps();
   roomScene.attach(ball.g); ball.g.visible = false; ball.state = 'none';
   cam.pos.copy(CAM_POS); cam.aim.copy(CAM_AIM); camHome();
   look.y = look.ty = look.p = look.tp = 0;
@@ -2314,6 +2724,7 @@ function updateRoom(dt, t) {
   updateDog(pinky, dt, t, roomCam.position); napPost(pinky, dt, t);
   updateHand(handR, 1, dt); updateHand(handL, -1, dt);
   stepCrumbs(dt); stepKibble(dt); stepBall(dt);
+  stepRope(dt);
 }
 
 // ================================================================
@@ -2430,4 +2841,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // 로컬에서만 쓰는 점검용 핸들
-if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCommand, CMDS, look, cam, ball, goRoom, goSelect, roomCam, CUSH, POSES, CURL, fitCurl, NAP: (pk) => { Object.assign(pk, { x: SPOTS.cushion.x, z: SPOTS.cushion.z, yaw: CUSH.yaw, face: null, lift: cushLift(Math.hypot(CUSH.px, CUSH.pz)), eyeOpen: 0.04, wagAmpT: 0.03, curlK: 1 }); setPose(pk, 'curl', 50); } };
+if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCommand, CMDS, look, cam, ball, goRoom, goSelect, roomCam, CUSH, POSES, CURL, fitCurl, NAP: (pk) => { Object.assign(pk, { x: SPOTS.cushion.x, z: SPOTS.cushion.z, yaw: CUSH.yaw, face: null, lift: cushLift(Math.hypot(CUSH.px, CUSH.pz)), eyeOpen: 0.04, wagAmpT: 0.03, curlK: 1 }); setPose(pk, 'curl', 50); }, SPOTS, HOME, handR, handL, treat, rope, ROPE_REST, yogurt, yogurtDab, goguma, buildYogurt, buildGoguma, releaseProps, resetProps };
