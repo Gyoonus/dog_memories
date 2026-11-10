@@ -2570,7 +2570,7 @@ async function cushionNap(tok, sec = 16, cam = false) {
   pinky.eyeOpen = 1; say('잘 잤다…', headTop, 'soft', 1.8); await wait(tok, 1.6);
   if (cam) camHome();
   setPose(pinky, 'down', 2.2); pinky.face = null; await wait(tok, 1.0);
-  setPose(pinky, 'stand', 2.6); pinky.wagAmpT = 0.3; pinky.wagSpeedT = 7; pinky.tailLow = 0; await wait(tok, 1.2);
+  setPose(pinky, 'stand', 2.6); pinky.tailWrap = false; pinky.wagAmpT = 0.3; pinky.wagSpeedT = 7; pinky.tailLow = 0; await wait(tok, 1.2); // 일어서면 감았던 꼬리도 풀린다
   // 기지개: 앞을 낮추고 엉덩이를 든 채 쭈욱, 눈을 지그시 감았다가 다시 서서 꼬리를 흔든다
   Object.assign(pinky.tgt, { pitch: 0.3, bodyY: POSES.stand.bodyY - 0.035, bodyZ: -0.03, headPitch: -0.35, gaze: 0.3, neck: 0.15 }); pinky.poseRate = 2.6; pinky.earPerk = -0.4;
   hush('쭈욱…', headTop, 'soft', 1.5); await lids(0.25, 0.6); await wait(tok, 0.9);
@@ -3260,7 +3260,7 @@ function resetRoom() {
   for (const k of kibbles) roomScene.remove(k.m); kibbles.length = 0; for (const c of crumbs) roomScene.remove(c.m); crumbs.length = 0;
   $('#hint').classList.remove('gone');
   Object.assign(pinky, { x: HOME.x, z: HOME.z, yaw: 0, lift: 0 });
-  resetTransient(pinky); Object.assign(pinky, { sigh: 0, curlK: 0, curlS: 0, napEnd: 0 }); for (const L of pinky.legs) L.hip.rotation.y = 0; cushGo = false;
+  resetTransient(pinky); Object.assign(pinky, { sigh: 0, curlK: 0, curlS: 0, napEnd: 0, tailWrap: false, tailW: 0 }); for (const L of pinky.legs) L.hip.rotation.y = 0; cushGo = false;
   setPose(pinky, 'stand', 50);
   const st = poseFor('stand', pinky);
   for (const k of POSE_KEYS) pinky.cur[k] = st[k];
