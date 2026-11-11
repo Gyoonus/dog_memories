@@ -431,8 +431,68 @@ def('kiss_call', 3, -17, 'foley', () => { // 츄츄츄~ — 엄마가 입술로 
   return out;
 }, { gap: 0.4 });
 
+// --- 푸푸 목소리 (엄근진 진돗개 아가씨: 핑키 · 담이보다 한참 낮고 묵직한 "월", 짖는 일이 드물다 · 그르르 경고 · 충성의 "웝" · 이상 무의 "훕" · 점잖은 "흠")
+// 월 = ㅜ(입술을 오므린 w: 포먼트가 낮은 데서 출발) → ㅓ(가슴을 울리는 굵은 소리, 바닥음 190~215Hz) → ㄹ(혀끝이 닿으며 첫 포먼트는 내려가고 둘째 · 셋째는 올라간다, 소리가 살짝 줄며 끝난다)
+function wol(D, top, k, o = {}) {
+  const tl = rr(58, 72), w = rr(26, 34);
+  const y0 = voiced(D, { f0: curve([[0, top * 0.78], [w, top], [D * 0.45, top * 0.97], [D - tl, top * 0.88], [D, top * 0.72]]), jit: 0.028, shim: 0.1, oq: 0.5, tilt: o.tilt ?? 5000, sub: (m) => (m < 30 ? 0.4 : 0.14), asp: o.asp ?? -17, hoarse: -20, dry: 0.05,
+    F: [curve([[0, 320 * k], [w + 10, 590 * k], [D - tl, 550 * k], [D - 12, 360 * k]]), curve([[0, 640 * k], [w + 14, 1050 * k], [D - tl, 1000 * k], [D - 12, 1260 * k]]), curve([[0, 2350 * k], [D - tl, 2350 * k], [D - 12, 2650 * k]]), 3250 * k, 4300 * k], B: [110, 150, 230, 320, 450], G: [0, 1, -2, -5, -10] });
+  const y = bq(bq(y0, 'pk', 290, 1.1, 3), 'lp', curve([[0, 2600], [w, 7000], [D - tl, 6000], [D, 1700]]), 0.7); // 가슴 울림 · ㄹ에서 입안이 어두워진다
+  mulf(y, curve([[0, 0], [12, 0.85], [w, 1], [D * 0.42, 0.9], [D - tl, 0.74], [D - tl * 0.55, 0.56], [D - tl * 0.25, 0.5], [D, 0]]));
+  const out = P(D + 20), z = norm(y), sat = Math.tanh(2.2); for (let i = 0; i < z.length; i++) z[i] = Math.tanh(2.2 * z[i]) / sat; // 힘껏 짖을 때 목이 살짝 갈라진다 (센 데서만 조금 찌그러져 소리가 단단해진다)
+  mix(out, mulf(nb(14, 'p', 'bp', 900 * k, 1.1), curve([[0, 0], [2, 1], [14, 0]])), 0, db(-14)); // 가슴에서 터져 나오는 첫 바람
+  return mix(out, z);
+}
+// 0~2: 한 묶음의 첫 월(조금 높고 길게) · 3~5: 뒤따르는 월(조금 낮고 짧게, 숨이 더 섞인다)
+def('pupu_wol', 6, -13.5, 'dog', (v) => (v < 3 ? wol(rr(255, 290), rr(203, 218), rr(0.97, 1.03)) : wol(rr(225, 255), rr(184, 198), rr(0.97, 1.02), { asp: -15, tilt: 4400 })), { voiced: 1, vocal: 1, gap: 0.22, noTag: 1 });
+def('pupu_grr', 3, -17, 'dog', () => { // 그르르 — 낮게 깔리는 경고 (장난 으르릉과 달리 고르고 길게, 흔들림 없이 버틴다)
+  const D = rr(950, 1250), f = rr(86, 100), w = rr(0.4, 0.8), ph = rr(0, TAU), am = rr(21, 26), aph = rr(0, TAU);
+  const y = norm(bq(bq(voiced(D, { f0: (m) => f * (1 + 0.025 * Math.sin((TAU * w * m) / 1000 + ph)) * (1 - (0.04 * m) / D), jit: 0.05, shim: 0.16, oq: 0.5, tilt: 1500, sub: 0.45, asp: -15, hoarse: -24, F: [470, 1120, 2250], B: [190, 280, 400], G: [0, -6, -13], dry: 0.12 }), 'pk', 230, 1.2, 4), 'lp', 1900, 0.7));
+  const env = curve([[0, 0], [170, 0.82], [D * 0.45, 1], [D - 220, 0.9], [D, 0]]);
+  return mulf(y, (m) => env(m) * (0.68 + 0.32 * Math.sin((TAU * am * m) / 1000 + aph + 0.6 * Math.sin((TAU * 3.1 * m) / 1000)))); // 그르르 결: 고르지 않게 구르는 떨림
+}, { voiced: 1, vocal: 1, gap: 1.2, lo: 1, noTag: 1 });
+def('pupu_chuff', 3, -18, 'dog', () => { // 웝 — 충성! 할 때 입을 거의 다문 채 짧고 낮게 한 번 (월보다 작고 부드럽게, 입술이 닫히며 끝난다)
+  const D = rr(125, 160), k = rr(0.96, 1.04), top = rr(172, 188);
+  const y = voiced(D, { f0: curve([[0, top * 0.82], [22, top], [D * 0.6, top * 0.95], [D, top * 0.78]]), jit: 0.022, shim: 0.08, oq: 0.66, tilt: 2200, sub: (m) => (m < 20 ? 0.3 : 0.08), asp: -12, hoarse: -24, dry: 0.1,
+    F: [curve([[0, 330 * k], [26, 500 * k], [D - 34, 470 * k], [D - 6, 270 * k]]), curve([[0, 650 * k], [26, 900 * k], [D - 34, 860 * k], [D - 6, 600 * k]]), 2250 * k, 3150 * k], B: [120, 170, 260, 350], G: [0, -3, -10, -16] });
+  const z = bq(bq(y, 'pk', 280, 1.1, 4), 'lp', curve([[0, 4200], [D - 34, 3600], [D, 900]]), 0.7);
+  mulf(z, curve([[0, 0], [10, 1], [D * 0.5, 0.82], [D - 30, 0.55], [D, 0]]));
+  const out = mix(P(D + 40), norm(z));
+  return mix(out, mulf(nb(30, 'p', 'bp', 800, 1.2), bell(30)), D - 12, db(-20)); // 입술이 닫히는 "ㅂ"
+}, { voiced: 1, vocal: 1, fat: 0.5, gap: 0.6, noTag: 1 });
+def('pupu_huff', 3, -20, 'dog', () => { // 훕 — 이상 무! 할 때 가슴으로 짧게 내쉬는 흡족한 숨 (ㅎ 바람 → ㅜ 오므린 입 → ㅂ 입술을 닫으며 뚝)
+  const D = rr(240, 320), k = rr(0.93, 1.07), cl = D - rr(30, 45), out = P(D + 40), n0 = noise(N(D), 'p');
+  const y = norm(bq(sum(norm(bq(n0, 'bp', curve([[0, 1000 * k], [70, 600 * k], [D, 520 * k]]), 1.3)), norm(bq(n0, 'bp', curve([[0, 2000 * k], [70, 1250 * k], [D, 1100 * k]]), 1.8)), db(-10)), 'lp', 2200, 0.7)); // 오므린 입으로 나가는 어두운 바람
+  mix(out, mulf(y, curve([[0, 0], [28, 1], [cl * 0.6, 0.72], [cl, 0.5], [cl + 12, 0]])));
+  const v = norm(bq(voiced(cl, { f0: curve([[0, 125 * k], [cl, 105 * k]]), jit: 0.03, shim: 0.1, oq: 0.66, tilt: 600, sub: 0.2 }), 'lp', 700, 0.7));
+  mix(out, mulf(v, curve([[0, 0], [40, 1], [cl * 0.7, 0.6], [cl, 0]])), 10, db(-3)); // 가슴 울림
+  mix(out, thud(40, 130, 85, 12), 4, db(-14)); // 가슴이 툭
+  return mix(out, mulf(nb(22, 'p', 'bp', 700, 1.2), bell(22)), cl + 8, db(-16)); // 입술 "ㅂ"
+}, { voiced: 1, gap: 1.2 });
+def('pupu_hum', 3, -20, 'dog', () => { // 흠 — 코로 짧게 훅 내쉬고 입을 다문 채 낮게 "음" (점잖게 따져 보는 소리)
+  const D = rr(330, 430), k = rr(0.94, 1.06), out = P(D + 40);
+  mix(out, mulf(nb(60, 'w', 'bp', 1050 * k, 1.3), ad(6, 16)), 0, db(-5)); // ㅎ: 코로 훅
+  const h = norm(bq(bq(bq(voiced(D, { f0: curve([[0, 128 * k], [60, 146 * k], [D, 116 * k]]), jit: 0.02, shim: 0.07, oq: 0.7, tilt: 800, sub: (m) => (m > D * 0.7 ? 0.2 : 0) }), 'pk', 260, 1.5, 8), 'pk', 750, 2, -9), 'lp', 1100, 0.7)); // 다문 입: 낮은 울림을 키우고 가운데를 판다(콧소리)
+  sum(h, nb(D, 'p', 'bp', 900, 0.9), db(-24));
+  return mix(out, mulf(h, curve([[0, 0], [55, 1], [D * 0.5, 0.82], [D, 0]])), 28);
+}, { voiced: 1, gap: 0.5, lo: 1 });
+// 까치: 까악 까악 — 남산 나무 위에서 거칠게 쉰 높은 소리 두세 번 (ㄲ 부리가 딱 → 아악 거칠게 → 끝이 처지다 뚝)
+function kkak(D, f, k) {
+  const y = voiced(D, { f0: curve([[0, f * 0.9], [12, f * 1.08], [D * 0.45, f], [D, f * 0.82]]), jit: 0.09, shim: 0.28, oq: 0.42, tilt: 8000, sub: 0.45, asp: -9, hoarse: -8, dry: 0.12,
+    F: [curve([[0, 1300 * k], [25, 1700 * k], [D, 1500 * k]]), 2800 * k, 4100 * k, 5400 * k], B: [280, 420, 580, 780], G: [0, -1, -4, -8] });
+  const z = mulf(bq(y, 'hp', 900, 0.7), curve([[0, 0], [4, 1], [D * 0.4, 0.92], [D - 25, 0.7], [D - 6, 0.3], [D, 0]]));
+  return mix(mix(P(D + 10), click(3, 3200 * k, 2), 0, 0.9), norm(z), 2);
+}
+def('magpie_call', 3, -17, 'foley', (v) => { // 0 · 1: 두 번 · 2: 세 번 (뒤로 갈수록 조금 낮고 작게)
+  const n = v === 2 ? 3 : 2, f = rr(700, 820), k = rr(0.95, 1.06), Ds = [], ats = []; let at = rr(0, 10);
+  for (let i = 0; i < n; i++) { Ds.push(rr(135, 180) * (i ? 1 : 1.1)); ats.push(at); at += Ds[i] + rr(110, 160); }
+  const out = P(ats[n - 1] + Ds[n - 1] + 20);
+  for (let i = 0; i < n; i++) mix(out, kkak(Ds[i], f * (1 - 0.035 * i), k), ats[i], i ? 0.85 - 0.05 * i : 1);
+  return out;
+}, { gap: 2 });
+
 // 미리 그려 둘 순서(자주 쓰는 것부터, 드물게 쓰는 소리는 맨 뒤). 아직 안 그린 소리를 틀면 그 자리에서 그린다
-const RARE = ['bay_aroo', 'growl_play', 'sneeze', 'chomp_soft', 'crunch_big', 'lick_yogurt', 'swish', 'shake', 'kibble_floor', 'flap', 'rope_drop', 'chomp_crunch', 'crinkle', 'dig_scratch', 'dami_kk', 'dami_yip', 'dami_arr', 'dami_pant_out', 'dami_pant_in', 'splash', 'water_lap', 'step_splash', 'step_path', 'brook', 'paw_clap', 'kiss_call'];
+const RARE = ['bay_aroo', 'growl_play', 'sneeze', 'chomp_soft', 'crunch_big', 'lick_yogurt', 'swish', 'shake', 'kibble_floor', 'flap', 'rope_drop', 'chomp_crunch', 'crinkle', 'dig_scratch', 'dami_kk', 'dami_yip', 'dami_arr', 'dami_pant_out', 'dami_pant_in', 'splash', 'water_lap', 'step_splash', 'step_path', 'brook', 'paw_clap', 'kiss_call', 'pupu_wol', 'pupu_grr', 'pupu_chuff', 'pupu_huff', 'pupu_hum', 'magpie_call'];
 const NAMES = ['chomp_treat', 'chomp_kibble', 'sniff', 'bark_woof', 'bark_yip', 'step_wood', 'step_rug', 'lick', ...Object.keys(DEF).filter((n) => !RARE.includes(n)), ...RARE].filter((n, i, a) => a.indexOf(n) === i);
 const hash = (s) => { let h = 7; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0; return h; };
 /** 소리 하나를 그린다 (순수 함수: 같은 이름·번호·샘플레이트면 늘 같은 결과) */
@@ -496,7 +556,9 @@ function makeGraph(c) {
   revIn = c.createGain(); revIn.connect(conv); conv.connect(master);
   renderQ = []; for (const nm of NAMES) for (let v = 0; v < DEF[nm].v; v++) renderQ.push([nm, v]);
   if (isDami()) renderQ.sort((a, b) => (b[0].startsWith('dami_') ? 1 : 0) - (a[0].startsWith('dami_') ? 1 : 0));
+  else if (isPupu()) renderQ.sort(pupuFirst);
 }
+const pupuFirst = (a, b) => (/^pupu_|^magpie/.test(b[0]) ? 1 : 0) - (/^pupu_|^magpie/.test(a[0]) ? 1 : 0); // 푸푸 목소리 · 까치부터 미리 그려 둔다
 const gestures = ['pointerdown', 'pointerup', 'touchend', 'mousedown', 'keydown', 'click'];
 /** 첫 손길에서 소리를 연다 (브라우저는 손길 없이는 소리를 못 내게 한다). 여러 번 불러도 괜찮다 */
 function unlock() {
@@ -593,9 +655,12 @@ const VOICE = { yip: 'bark_yip', woof: 'bark_woof', aroo: 'bay_aroo', whine: 'wh
 // 강아지마다 목소리 (configure({ voice })): 담이는 짖는 소리 · 그르렁이 따로 있고, 낑 소리는 조금 높다(어리다)
 const DAMI_V = { yip: 'dami_yip', woof: 'dami_kk', aroo: 'dami_kk', growl: 'dami_arr' };
 const isDami = () => cfg.voice === 'dami';
-const isPupu = () => cfg.voice === 'pupu'; // 푸푸(진돗개): 핑키 목소리를 조금 낮게
-const huff = () => (isDami() ? 'dami_pant_out' : 'pant_out'); // 흥정 · 조를 때 내쉬는 숨
-const voice = (name, o = {}) => (isDami() ? play(DAMI_V[name] || VOICE[name] || name, name === 'whine' || name === 'whimper' ? { ...o, rate: (o.rate || 1) * 1.08 } : o) : play(VOICE[name] || name, isPupu() ? { ...o, rate: (o.rate || 1) * 0.92 } : o));
+const isPupu = () => cfg.voice === 'pupu'; // 푸푸(진돗개): 낮고 묵직한 목소리 (엄근진 — 깽깽대지 않는다)
+// 푸푸: 짖는 소리(월) · 그르르 · 웝은 따로 있고(신나서 깽 하는 일이 없다: yip도 낮은 웝), 낑 · 음 · 한숨 · 하품은 핑키 것을 낮게(0.85배)
+const PUPU_V = { woof: 'pupu_wol', aroo: 'pupu_wol', growl: 'pupu_grr', yip: 'pupu_chuff' };
+const huff = () => (isDami() ? 'dami_pant_out' : isPupu() ? 'pupu_huff' : 'pant_out'); // 흥정 · 조를 때 내쉬는 숨 (푸푸는 가슴으로 훕)
+const voice = (name, o = {}) => (isDami() ? play(DAMI_V[name] || VOICE[name] || name, name === 'whine' || name === 'whimper' ? { ...o, rate: (o.rate || 1) * 1.08 } : o) : isPupu() ? pupuVoice(name, o) : play(VOICE[name] || name, o));
+function pupuVoice(name, o) { const p = PUPU_V[name]; return p ? play(p, { ...(p === 'pupu_wol' ? { vlo: 0, vhi: 3 } : {}), ...o, rate: Math.min(o.rate || 1, 1.06) }) : play(VOICE[name] || name, { ...o, rate: (o.rate || 1) * 0.85 }); } // 제 목소리는 너무 높이지 않는다
 let lastAroo = -99;
 // 담이의 컹컹: 한 번에 둘셋씩 끊어서 (0.2초 남짓 간격, 뒤로 갈수록 조금 낮고 작게), 묶음 사이는 쉰다. 자주 짖지만 시끄럽지 않게 — 20초에 아홉 번을 넘으면 한 번씩만
 let kkEnd = -99, kkTimes = [];
@@ -617,8 +682,44 @@ function barkBurst(n = 2, o = {}) {
   kkEnd = T + at;
   return n;
 }
+// 푸푸의 월월: 0.3초 남짓 간격으로 n번 (뒤로 갈수록 조금 낮고 작게). 짖는 일이 드물다 — 20초에 두 묶음까지만 (o.force: 지킬 때 · 엄마를 맞을 때는 언제든). 못 짖으면 0
+let wolTimes = [];
+export const PUPU_WOL = { burstMax: 3, per20s: 2 };
+function wolBurst(n = 1, o = {}) {
+  if (!live()) return 0;
+  n = clamp(Math.round(n), 1, PUPU_WOL.burstMax);
+  wolTimes = wolTimes.filter((t) => T - t < 20);
+  if (!o.force && wolTimes.length >= PUPU_WOL.per20s) return 0;
+  wolTimes.push(T);
+  const tag = o.tag || 'wol', g = o.gain ?? 0; let at = 0;
+  for (let i = 0; i < n; i++) {
+    const gi = g - i * 1.5, fn = () => play('pupu_wol', { vlo: i ? 3 : 0, vhi: i ? 6 : 3, gain: gi, rate: 1 - i * 0.015, force: 1, pos: o.pos, why: o.why || 'wol' }); // 묶음 안에서는 끊기지 않게 (묶음 자체를 위에서 아낀다)
+    if (i === 0) fn(); else later(at, fn, tag);
+    at += 0.3 + Math.random() * 0.04;
+  }
+  if (!o.noJingle) later(0.05, () => play('tag_jingle', { pos: o.pos, gain: g - 2, why: 'wol' }), tag); // 가슴이 울려 인식표가 한 번 짤랑
+  return n;
+}
+// 푸푸: 엄마를 맞을 때도 점잖게 — 인식표 짤랑 → 낮은 월 한 번 (들어설 때는 작게), 돌아오셨을 때는 가끔 웝으로 맺는다. 낑낑대지 않는다
+function pupuPhrase(name, o) {
+  if (name === 'greet') {
+    if (st) st.greetT = T;
+    play('tag_jingle', { force: 1, gain: 1, why: 'greet' });
+    later(0.3, () => wolBurst(1, { force: 1, gain: o.gain ?? -6, noJingle: 1, why: 'greet' }));
+    if (o.double) later(0.8 + Math.random() * 0.08, () => play('pupu_chuff', { force: 1, gain: (o.gain ?? -6) - 1, why: 'greet' }));
+    return;
+  }
+  const m = o.mode, tag = 'mom'; cancelPhrase(tag);
+  if (m === 'busy') return void play('pupu_hum', { gain: -2, why: 'mom' }); // 입에 뭘 물고 있으면 "흠"
+  if (m === 'quick') { if (!wolBurst(1, { gain: -8, noJingle: 1, tag, why: 'mom' })) play('pupu_chuff', { force: 1, gain: -8, why: 'mom (holds back)' }); return; } // 알아보기만: 말풍선 '월!'처럼 작게 월 한 번 (20초에 두 묶음 몫 안에서 — 넘치면 작게 웝)
+  const lead = m === 'entry' || m === 'again', first = m === 'entry', g = first ? -8 : lead ? -5 : -2; // 말풍선 '엄마다!'로만 불렸으면 전부 미뤄 둔다 (곧 mode를 달고 다시 불리면 거둬진다)
+  if (lead) play('tag_jingle', { force: 1, gain: first ? 1 : -1, why: 'mom' }); else later(0.05, () => play('tag_jingle', { force: 1, gain: -1, why: 'mom' }), tag);
+  later(0.4, () => wolBurst(1, { force: 1, gain: g, noJingle: 1, tag, why: 'mom' }), tag);
+  if (!first && Math.random() < 0.5) later(1.0 + Math.random() * 0.1, () => play('pupu_chuff', { force: 1, gain: g - 4, why: 'mom' }), tag); // 웝 — 다녀오셨습니까
+}
 function phrase(name, o = {}) {
   if (!live()) return;
+  if (isPupu() && (name === 'mom' || name === 'greet')) return void pupuPhrase(name, o);
   if (name === 'mom' && isDami()) { // 담이: 엄마다! — 신나서 앙! → 컹컹 (방에 들어설 때는 작게: 휴대폰 소리를 크게 해 둬도 놀라지 않게)
     const m = o.mode, tag = 'mom'; cancelPhrase(tag);
     if (m === 'busy') { voice('content', { gain: -2, rate: 1.1, why: 'mom' }); return; }
@@ -671,7 +772,7 @@ function onSay(text) {
   if (s === '' && String(text).includes('!')) return void play('gasp_alert', { why: text });
   if (has(s, '엄마다', '엄마당')) return void phrase('mom');
   if (isDami() && damiSay(s, String(text))) return;
-  if (isPupu() && pupuSay(s)) return;
+  if (isPupu() && pupuSay(s, String(text))) return;
   // 핑키의 마음(엉뚱한 짓 · 주워 먹기 · 남긴 밥)에서 뜨는 말풍선
   if (has(s, '내꺼야')) return void voice('growl', { gain: -1, rate: 1.18, why: text }); // 장난스럽게 으르릉
   if (has(s, '놀아줘', '왔어', '왔다왔다', '엄마~')) return void voice('content', { gain: -1, rate: 1.08, why: text }); // 반가워서 음~ (조르는 낑이 아니다)
@@ -724,18 +825,28 @@ function onSay(text) {
   }
 }
 
-// 담이만의 말풍선 → 소리 (못 알아들은 말은 핑키와 같은 규칙으로: 그때 나는 목소리는 담이 목소리)
-// 푸푸만의 말풍선 → 소리 (못 알아들은 말은 핑키와 같은 규칙으로)
-function pupuSay(s) {
-  if (has(s, '물이다', '터키츄다')) { play('gasp_alert', { why: s }); later(0.22, () => voice('whine', { vlo: 0, vhi: 2, gain: -3, rate: 1.12, why: s })); return true; }
-  if (has(s, '하이파이브', '또해요', '최고')) return voice('yip', { gain: -5, why: s }), true;
-  if (s === '터키츄' || s === '츄츄츄') { voice('yip', { gain: -3, why: s }); later(0.19, () => voice('yip', { gain: -5, rate: 1.08, why: s })); return true; } // 터키츄!! — 신나서 깽깽
-  if (has(s, '시원하다', '헤헤', '뿌듯', '깔끔')) return voice('content', { gain: -1, why: s }), true;
-  if (s === '끙') return voice('content', { gain: -6, rate: 0.82, why: s }), true;
-  if (s.startsWith('휴')) return voice('sigh', { gain: -4, why: s }), true;
+// 푸푸만의 말풍선 → 소리 (엄근진: 말수가 적고, 짖을 때는 낮고 묵직하게. 못 알아들은 말은 핑키와 같은 규칙으로 — 그때 나는 목소리도 푸푸의 낮은 목소리)
+const PUPU_HUFF_GAP = 8; // '…, 이상 무.' 훕 사이 (초)
+function pupuSay(s, text = s) {
+  const n = (s.match(/월/g) || []).length;
+  if (n) { if (!wolBurst(n, { force: has(s, '지킨', '누구', '물러', '거기', '엄마'), why: text })) play('pupu_chuff', { gain: -6, why: text + ' (holds back)' }); return true; } // 월! · 월월! · 월월월! — 20초에 두 묶음까지만 (지킬 때 · 엄마 앞에서는 언제든), 넘치면 낮게 웝 한 번으로 참는다
+  if (has(s, '그르르', '으르릉')) return voice('growl', { why: text }), true; // 낮게 깔리는 경고
+  if (has(s, '충성')) return play('pupu_chuff', { force: 1, gain: -2, why: text }), true; // 충성! — 짧고 낮은 웝
+  if (has(s, '이상무')) { const big = text.includes('!'); if (big || T - (st.huffT ?? -99) > PUPU_HUFF_GAP) { st.huffT = T; play('pupu_huff', { force: 1, gain: big ? 0 : -3, why: text }); } return true; } // 이상 무! — 가슴으로 흡족하게 훕 (보고하는 '이상 무!'는 늘, 돌아다니며 하는 '…, 이상 무.'는 8초에 한 번만 · 조금 작게)
+  if (s.startsWith('흠')) { const h = Math.min(3, s.match(/^흠+/)[0].length); for (let i = 0; i < h; i++) { const fn = () => play('pupu_hum', { force: 1, gain: -i * 2.5, rate: 1 - i * 0.03, why: text }); if (i) later(i * 0.42, fn, 'hum'); else fn(); } return true; } // 흠. · 흠흠. — 점잖게 따져 본다
+  if (has(s, '끄응', '끼잉')) return voice('whimper', { force: 1, gain: 2, why: text }), true; // 끄응…! — 꾹 참다 새어 나오는 낮은 낑 (터키츄 앞에서만 체통이 무너진다)
+  if (has(s, '터키츄다')) { play('gasp_alert', { why: text }); later(0.22, () => voice('whine', { vlo: 0, vhi: 2, gain: -3, rate: 1.12, why: text })); return true; }
+  if (/^((터키)?츄+)+$/.test(s)) { voice('whine', { force: 1, vlo: 0, vhi: 2, gain: -4, why: text }); later(0.55, () => play('pupu_chuff', { force: 1, gain: -3, why: text }), 'chu'); return true; } // 터키츄!! · 츄츄츄 — 체통이 무너진다: 조르는 낮은 낑 → 웝!
+  if (has(s, '물이다')) { play('gasp_alert', { why: text }); later(0.25, () => voice('content', { gain: -3, why: text })); return true; } // 물이다 — 헉 → 낮게 음 (반가워도 점잖게)
+  if (has(s, '멍')) { if (T - (st.greetT ?? -9) > 1.5) wolBurst(1, { why: text }); return true; }
+  if (has(s, '하이파이브', '또해요', '최고')) return voice('yip', { gain: -5, why: text }), true; // 낮은 웝
+  if (has(s, '시원하다', '헤헤', '뿌듯', '깔끔')) return voice('content', { gain: -1, why: text }), true;
+  if (s === '끙') return voice('content', { gain: -6, rate: 0.82, why: text }), true;
+  if (s.startsWith('휴')) return voice('sigh', { gain: -4, why: text }), true;
   if (has(s, '손', '짝', '첨벙', '슥슥', '척', '똥츄', '빙글', '꼴깍', '퐁')) return true; // 소리는 main.js가 그 순간에 직접 낸다 (첨벙 · 짝 · 슥슥 · 바스락)
   return false;
 }
+// 담이만의 말풍선 → 소리 (못 알아들은 말은 핑키와 같은 규칙으로: 그때 나는 목소리는 담이 목소리)
 function damiSay(s, text) {
   const n = (s.match(/컹/g) || []).length;
   if (n) return barkBurst(n, { why: text }), true; // 컹! · 컹컹! · 컹컹컹!
@@ -856,7 +967,7 @@ function update(dt, t, s) {
       } else if (wrap(SLEEP_W, -Math.PI / 2)) play('sleep_out', { why: 'exhale' });
     }
     if (s.paddle > 0.1 && !(p.paddle > 0.1)) { // 꿈속 발짓: 대부분 조용히 바스락, 가끔만 작게 꿈꾸는 소리 (우는 소리로 들리지 않게)
-      if (T - (st.dreamT ?? -99) > 28 && Math.random() < 0.34) { st.dreamT = T; st.dreamN = (st.dreamN || 0) + 1; if (st.dreamN % 2) play('bark_woof', { rate: 0.8, gain: -12, nofat: 1, why: 'dream boof' }); else voice('whimper', { rate: 1.1, gain: -5, why: 'dream' }); }
+      if (T - (st.dreamT ?? -99) > 28 && Math.random() < 0.34) { st.dreamT = T; st.dreamN = (st.dreamN || 0) + 1; if (st.dreamN % 2) play(isPupu() ? 'pupu_chuff' : 'bark_woof', { rate: 0.8, gain: -12, nofat: 1, why: 'dream boof' }); else voice('whimper', { rate: 1.1, gain: -5, why: 'dream' }); }
       else if (surf === 'cushion') play('tail_cushion', { pos: ft, gain: -6, why: 'dream rustle' });
     }
   } else { st.snoreNext = false; if (s.paddle > 0.1 && surf === 'cushion' && wrap(KNEAD_W)) play('knead', { pos: ft, why: 'knead' }); }
@@ -943,9 +1054,11 @@ export const sound = {
   configure(o) { // 장소를 바꿀 때: 바닥(rug · cush · bowl, 또는 surf(x, z) → 'wood' · 'rug' · 'cushion' · 'grass' · 'path' · 'water') · 목소리(voice: 'pinky' · 'dami' · 'pupu') · 시냇물(brook: 물가의 점들, 없으면 null)
     cfg = { ...cfg, ...o };
     if (o && o.voice === 'dami' && renderQ.length) renderQ.sort((a, b) => (b[0].startsWith('dami_') ? 1 : 0) - (a[0].startsWith('dami_') ? 1 : 0)); // 담이 목소리부터 미리 그려 둔다
+    else if (o && o.voice === 'pupu' && renderQ.length) renderQ.sort(pupuFirst); // 푸푸 목소리부터
   },
   get voiceName() { return cfg.voice || 'pinky'; },
-  bark: barkBurst, // 담이: 컹컹 한 묶음 (n: 1~3)
+  bark(n, o) { return isPupu() ? wolBurst(n, o) : barkBurst(n, o); }, // 담이: 컹컹 한 묶음 (n: 1~3) · 푸푸: 월월 (20초에 두 묶음, o.force면 언제든)
+  wol: wolBurst, // 푸푸: 월 n번 (n: 1~3) — 짖었으면 n, 아껴서 못 짖었으면 0
   setListener(p, r) { L = { p, r }; },
   setChewKind(k) { chewKind = k || 'auto'; },
   setLickKind(k) { lickKind = k || 'auto'; },
