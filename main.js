@@ -3094,8 +3094,8 @@ async function damiAttn(tok, kind) {
   await idleLook(tok, 1.0, false);
 }
 // 친구한테 괜히 센 척: 울타리 밖으로 다른 강아지가 지나가면 꼿꼿이 서서 꼬리를 세우고 컹컹! → 친구가 멈춰 돌아보면 엄마 곁으로 쪼르르 → 친구가 가고 나면 다시 의기양양
-const FZ = -6.3, FSTOP = 1.6, BARK_AT = [0.45, -4.5]; // 친구가 걷는 길(울타리 바깥) · 멈춰 서서 돌아보는 곳(담이 앞 비스듬히, 울타리 너머 두 걸음) · 담이가 버티고 서서 짖는 곳(울타리 바로 앞, 미끄럼틀 끝 뒤)
-const FCAM = [V3(-0.35, 0.9, -2.2), V3(1.0, 0.32, -5.4)]; // 짖는 동안 엄마 눈길: 담이 어깨 너머로 울타리 밖 친구까지 (세로 화면에서도 둘이 한 화면에, 친구가 작지 않게)
+const FZ = -6.3, FSTOP = -0.7, BARK_AT = [0.8, -4.6]; // 친구가 걷는 길(울타리 바깥) · 멈춰 서서 돌아보는 곳(담이 왼쪽 비스듬히, 울타리 살 사이) · 담이가 버티고 서서 짖는 곳(미끄럼틀 끝과 그네 기둥 사이 · 울타리 앞)
+const FCAM = [V3(1.05, 1.5, -1.55), V3(0.18, 0.37, -5.66)]; // 짖는 동안 엄마 눈길: 미끄럼틀 끝과 그네 사이로 다가가 조금 높이서 — 담이(앞 오른쪽)와 울타리 밖 친구(뒤 왼쪽)가 가리지 않고 한 화면에 (세로 화면에서도)
 const fHead = () => DM.friend.d.head.localToWorld(V3(0, 0.1, 0.04));
 function friendOff() { const f = DM.friend; if (!f) return; f.on = false; f.stop = 0; f.d.root.visible = false; f.d.walkTarget = null; }
 function friendStart(dir = Math.random() < 0.5 ? 1 : -1) {
@@ -3134,7 +3134,7 @@ async function friendScene(tok) {
   pinky.walkSpeed = 1.0; pinky.lookFn = null; pinky.tgt.gaze = 1;
   // 엄마 눈길도 울타리 쪽으로: 담이를 따라 다가가 어깨 너머로 본다 (지금 화면을 끌고 있을 때만 그대로 · 끌기 시작하면 바로 놓아준다)
   if (!drag && !touch.active) { camTurn = true; camTo(FCAM[0], FCAM[1], 1.1); tok.cleanups.push(() => { if (camTurn) { camTurn = false; camHome(); } }); }
-  await walkTo(tok, BARK_AT[0], BARK_AT[1]); // 미끄럼틀 앞: 울타리 쪽을 보고 선다
+  await walkTo(tok, BARK_AT[0], BARK_AT[1]); // 울타리 앞: 친구 쪽을 보고 선다
   pinky.face = track; pinky.lookFn = fHead; tall();
   await wait(tok, 0.4);
   const t0 = clock, LINES = [['컹컹!', 0], ['누구야!', 1], ['컹컹컹!', 0], ['여긴 내 구역이야!', 1], ['컹!', 0], ['저리 가!', 1]];
@@ -3152,7 +3152,7 @@ async function friendScene(tok) {
   await wait(tok, 0.6);
   setPose(pinky, 'stand', 6); pinky.earPerk = -0.8; pinky.tailLow = 0.7; pinky.wagAmpT = 0.06; pinky.wagSpeedT = 5; bubble('…!', headTop, 'small', 1.0); await wait(tok, 0.5); // 앗…
   const n = nearSpot(); pinky.lookFn = null; pinky.face = null; pinky.tgt.headPitch = 0.15; pinky.walkSpeed = 1.15; mark('friend:retreat');
-  if (camTurn) { camTurn = false; camTo(CAM_POS, CAM_AIM, 1.8); } // 엄마 곁으로 오는 담이를 따라 시점도 제자리로
+  if (camTurn) (async () => { await wait(tok, 0.8); if (camTurn) { camTurn = false; camTo(CAM_POS, CAM_AIM, 1.8); } })().catch(() => {}); // 쪼르르 달아나는 첫걸음까지 보여 주고, 엄마 곁으로 오는 담이를 따라 시점도 제자리로
   await walkTo(tok, n.x, n.z); // 엄마 곁으로 쪼르르
   sitFront(7); pinky.earPerk = -0.5; pinky.tailLow = 0.4; pinky.wagAmpT = 0.2; pinky.wagSpeedT = 6; await wait(tok, 0.7);
   pinky.lookFn = fHead; await wait(tok, 0.7); pinky.lookFn = null; pinky.tiltT = 0.2;
