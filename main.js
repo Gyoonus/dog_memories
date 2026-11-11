@@ -98,7 +98,9 @@ const P = (x, y, z) => V3(x, y, z);
 COLORS.dami ??= { base: 0xf5f1ea, tan: 0x9a5a26, headTan: 0xa8652b, ear: 0x8a4c1f, saddle: 0x15110f, grizzle: 0x221c18, nose: 0x0a0807, collar: 0x7c8186 };
 function makeDami(scale = 1, seed = 11) { return buildDog({ kind: 'beagle', variant: 'dami', colors: COLORS.dami, scale, seed }); }
 // 푸푸 모델은 이 함수 하나에서만 만든다 (buildDog의 variant 'pupu': 하얀 진돗개 — 쫑긋 선 귀 · 등 위로 말린 꼬리 · 웃는 입 · 청록 별 이름표)
-function makePupu(scale = 1, seed = 5) { return buildDog({ kind: 'jindo', variant: 'pupu', colors: COLORS.pupu, scale, seed }); }
+// PUPU_S: 푸푸는 20kg 넘는 듬직한 진돗개 — 핑키·담이보다 몸 전체가 1.25배 크다 (남산 방 · 고르기 화면 모두. 자세 숫자는 몸 기준이라 그대로 커지고, 월드 단위로 쓰는 곳만 PUPU_S를 곱한다)
+const PUPU_S = 1.25;
+function makePupu(scale = PUPU_S, seed = 5) { return buildDog({ kind: 'jindo', variant: 'pupu', colors: COLORS.pupu, scale, seed }); }
 // paws: 발 위치(강아지 바닥 기준). lean: 발목 아래 마디 기울기(0 = 수직, π/2 = 바닥에 눕힘). free: 1이면 다리를 곧게 뻗음
 // 비글(핑키) 관절: 어깨 관절(견단) (±0.048, -0.022, 0.226 — 걸을 때 견갑골과 함께 앞뒤로 조금 미끄러진다) → 위팔 0.10(뒤·아래로) → 팔꿈치(뒤를 향함, 가슴 바닥 높이) → 아래팔 0.122(수직) → 손목 → 발허리 0.045
 //   고관절 (±0.062, 0.015, -0.175) → 무릎(앞을 향함) → 허벅지 0.118 → 정강이 0.105(뒤·아래로) → 비절(뒤를 향함, 바닥에서 ~0.12) → 뒷발허리 0.088(거의 수직)
@@ -1599,7 +1601,7 @@ function updateDog(d, dt, t, camPos) {
 // 강아지 고르기 화면
 // ================================================================
 const DOGS = [
-  { id: 'pupu', name: '푸푸', place: '남산 산책길', ready: true, kind: 'jindo', variant: 'pupu', colors: COLORS.pupu, room: 'namsan', make: makePupu },
+  { id: 'pupu', name: '푸푸', place: '남산 산책길', ready: true, kind: 'jindo', variant: 'pupu', colors: COLORS.pupu, room: 'namsan', make: (s, i) => makePupu(s * PUPU_S, i) }, // 받침대 위에서도 다른 강아지보다 1.25배 크게
   { id: 'alpang', name: '알팡', place: '쇼핑센터', ready: false, kind: 'beagle', colors: COLORS.generic },
   { id: 'pinky', name: '핑키', place: '푸맘네 집', ready: true, kind: 'beagle', colors: COLORS.pinky, room: 'home' },
   { id: 'jaerong', name: '재롱', place: '장소 정하는 중', ready: false, kind: 'beagle', colors: COLORS.generic },
@@ -1624,9 +1626,10 @@ const ring = new THREE.Group(); selScene.add(ring);
 const selDogs = DOGS.map((info, i) => {
   const th = i * STEP;
   const ped = new THREE.Group(); ped.position.set(Math.sin(th) * RING_R, 0, Math.cos(th) * RING_R); ped.rotation.y = th; ring.add(ped);
-  add(ped, cyl(0.46, 0.5, 0.1, 40), M(0x3a2b22, { roughness: 0.7 }), [0, 0.05, 0]);
+  const pk = info.id === 'pupu' ? 1.12 : 1; // 푸푸: 1.25배 큰 몸에 맞춰 받침대 · 빛 고리도 조금 넓게
+  add(ped, cyl(0.46 * pk, 0.5 * pk, 0.1, 40), M(0x3a2b22, { roughness: 0.7 }), [0, 0.05, 0]);
   if (info.ready) {
-    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.47, 0.009, 8, 64), new THREE.MeshBasicMaterial({ color: 0xf3b466 }));
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.47 * pk, 0.009, 8, 64), new THREE.MeshBasicMaterial({ color: 0xf3b466 }));
     halo.rotation.x = Math.PI / 2; halo.position.y = 0.101; ped.add(halo);
   }
   const d = info.make ? info.make(1.3, i) : buildDog({ kind: info.kind, variant: info.variant, colors: info.colors, silhouette: !info.ready, scale: 1.3, seed: i });
@@ -2153,7 +2156,8 @@ function navSee(ax, az, bx, bz, pad = NAV.pad - 0.012) {
 }
 function route(x, z, tx, tz) {
   const { x0, z0, h, nx, nz } = NAV, N = nx * nz, goal = { x: tx, z: tz };
-  if (navSee(x, z, tx, tz) && navFree(tx, tz, 0.121)) return [goal];
+  const gp = RP.colR ? RP.colR + 0.001 : 0.121; // 목적지가 장애물에서 collide만큼 떨어져 있어야 곧장 간다
+  if (navSee(x, z, tx, tz) && navFree(tx, tz, gp)) return [goal];
   const free = new Uint8Array(N);
   for (let i = 0; i < N; i++) free[i] = navFree(x0 + (i % nx) * h, z0 + Math.floor(i / nx) * h) ? 1 : 0;
   const near = (px, pz) => { // 가장 가까운 빈 칸
@@ -2187,7 +2191,7 @@ function route(x, z, tx, tz) {
   if (!done[g]) return [goal]; // 길이 없으면 곧장 (막히면 updateDog가 풀어 준다)
   const cells = []; for (let i = g; i >= 0; i = from[i]) cells.push({ x: x0 + (i % nx) * h, z: z0 + Math.floor(i / nx) * h });
   cells.reverse();
-  const gFree = navFree(tx, tz, 0.121);
+  const gFree = navFree(tx, tz, gp);
   if (gFree) cells.push(goal); else cells[cells.length - 1].snap = true; // 목적지가 장애물 속: 가장 가까운 빈 칸에서 멈춘다
   const out = []; let a = { x, z }, k = 0; // 곧게 펴기
   while (k < cells.length) {
@@ -2198,7 +2202,7 @@ function route(x, z, tx, tz) {
 }
 function collide(d) {
   for (const o of OBST) {
-    const dx = d.x - o.x, dz = d.z - o.z, l = Math.hypot(dx, dz), R = o.r + 0.12;
+    const dx = d.x - o.x, dz = d.z - o.z, l = Math.hypot(dx, dz), R = o.r + (RP.colR || 0.12); // colR: 장애물과 띄우는 거리 (남산: 몸이 큰 푸푸는 조금 더)
     if (l < R && l > 1e-4) { d.x = o.x + (dx / l) * R; d.z = o.z + (dz / l) * R; }
   }
   RP.clamp(d);
@@ -3132,11 +3136,11 @@ const CMDS = {
     setPose(pinky, 'held', 3.5); pinky.liftT = 0.2;
     const p0 = { x: pinky.x, z: pinky.z }, dx = roomCam.position.x - p0.x, dz = roomCam.position.z - p0.z, L = Math.hypot(dx, dz);
     const p1 = { x: p0.x + (dx / L) * 0.33, z: p0.z + (dz / L) * 0.33 };
-    camTo(cam.tPos, V3(p1.x, 0.64, p1.z), 2.2);
+    camTo(cam.tPos, V3(p1.x, 0.64 + ((pinky.camK || 1) - 1) * 0.3, p1.z), 2.2); // 큰 강아지(푸푸)를 안으면 품이 그만큼 높다
     await tween(tok, 1.1, (k) => { const e = ease(k); pinky.x = lerp(p0.x, p1.x, e); pinky.z = lerp(p0.z, p1.z, e); });
     happy(true); pinky.pant = false; pinky.tiltT = 0;
     for (let i = 0; i < 3; i++) {
-      pinky.lick = 1; pinky.tongueOut = 0.7; say('할짝', headTop, '', 1.1, (i % 2 ? 1 : -1) * 80); heart();
+      pinky.lick = 1; pinky.tongueOut = 0.7; say('할짝', headTop, '', 1.1, (i % 2 ? 1 : -1) * (pinky.pupu ? 115 : 80)); heart(); // 푸푸: 쫑긋 선 큰 귀 바깥으로 (귀 끝에 겹치지 않게)
       await wait(tok, 0.55); pinky.lick = 0; pinky.tongueOut = 0; await wait(tok, 0.35);
     }
     say('포근해…', headTop, 'soft', 1.8); await wait(tok, 1.6);
@@ -4236,9 +4240,10 @@ function hideTreat(toss = true) { // 엄마가 흘린 간식 한 조각이 러�
   return dropTreat(x, z, kind, from, V3(((x - from.x) / T) * 0.7, (0.02 - from.y + 0.5 * 7 * T * T) / T, ((z - from.z) / T) * 0.7));
 }
 // 킁킁 냄새를 따라가다 찾아서 주워 먹는다: 코를 바닥에 대고 다가가 → 킁킁킁(빨라진다) → ! → 덥석 → 와작와작
-const NOSE_REACH = 0.29;
+const NOSE_R0 = 0.29;
 const FOUND_LINES = ['찾았다!', '헤헤, 주웠다', '맛있다!', '횡재했다!'];
 async function findTreat(tok, dr) {
+  const NOSE_REACH = pinky.pupu ? NOSE_R0 * pinky.scale : NOSE_R0; // 푸푸는 몸이 1.25배라 코끝도 그만큼 멀리 닿는다
   if (!dr || dr.taken || dr.v) return false;
   dr.taken = true; tok.cleanups.push(() => { snd('cancelPhrase', 'found'); if (drops.includes(dr)) { if (dr.m.parent === roomScene) dr.taken = false; else { dr.m.parent && dr.m.parent.remove(dr.m); drops.splice(drops.indexOf(dr), 1); } } });
   setPose(pinky, 'stand', 6); pinky.lookFn = null; pinky.tgt.gaze = 0; pinky.tgt.headPitch = 0.6; pinky.sniff = 0.7; pinky.walkSpeed = 0.42; pinky.wagAmpT = 0.5; pinky.wagSpeedT = 11; pinky.earPerk = 0.3;
@@ -4839,6 +4844,7 @@ function setDog(d) { // 방에 있는 강아지를 바꿔 끼운다 (코에 묻�
   pinky.mem = { sideSign, ropeRuns, toyIdle, lastSit };
   ({ sideSign, ropeRuns, toyIdle, lastSit } = d.mem || { sideSign: 1, ropeRuns: 0, toyIdle: 60, lastSit: '' });
   pinky.root.visible = false; d.root.visible = true; pinky = d; d.head.add(yogurtDab.g);
+  fitCurl(d); // 몸을 말고 자는 자세(POSES.curl의 발 · CURL)는 하나뿐이라, 강아지가 바뀔 때마다 지금 강아지의 다리에 다시 맞춘다 (남산 · 놀이터에 다녀온 핑키가 푸푸 · 담이의 발로 자지 않게)
 }
 // 담이 말투: 명랑 쾌활한 '담과장' — 핑키의 나긋한 말을 담이답게 바꾼다 (소리는 원래 말에 맞춰 그대로 난다)
 const DAMI_TALK = {
@@ -5765,7 +5771,7 @@ function buildNamsan() {
         part(add(g, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, TK_RT * (0.9 + 0.1 * Math.sin(k * 2.1 + sg * 1.7)), 7, false), k === 1 ? mB : mA), z1);
       }
     }
-  }, 1.5);
+  }, 1.65); // 1.5 → 1.65: 1.25배 큰 푸푸의 입 · 앞발 사이에서도 링이 작아 보이지 않게 (물린 가장자리가 원점이라 입에 문 자리는 그대로)
   NS.turkey.g.traverse((o) => { if (o.isMesh) o.castShadow = false; }); G.add(NS.turkey.g);
   NS.poop = (() => { const g = new THREE.Group(), m = M(0x6b4224, { roughness: 0.42 }); add(g, SPH, m, [0, 0.013, 0], null, [0.03, 0.017, 0.027]); add(g, SPH, m, [0.003, 0.028, 0.001], null, [0.021, 0.013, 0.019]); add(g, SPH, m, [0.005, 0.04, 0.002], null, [0.012, 0.01, 0.012]); add(g, SPH, m, [0.007, 0.049, 0.002], [0, 0, -0.5], [0.005, 0.007, 0.005]); g.traverse((o) => { if (o.isMesh) o.castShadow = false; }); g.visible = false; G.add(g); return g; })(); // 이모지처럼 동글동글 세 층 (아주 작게)
   NS.bag = (() => { const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color: 0x4fc1ad, roughness: 0.38 }); add(g, SPH, m, [0, -0.034, 0], null, [0.05, 0.058, 0.047]); for (const sx of [-1, 1]) add(g, SPH, m, [sx * 0.014, 0.026, 0], [0, 0, sx * 0.5], [0.011, 0.024, 0.009]); NS.bagKnot = add(g, SPH, m, [0, 0.03, 0], null, [0.016, 0.012, 0.014]); g.visible = false; return g; })(); // 푸푸 이름표 같은 민트색
@@ -5795,12 +5801,12 @@ function buildNamsan() {
     return { g, body, head, jaw, tail, legs, wings, on: false, p: V3(), yaw: 0, pitch: -0.5, fold: 1, ph: 0, hy: 0, hop: null, peck: null, callT: -9, fly: null, watch: null };
   })();
   // ---------- 푸푸 (이 방의 강아지)
-  PUPU = makePupu(); Object.assign(PUPU, { route, routeSee: navSee, collide, speedK: 1.15, talk: pupuTalk, camK: 1.3 }); PUPU.root.visible = false; roomScene.add(PUPU.root); fitCurl(PUPU);
+  PUPU = makePupu(); Object.assign(PUPU, { route, routeSee: navSee, collide, speedK: 1.3, talk: pupuTalk, camK: 1.65 }); PUPU.root.visible = false; roomScene.add(PUPU.root); fitCurl(PUPU); // 1.25배 큰 몸: 보폭이 긴 만큼 조금 더 빨리 걷고(발 박자는 d.scale이 맞춘다) · 엄마는 더 물러나 앉아 본다(camK)
   // 매 프레임(푸푸를 움직이기 전): 땅 높이를 따라 걷는다 (물에 들어가면 냇바닥까지 내려간다)
-  roomUpd.push((t, dt) => { if (RP !== ROOM_NAMSAN) return; const d = pinky; if (d.tgt.name === 'held') return; const gy = d.liftT = nsGround(d.x, d.z); if (Math.abs(d.x - NS_SX(d.z)) < NS_SW(d.z) * 1.3) d.lift += (gy - d.lift) * (1 - Math.exp(-14 * dt)); }); // 물가에서는 바닥을 바짝 따라 (물에 들어갈 때 다리가 냇바닥에 묻히지 않게)
+  roomUpd.push((t, dt) => { if (RP !== ROOM_NAMSAN) return; const d = pinky; if (d.tgt.name === 'held') return; const gy = d.liftT = nsGround(d.x, d.z); if (Math.abs(d.x - NS_SX(d.z)) < NS_SW(d.z) * 1.3) d.lift += (gy - d.lift) * (1 - Math.exp(-24 * dt)); }); // 물가에서는 바닥을 바짝 따라 (물에 들어갈 때 다리가 냇바닥에 묻히지 않게) · 1.25배 큰 푸푸는 보폭이 커서 더 빨리 둑을 오르내리므로 더 바짝
   Object.assign(ROOM_NAMSAN, {
     built: true, OBST: OB,
-    SPOTS: { cushion: SPOTS.cushion, gifts: { x: 0.68, z: -1.5, fx: 1.0, fz: -1.85 }, table: { x: -1.3, z: -1.35, fx: -2.0, fz: -1.35 }, window: { x: 0.74, z: 0.62, fx: 1.65, fz: 0.35 } },
+    SPOTS: { cushion: SPOTS.cushion, gifts: { x: 0.56, z: -1.38, fx: 1.0, fz: -1.85 }, /* 바위 냄새: 1.25배 큰 푸푸의 코끝(엎드려 0.48 앞)이 바위 가장자리에 오게 한 걸음 물러선 자리 */ table: { x: -1.0, z: -1.35, fx: -2.0, fz: -1.35 }, /* 벤치 밑 냄새: 1.25배 큰 푸푸가 고개를 숙이면 쫑긋 선 귀가 앞으로 누워 몸 앞 0.75 · 좌판 높이(0.42)까지 오므로, 귀 끝이 좌판 앞 모서리(x -1.80)에 박히지 않게 한 걸음 반 물러선 자리 */ window: { x: 0.74, z: 0.62, fx: 1.65, fz: 0.35 } },
     looks: [V3(1.6, 0.05, -0.4), V3(1.4, 0.1, -2.6), V3(-2.0, 0.45, -1.35), V3(-3.6, 2.4, -3), V3(4, 2.2, -2), V3(-0.4, 0.3, -6.5)],
   });
   ROOM_NAMSAN.sound.brook = [2.6, 1, -0.6, -2.2, -3.8, -5.5].map((z) => [NS_SX(z), nsWaterY(z), z]);
@@ -5811,8 +5817,8 @@ const ROOM_NAMSAN = {
   navIn: (x, z) => z >= -3.301 && z <= 2.351 && x >= -1.451 && x <= NS_SX(z) + NS_SW(z) - 0.159, // 길 · 길과 냇물 사이 둑 · 냇물 속 (건너편 둑과 언덕은 아니다)
   clamp(d) { d.z = clamp(d.z, -3.3, 2.35); d.x = clamp(d.x, -1.45, NS_SX(d.z) + NS_SW(d.z) - 0.16); },
   ball: [-1.6, 2.3, -3.5, 2.6],
-  NAV: { x0: -1.45, z0: -3.3, h: 0.08, nx: 48, nz: 72, pad: 0.15 },
-  HOME: { x: 0.1, z: 0.85 }, AIM: V3(0.42, 0.36, 0.45), camPos: (v, a) => (a < 0.8 ? v.set(0.82, 1.32, 3.1) : v.set(0.3, 1.36, 3.45)), // 푸푸와 오른쪽 시냇물이 한 화면에 (세로 화면은 조금 오른쪽 · 높이)
+  NAV: { x0: -1.45, z0: -3.3, h: 0.08, nx: 48, nz: 72, pad: 0.18 }, colR: 0.15, // 1.25배 큰 푸푸: 바위에서 조금 더 떨어져 돈다 (pad: 길 찾기 · colR: 몸을 밀어내는 거리)
+  HOME: { x: 0.1, z: 0.85 }, AIM: V3(0.42, 0.36, 0.45), camPos: (v, a) => (a < 0.8 ? v.set(0.85, 1.39, 3.29) : v.set(0.3, 1.36, 3.45)), // 푸푸와 오른쪽 시냇물이 한 화면에 (세로 화면은 조금 오른쪽 · 높이 — 좁은 세로 화면에서는 1.25배 큰 푸푸가 다가와도 꽉 차지 않게 7% 물러나)
   BOWL: V3(99, 0.006, 99), EAT: { x: 99, z: 99 }, CUSH: { x: 99, z: 99 }, // 밥그릇 · 방석은 없다
   THROW: [[-0.6, -0.9], [0.2, -0.5], [-1.0, 0.4], [0.3, -1.6], [-0.4, -2.0]],
   HIDE: [[-0.6, 0.4], [0.2, 0.3], [-0.95, 1.0], [0.3, 1.05], [-0.3, -0.2], [-0.2, 1.25], [-1.1, 0.6], [0.35, 0.6]], // 길 위, 늘 화면에 보이는 자리
@@ -5856,11 +5862,15 @@ function pupuRelease() {
   magOff(); // 까치도 날아가고 없다
 }
 function pupuEnter() { pinky.pawUp = null; pinky.kick = 0; pinky.smile = 0; pinky.tongueOut = 0; pinky.wild = false; pinky.earSw = 0; magOff(); NS.magAt = clock + 45 + Math.random() * 25; NS.lapOn = false; NS.drops.length = 0; for (const r of NS.rings) r.visible = false; for (const f of NS.puffs) f.visible = false; }
+// 자세 숫자(poseFor의 발 · 몸 기준 좌표)로 잡은 점을 월드로: d.root는 크기를 모르므로(몸은 그 밑의 sc가 키운다) 푸푸의 크기(1.25배)를 곱해서 옮긴다
+const poseW = (x, y, z) => { const s = pinky.scale; return rootW(x * s, y * s, z * s); };
+// 엄마 시점: 겨냥점(a)은 그대로 두고 k배 물러나 본다 (몸이 큰 푸푸가 화면 밖으로 잘리지 않게)
+const camOut = (p, a, k, rate) => camTo(a.clone().add(p.clone().sub(a).multiplyScalar(k)), a, rate);
 // ---------- 남산에서 매 프레임 (푸푸를 움직인 뒤 · 입에 문 것을 맞추기 전)
 const _pq = new THREE.Quaternion(), _ps = V3(), _pm = new THREE.Matrix4();
 function pupuPost(d, dt, t) {
   if (!NS) return;
-  contact.position.y = nsGround(d.x, d.z) + 0.009; // 그림자 원판도 땅(냇바닥)을 따라
+  contact.position.y = nsGround(d.x, d.z) + 0.009; contact.scale.x *= d.scale; contact.scale.y *= d.scale; // 그림자 원판도 땅(냇바닥)을 따라 · 큰 몸만큼 넓게
   const lap = toy.lap > 0 && toy.lapKind === 'water';
   if (lap) { d.smile = 0; d.tongueOut = 0.5 + 0.5 * Math.sin(t * 20 + 0.8); NS.lapOn = true; } // 물을 마실 때: 혀를 날름날름 (턱은 toy.lap이 움직인다)
   else if (NS.lapOn) { NS.lapOn = false; d.tongueOut = 0; d.smile = 0; }
@@ -5870,9 +5880,9 @@ function pupuPost(d, dt, t) {
   }
   if (nsInWater(d.x, d.z) && d.tgt.name !== 'held') { // 물속에 서 있거나 걸으면 다리 둘레로 물결
     NS.wadeT -= dt;
-    if (NS.wadeT <= 0) { NS.wadeT = d.gait > 0.2 ? 0.26 : 1.2; const f = d.legs[Math.floor(Math.random() * 4)].foot.getWorldPosition(_nv); nsRing(f.x, f.z, d.gait > 0.2 ? 0.1 : 0.07, 1.0); }
+    if (NS.wadeT <= 0) { NS.wadeT = d.gait > 0.2 ? 0.26 : 1.2; const f = d.legs[Math.floor(Math.random() * 4)].foot.getWorldPosition(_nv); nsRing(f.x, f.z, (d.gait > 0.2 ? 0.1 : 0.07) * d.scale, 1.0); } // 굵은 다리만큼 물결도
   }
-  if (lap) { NS.lapT -= dt; if (NS.lapT <= 0) { NS.lapT = Math.PI / 10; const n = noseTip(); nsRing(n.x, n.z, 0.05, 0.7); if (Math.random() < 0.5) nsDrop(V3(n.x, nsWaterY(n.z) + 0.01, n.z), V3((Math.random() - 0.5) * 0.3, 0.5 + Math.random() * 0.4, (Math.random() - 0.5) * 0.3), 0xeaf6ff, 0.004); } }
+  if (lap) { NS.lapT -= dt; if (NS.lapT <= 0) { NS.lapT = Math.PI / 10; const n = noseTip(); nsRing(n.x, n.z, 0.05 * d.scale, 0.7); if (Math.random() < 0.5) nsDrop(V3(n.x, nsWaterY(n.z) + 0.01, n.z), V3((Math.random() - 0.5) * 0.3, 0.5 + Math.random() * 0.4, (Math.random() - 0.5) * 0.3), 0xeaf6ff, 0.004); } }
   if (d.kick > 0.05) { // 뒷발로 풀을 슥슥: 발이 뒤로 찰 때마다 풀 부스러기 · 흙이 뒤로 휙
     const beat = (w, ph) => Math.floor((w * t + ph) / (Math.PI * 2)) !== Math.floor((w * (t - dt) + ph) / (Math.PI * 2));
     for (const [i, ph] of [[2, 0], [3, Math.PI]]) if (beat(13, ph)) {
@@ -5904,13 +5914,13 @@ function pupuPost(d, dt, t) {
 let pawSide = 1;
 async function pupuPaw(tok) {
   await comeHere(tok, 0.8);
-  const ph = phoneK(); { const [p, a] = kneelAt(0.92 * ph, 0.6, 0.2); camTo(p, a); }
+  const ph = phoneK(); { const [p, a] = kneelAt(1.0 * ph, 0.6, 0.3); camTo(p, a); } // 꼿꼿이 앉은 큰 푸푸의 귀 끝과 엄마 손이 함께 보이게 (조금 물러나 높이)
   sitFront(10); pupuTall(); pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6;
   await wait(tok, 0.9);
   const i = (pawSide = 1 - pawSide), sx = pinky.legs[i].sx, base = poseFor('sit', pinky).paws[i], UPK = { y: 0.15, z: 0.15 };
   tok.cleanups.push(() => { pinky.pawUp = null; });
   let bob = 0;
-  const palm = () => rootW(base.x + sx * 0.02, base.y + UPK.y - 0.046 + bob, base.z + UPK.z + 0.012);
+  const palm = () => poseW(base.x + sx * 0.02, base.y + UPK.y - 0.046 + bob, base.z + UPK.z + 0.012); // 앞발이 올라올 자리 (몸 기준 → 1.25배)
   handR.want = { pos: palm, up: () => V3(0, -1, 0), curl: 0.05, rate: 5 };
   await wait(tok, 0.6);
   bubble('손!', () => handR.pos.clone().add(V3(0, 0.1, 0)), 'soft', 1.5, 0); // 엄마의 말 (손 위에)
@@ -5938,9 +5948,9 @@ async function pupuHigh5(tok) {
   tok.cleanups.push(() => { handR.want = null; });
   for (let n = 0; n < 2; n++) {
     const i = n, m = i === 0 ? 1 : -1;
-    const tgtPt = () => rootW(m * up.x, up.y + 0.03, up.z + 0.02), live = () => pinky.legs[i].foot.getWorldPosition(V3()).add(V3(0, 0.025, 0));
+    const tgtPt = () => poseW(m * up.x, up.y + 0.03, up.z + 0.02), live = () => pinky.legs[i].foot.getWorldPosition(V3()).add(V3(0, 0.025 * pinky.scale, 0));
     let reach = 0;
-    handR.want = { pos: () => (reach > 0 ? live() : tgtPt()).addScaledVector(toCamDir(), 0.2 - 0.16 * reach), up: () => toCamDir(), curl: 0.04, rate: 6 }; // 손바닥이 푸푸 쪽을 본다 (푸푸 머리 높이)
+    handR.want = { pos: () => (reach > 0 ? live() : tgtPt()).addScaledVector(toCamDir(), (0.2 - 0.16 * reach) * pinky.scale), up: () => toCamDir(), curl: 0.04, rate: 6 }; // 손바닥이 푸푸 쪽을 본다 (푸푸 머리 높이)
     await wait(tok, 0.5);
     if (n === 0) say('옙! 준비 완료.', headTop, 'soft', 1.4);
     pinky.lookFn = () => handR.pos; pinky.earPerk = 1; pinky.wagAmpT = 0.8; pinky.wagSpeedT = 16;
@@ -5967,12 +5977,12 @@ async function pupuSplash(tok, solo = false) {
   await wait(tok, solo ? 0.3 : 0.6);
   pinky.walkSpeed = solo ? 0.7 : 1.0;
   if (Math.hypot(pinky.x - B.x, pinky.z - B.z) > 0.1) await walkTo(tok, B.x, B.z);
-  const tall = roomCam.aspect < 0.8, bankCam = () => camTo(tall ? V3(0.38, 1.25, 1.95) : V3(0.42, 0.95, 1.12), V3(1.42, 0.1, -0.28), 1.6);
+  const tall = roomCam.aspect < 0.8, k = pinky.scale, bankCam = () => camOut(tall ? V3(0.38, 1.25, 1.95) : V3(0.42, 0.95, 1.12), V3(1.42, 0.1, -0.28), k, 1.6); // k: 1.25배 큰 몸만큼 물러나 (물가로 나와 부르르 할 때도 귀가 잘리지 않게)
   if (!solo) bankCam(); // 물가에 쪼그려 앉아 내려다본다
   pinky.lookFn = null; pinky.walkSpeed = 0.42; pinky.tgt.headPitch = 0.35; pinky.tgt.gaze = 0.4;
   await walkTo(tok, W.x, W.z);
   pinky.face = 'cam'; pinky.tgt.yawOff = 0.75; await wait(tok, 0.6); // 비스듬히 엄마 쪽을 보고 서서 발 앞의 물을 본다
-  const ahead = () => rootW(0, 0, 0.3).setY(nsWaterY(pinky.z));
+  const ahead = () => poseW(0, 0, 0.3).setY(nsWaterY(pinky.z));
   pinky.lookFn = ahead; pinky.tgt.gaze = 1; pinky.wagAmpT = 0.9; pinky.wagSpeedT = 17;
   const strikes = solo ? 2 : 5;
   for (let n = 0; n < strikes; n++) { // 앞발을 들었다가 탁! (대개 오른발, 가끔 왼발)
@@ -5989,8 +5999,9 @@ async function pupuSplash(tok, solo = false) {
     await wait(tok, 0.22 + Math.random() * 0.14);
   }
   // 코를 물에 퐁 — 고개를 털고
-  if (!solo) { const N = noseTip(), h = V3(cam.pos.x - N.x, 0, cam.pos.z - N.z).normalize(); N.y = nsWaterY(N.z) + 0.05; camTo(N.clone().addScaledVector(h, tall ? 1.35 : 0.95).add(V3(0, tall ? 0.26 : 0.15, 0)), N, 2.2); } // 엄마가 물가에 낮게 쪼그려 얼굴 가까이 (마시는 혀가 보이게)
+  if (!solo) { const N = noseTip(), h = V3(-0.95, 0, 0.31).normalize(); N.y = nsWaterY(N.z) + 0.05 * k; camTo(N.clone().addScaledVector(h, (tall ? 1.3 : 0.95) * k).add(V3(0, (tall ? 0.55 : 0.17) * k, 0)), N, 2.2); } // 엄마가 물가에 낮게 쪼그려 얼굴 가까이 (마시는 혀가 보이게) — 큰 머리가 잘리지 않게 몸 크기만큼 물러나되, 늘 풀을 비워 둔 길목 쪽(길 쪽 물가)에서 본다 (갈대 · 붓꽃이 얼굴을 가리지 않게) · 세로 화면은 조금 더 높이 서서 내려다본다 (발밑 길가 경계석이 화면 아래 1/3을 덮지 않게)
   setPose(pinky, 'eat', 4); pinky.tgt.gaze = 0; pinky.tgt.yawOff = 0.6; pinky.face = 'cam'; pinky.lookFn = null; pinky.wagAmpT = 0.6; pinky.wagSpeedT = 12; // 비스듬히 고개를 숙여 (물 마시는 입이 보이게)
+  pinky.tgt.headPitch += 0.13; pinky.tgt.bodyY -= 0.006; // 1.25배 큰 몸: 다리가 길어 고개를 조금 더 숙여야 코끝이 물 위 3cm쯤 (혀가 물에 닿는다)
   await wait(tok, 0.8);
   { const nz = noseTip(); nsRing(nz.x, nz.z, 0.08, 0.9); bubble('퐁', noseTip, 'small', 0.9, 40); }
   await wait(tok, 0.4);
@@ -6013,7 +6024,7 @@ async function pupuSplash(tok, solo = false) {
   await wait(tok, 1.9); happy(false);
 }
 async function pupuShake(tok) { // 부르르: 털에서 물방울이 사방으로
-  (async () => { await wait(tok, 0.35); for (let i = 0; i < 9; i++) { await wait(tok, 0.1); const c = pinky.body.getWorldPosition(V3()); for (let j = 0; j < 7; j++) { const a = Math.random() * Math.PI * 2, s = 1.0 + Math.random() * 1.2; nsDrop(c.clone().add(V3(Math.cos(a) * 0.13, Math.random() * 0.08, Math.sin(a) * 0.13)), V3(Math.cos(a) * s, 0.5 + Math.random() * 1.2, Math.sin(a) * s), 0xeaf6ff, 0.004 + Math.random() * 0.005); } } })().catch(() => {});
+  (async () => { await wait(tok, 0.35); for (let i = 0; i < 9; i++) { await wait(tok, 0.1); const c = pinky.body.getWorldPosition(V3()), r = 0.13 * pinky.scale; for (let j = 0; j < 7; j++) { const a = Math.random() * Math.PI * 2, s = 1.0 + Math.random() * 1.2; nsDrop(c.clone().add(V3(Math.cos(a) * r, Math.random() * 0.08 * pinky.scale, Math.sin(a) * r)), V3(Math.cos(a) * s, 0.5 + Math.random() * 1.2, Math.sin(a) * s), 0xeaf6ff, 0.004 + Math.random() * 0.005); } } })().catch(() => {});
   await shakeOff(tok);
 }
 // ---------- 똥츄: 길가 풀밭을 킁킁 돌다가 → 고개를 돌리고 쪼그려 볼일 → 뒷발로 풀을 슥슥 (뿌듯) → 엄마 손이 봉투로 쏙 집어 들어 올린다 · 똥츄 완료!
@@ -6026,7 +6037,7 @@ function pupuSquat(d) { // 쪼그려 앉기: 엉덩이를 풀 위로 낮추고 �
 async function pupuPoop(tok) {
   const S = NS_SPOT.grass, phone = roomCam.aspect < 0.8;
   tok.cleanups.push(() => { pinky.kick = 0; });
-  camTo(phone ? V3(S.x - 1.75, 0.98, S.z - 0.32) : V3(S.x - 1.2, 0.66, S.z - 0.24), V3(S.x - 0.02, 0.2, S.z - 0.04), 2.0); // 엄마는 길 위에서 옆으로 본다 (풀밭의 푸푸가 옆모습으로)
+  const k = pinky.scale; camOut(phone ? V3(S.x - 1.75, 0.98, S.z - 0.32) : V3(S.x - 1.2, 0.66, S.z - 0.24), V3(S.x - 0.02, 0.24 * k, S.z - 0.04), k * 1.18, 2.0); // k: 1.25배 큰 몸이 잘리지 않게 더 물러나 조금 높이 · 엄마는 길 위에서 옆으로 본다 (풀밭의 푸푸가 옆모습으로)
   setPose(pinky, 'stand', 6); pinky.tgt.gaze = 0; pinky.tgt.headPitch = 0.6; pinky.sniff = 0.6; pinky.walkSpeed = 0.5; pinky.wagAmpT = 0.35; pinky.wagSpeedT = 8;
   await walkTo(tok, S.x - 0.04, S.z + 0.42);
   say('킁킁', noseTip); pinky.walkSpeed = 0.3;
@@ -6036,20 +6047,21 @@ async function pupuPoop(tok) {
   pinky.lookFn = () => V3(pinky.x + 1.3, 0.3, pinky.z - 0.5); pinky.earPerk = -0.4; pinky.eyeOpen = 0.55; pinky.wagAmpT = 0.04; // 부끄러워 엄마 반대쪽(냇물)을 본다
   await wait(tok, 1.0); say('끙…', headTop, 'small', 1.4, 50);
   { const y0 = pinky.tgt.bodyY; await tween(tok, 1.3, (k) => { pinky.tgt.bodyY = y0 + 0.004 * Math.sin(k * Math.PI * 12); }); pinky.tgt.bodyY = y0; } // 끙… 힘을 주느라 살짝 떨린다
-  { const p = rootW(0, 0, -0.2); NS.poop.position.set(p.x, nsGround(p.x, p.z) - 0.002, p.z); NS.poop.rotation.y = Math.random() * 6; NS.poop.visible = true; NS.poop.scale.setScalar(0.01); }
-  await tween(tok, 0.4, (k) => { NS.poop.scale.setScalar(Math.max(0.01, ease(k))); });
+  { const p = poseW(0, 0, -0.2); // 큰 푸푸는 볼일도 그만큼 (엉덩이 밑 · 몸 기준 자리도 1.25배 뒤)
+    NS.poop.position.set(p.x, nsGround(p.x, p.z) - 0.002, p.z); NS.poop.rotation.y = Math.random() * 6; NS.poop.visible = true; NS.poop.scale.setScalar(0.01); }
+  await tween(tok, 0.4, (q) => { NS.poop.scale.setScalar(Math.max(0.01, ease(q) * k)); });
   await wait(tok, 0.4);
   setPose(pinky, 'stand', 4); pinky.eyeOpen = 1; pinky.earPerk = 0.4; pinky.lookFn = null; pinky.tgt.gaze = 0.6; say('휴.', headTop, 'soft', 1.2);
   await wait(tok, 0.7);
   // 한 걸음 나가서 뒷발로 풀을 슥슥 — 꼬리를 높이, 가슴을 펴고 뿌듯하게
-  { const q = { x: pinky.x + Math.sin(pinky.yaw) * 0.3, z: pinky.z + Math.cos(pinky.yaw) * 0.3 }; collide(q); pinky.walkSpeed = 0.35; await walkTo(tok, q.x, q.z); pinky.walkSpeed = 0.5; }
+  { const q = { x: pinky.x + Math.sin(pinky.yaw) * 0.3 * k, z: pinky.z + Math.cos(pinky.yaw) * 0.3 * k }; collide(q); pinky.walkSpeed = 0.35; await walkTo(tok, q.x, q.z); pinky.walkSpeed = 0.5; }
   const st = poseFor('stand', pinky);
   Object.assign(pinky.tgt, { headPitch: -0.28, gaze: 0.3, tail: st.tail + 0.2, pitch: st.pitch + 0.07 }); pinky.wagAmpT = 0.6; pinky.wagSpeedT = 14; pinky.earPerk = 0.6;
   pinky.kick = 1; say('슥슥!', headTop, '', 1.0, -70); await wait(tok, 0.8); say('슥슥!', headTop, '', 1.0, 70); await wait(tok, 0.8);
   pinky.kick = 0; say('흔적 제거 완료.', headTop, 'soft', 1.5); await wait(tok, 0.6);
   // 엄마 손이 봉투로 쏙 집어서 들어 올린다
   const P = NS.poop.position.clone(); let dip = 0.24, lift = 0;
-  camTo(phone ? V3(P.x - 1.35, 1.0, P.z + 0.5) : V3(P.x - 1.0, 0.72, P.z + 0.34), V3(P.x + 0.02, 0.14, P.z - 0.24), 2.4); await wait(tok, 0.5); // 엄마가 허리를 숙여 다가간다 (볼일이 가운데 · 그 너머로 푸푸가 지켜본다)
+  camTo(P.clone().add(phone ? V3(-0.75, 1.05, 1.3) : V3(-0.55, 0.82, 0.95)), P.clone().add(V3(0.03, phone ? 0.3 : 0.42, -0.3)), 2.4); await wait(tok, 0.5); // 엄마가 볼일 뒤(길 쪽)에서 허리를 숙여 다가간다: 볼일이 앞 가운데, 한 걸음 앞에 나가 있던 큰 푸푸가 그 너머에서 돌아서 지켜본다 (엄마 손이 볼일에 닿는 거리) // 엄마가 허리를 숙여 다가간다 (볼일이 가운데 · 그 너머로 푸푸가 지켜본다)
   handR.rig.inner.add(NS.bag); NS.bag.position.set(0, -0.062, 0.045); NS.bag.rotation.set(0, 0, 0); NS.bag.scale.setScalar(1); NS.bag.visible = true; NS.bagKnot.visible = false;
   const lifted = () => P.clone().lerp(cam.pos, 0.3).setY(0.36); // 들어 올린 봉투: 엄마 쪽으로 조금 당겨 화면 가운데 높이
   handR.want = { pos: () => P.clone().add(V3(0, 0.07 + dip, 0)).lerp(lifted(), lift), up: () => V3(0, 1, 0), curl: 0.55, rate: 4.5 };
@@ -6073,7 +6085,7 @@ const PTREAT = ['흠흠. …잘 먹었습니다.', '흠. 훌륭한 터키츄였�
 async function pupuTreat(tok) {
   const T = NS.turkey, ph = phoneK(), UP = V3(0, 1, 0);
   toy.tok = tok; tok.cleanups.push(() => { toyOff(); T.hide(); pinky.smile = 0; pinky.wild = false; pinky.tiltT = 0; pinky.paddle = 0; pinky.paddleFront = false; });
-  { const [p, a] = kneelFor(HOME, 1.05 * ph, 0.56, 0.3); camTo(p, a); }
+  { const [p, a] = kneelFor(HOME, 1.15 * ph, 0.56, 0.4); camTo(p, a); } // 꼿꼿이 앉은 큰 푸푸의 귀 끝까지 보이게 조금 물러나 높이
   T.reset(); T.g.visible = false; T.state = 'held'; toy.fill = 1;
   const pinch = () => handR.rig.inner.localToWorld(V3(0.012, -0.034, 0.072));
   const dp = poseFor('down', pinky), pawZ = dp.paws[0].z + 0.04;
@@ -6082,7 +6094,7 @@ async function pupuTreat(tok) {
     hand(C, D, U) { const Bp = pinch(); C.copy(Bp).addScaledVector(UP, T.len); D.set(0, -1, 0); U.set(roomCam.position.x - Bp.x, 0, roomCam.position.z - Bp.z).normalize(); }, // 엄마는 링 아래쪽을 쥐고 (링은 화면을 보고 선다) 위쪽 가장자리를 푸푸 입에
     jaw(C, D, U) { C.copy(jawW(0, -0.006, 0.056)); D.copy(jawDir(0, -1, 0.45)).normalize(); U.copy(jawDir(0, 0, 1)); }, // 앞니로 가장자리를 물면 링이 턱 밑에 동그랗게 매달린다
     paws(C, D, U) { // 어금니 쪽으로 물고, 반대쪽 끝은 두 앞발 사이 바닥에
-      C.copy(jawW(side * 0.012, -0.012, 0.05)); const Bp = rootW(0, 0.014, pawZ), l = T.len, d = Bp.distanceTo(C), dy = Math.max(C.y - Bp.y + 0.004, 0);
+      C.copy(jawW(side * 0.012, -0.012, 0.05)); const Bp = poseW(0, 0.014, pawZ), l = T.len, d = Bp.distanceTo(C), dy = Math.max(C.y - Bp.y + 0.004, 0);
       D.copy(Bp).sub(C).normalize();
       if (d < l) { if (dy >= l) D.set(0, -1, 0); else { const hx = Bp.x - C.x, hz = Bp.z - C.z, hl = Math.hypot(hx, hz) || 1, hh = Math.sqrt(l * l - dy * dy); D.set((hx / hl) * hh, -dy, (hz / hl) * hh).normalize(); } }
       U.copy(UP);
@@ -6134,7 +6146,7 @@ async function pupuTreat(tok) {
   setPose(pinky, 'down', 3); pinky.tgt.yawOff = -0.45; pinky.wagAmpT = 0.7; pinky.wagSpeedT = 14; pinky.earPerk = 0;
   { const [p, a] = kneelAt(0.95 * ph, 0.32, 0.14); camTo(p, a, 1.8); }
   await wait(tok, 1.25);
-  const pawPt = () => rootW(0, 0.014, pawZ);
+  const pawPt = () => poseW(0, 0.014, pawZ); // 두 앞발 사이 (몸 기준 → 1.25배)
   let lookUp = 0; pinky.lookFn = () => pawPt().add(V3(0, 0.03 + lookUp, 0)).addScaledVector(toCamDir(), 0.06 + lookUp * 1.5); // 링이 작아서 고개를 앞발 쪽으로 푹 숙인다
   pinky.tgt.gaze = 0.6; pinky.tgt.neck = 0.45; pinky.tgt.reach = 0.02;
   pinky.tgt.paws[0].set(dp.paws[0].x * 0.62, 0.04, pawZ - 0.01); pinky.tgt.paws[1].set(dp.paws[1].x * 0.62, 0.04, pawZ - 0.01);
@@ -6297,7 +6309,7 @@ async function magpieScene(tok) {
   const m = NS.mag, d = pinky; mark('magpie');
   tok.cleanups.push(() => { magOff(); pinky.earSw = 0; if (camTurn) { camTurn = false; camHome(); } });
   const far = (q) => { const l = Math.hypot(q.x - d.x, q.z - d.z); return l < 1.4 ? 9 + 1 / l : Math.abs(l - 2.0); }, L = MAG_LAND.map(([x, z]) => ({ x, z })).sort((a, b) => far(a) - far(b))[0]; // 푸푸에게서 두 걸음쯤 (너무 가깝지 않게)
-  const dx = L.x - d.x, dz = L.z - d.z, D = Math.hypot(dx, dz) || 1, S = { x: L.x - (dx / D) * 1.05, z: L.z - (dz / D) * 1.05 }; collide(S); // 살금살금 다가가 멈출 곳 (까치 한 걸음 앞)
+  const dx = L.x - d.x, dz = L.z - d.z, D = Math.hypot(dx, dz) || 1, sg = 0.65 + 0.4 * d.scale, S = { x: L.x - (dx / D) * sg, z: L.z - (dz / D) * sg }; collide(S); // 살금살금 다가가 멈출 곳 (까치 한 걸음 앞) — sg: 코끝(몸 크기 × 0.4 앞)에서 까치까지 늘 0.65 (1.25배 큰 푸푸는 그만큼 더 떨어져 선다)
   magFly(MAG_FROM, V3(L.x, nsGround(L.x, L.z), L.z), 2.0, 0.9, true);
   const bird = () => m.body.localToWorld(V3(0, 0.03, 0.06)), track = { get x() { return m.p.x; }, get z() { return m.p.z; } };
   await wait(tok, 0.6);
