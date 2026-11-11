@@ -4,7 +4,7 @@ import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from './vendor/jsm/postprocessing/ShaderPass.js';
-import { sound } from './sound.js?v=17';
+import { sound } from './sound.js?v=18';
 
 const $ = (s) => document.querySelector(s);
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -505,6 +505,7 @@ const footSDF = (x, y, z) => {
 const damiBodySDF = (x, y, z) => smax(beagleBodySDF(x / 0.88, y, z) * 0.9, -sdE(x, y, z, 0, -0.2, -0.08, 0.3, 0.092, 0.115), 0.045);
 // 귀: 핑키보다 짧고(0.125) 조금 높이 붙은 세모꼴 — 위는 접혀 좁고, 위 1/3에서 가장 넓다가 아래로 갈수록 뒤 가장자리가 비스듬히 좁아져 앞쪽에 둥근 뾰족 끝이 생긴다
 const EAR_LD = 0.133;
+let DAMI_EAR_IN = 0.22; // 귀를 볼 쪽으로 모으는 각 (라디안)
 const damiEarFrame = (sx, x0, y, z) => {
   const t = clamp(-y / EAR_LD, 0, 1), xo = x0 * sx, nar = lerp(1, 0.07, clamp((t - 0.08) / 0.92, 0, 1));
   const hw = lerp(0.03, 0.043, ss(0.0, 0.14, t)) * nar, wc = 0.045 * (1 - nar) * 0.45; // wc: 좁아지는 만큼 끝을 앞 가장자리 쪽으로 (앞 가장자리는 곧게 내려온다)
@@ -518,7 +519,7 @@ const damiEarFrame = (sx, x0, y, z) => {
 const damiEarSDF = (sx) => (x0, y, z) => {
   if (y > 0.03 || y < -0.155) return Math.max(y - 0.02, -0.145 - y, 0.004);
   const { t, hw, w, q, n } = damiEarFrame(sx, x0, y, z);
-  const rr = lerp(0.009, 0.004, ss(0.3, 1, t)), qx = Math.abs(w) - (hw - rr), qy = Math.abs(y + EAR_LD / 2) - (EAR_LD / 2 - rr);
+  const rr = lerp(0.017, 0.005, ss(0.3, 1, t)), qx = Math.abs(w) - (hw - rr), qy = Math.abs(y + EAR_LD / 2) - (EAR_LD / 2 - rr);
   const d2 = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rr;
   const th = (lerp(0.007, 0.0052, ss(0, 0.5, t)) + 0.0025 * (1 - Math.min(1, q * q))) * (0.7 + 0.3 * ss(0, -0.014, d2));
   const dn = Math.abs(n) - th;
@@ -956,14 +957,14 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     else { eg.position.set(sx * 0.038, 0.061, 0.049); eg.rotation.set(-0.12, sx * 0.03, 0); } // 크고 앞을 보는 동그란 눈, 지름 0.033(두개골 폭의 23%), 눈 사이 간격은 두개골 폭의 ~0.6, 살 속에 묻혀 앞면만 살짝 나온다
     if (!silhouette) {
       // 아주 진한 갈색의 촉촉한 눈(앞면이 살짝 납작) · 동공(가장자리에 가는 갈색 홍채 테) · 작은 반사 하나. 위아래 눈꺼풀이 눈알을 살짝 덮는다 — 눈테는 머리 무늬로 칠한다
-      put(eg, sph(24, 16), [0, 0, 0], null, J ? [0.0148, 0.0144, 0.0115] : [0.015, 0.015, 0.012], null, DM ? new THREE.MeshPhysicalMaterial({ color: 0x8a5026, roughness: 0.28, clearcoat: 0.6, clearcoatRoughness: 0.15 }) : new THREE.MeshPhysicalMaterial({ color: J ? 0x2e1a10 : 0x23150f, roughness: J ? 0.2 : 0.5, clearcoat: J ? 0.6 : 0.14, clearcoatRoughness: J ? 0.1 : 0.5 }));
-      put(eg, sph(16, 10), [0, -0.0004, J ? 0.0088 : 0.0103], null, J ? [0.0068, 0.0068, 0.003] : DM ? [0.0062, 0.0062, 0.0022] : [0.0074, 0.0074, 0.002], null, M(0x050303, { roughness: 0.3 }));
+      put(eg, sph(24, 16), [0, 0, 0], null, J ? [0.0148, 0.0144, 0.0115] : [0.015, 0.015, 0.012], null, DM ? new THREE.MeshPhysicalMaterial({ color: 0x3b2314, roughness: 0.4, clearcoat: 0.35, clearcoatRoughness: 0.3 }) : new THREE.MeshPhysicalMaterial({ color: J ? 0x2e1a10 : 0x23150f, roughness: J ? 0.2 : 0.5, clearcoat: J ? 0.6 : 0.14, clearcoatRoughness: J ? 0.1 : 0.5 }));
+      put(eg, sph(16, 10), [0, -0.0004, J ? 0.0088 : 0.0103], null, J ? [0.0068, 0.0068, 0.003] : DM ? [0.0079, 0.0079, 0.0022] : [0.0074, 0.0074, 0.002], null, M(0x050303, { roughness: 0.3 }));
       if (J) put(eg, sph(16, 10), [0, 0.0138, -0.0035], null, [0.0132, 0.0016, 0.0098], null, M(cH.clone().multiplyScalar(0.92).getHex(), { roughness: 0.9 }));
       else {
         put(eg, new THREE.TorusGeometry(0.0146, 0.0026, 8, 28), [0, 0, 0.0033], null, [1, 1, 1.6], null, new THREE.MeshStandardMaterial({ color: DM ? 0x1d1512 : 0x3a2c25, roughness: 0.95 })); // 가늘고 부드러운 어두운 눈테(눈꺼풀 가장자리): 눈알은 덮지 않는다 — 동그랗게 활짝 뜬 눈
       }
       const h1 = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: J ? 0xe6e0d8 : 0x9a948c })); h1.position.set(J ? -sx * 0.0045 : -0.004, 0.0055, J ? 0.0108 : 0.0108); h1.scale.setScalar(J ? 0.0017 : 0.0013); eg.add(h1);
-      if (DM) { h1.material.color.setHex(0xf2eee8); h1.scale.setScalar(0.0019); const h2 = new THREE.Mesh(SPH, h1.material); h2.position.set(0.0036, -0.0036, 0.0106); h2.scale.setScalar(0.0008); eg.add(h2); } // 담이: 또렷한 눈 반짝임 둘
+      if (DM) { h1.material.color.setHex(0xe8e2da); h1.scale.setScalar(0.0016); const h2 = new THREE.Mesh(SPH, h1.material); h2.position.set(0.0036, -0.0036, 0.0106); h2.scale.setScalar(0.0008); eg.add(h2); } // 담이: 또렷한 눈 반짝임 둘
       if (J) { const h2 = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: 0xf6f2ec })); h2.position.set(sx * 0.0034, -0.0038, 0.0102); h2.scale.setScalar(0.0007); eg.add(h2); }
     }
     d.eyes.push(eg);
@@ -1233,7 +1234,7 @@ function updateDog(d, dt, t, camPos) {
     e.vz += (tz - e.az) * 120 * dt; e.vz *= Math.exp(-8 * dt); e.az += e.vz * dt;
     const upE = Math.max(0, e.side * Math.sin(hwR)); // 옆으로 누우면 위쪽 귀가 볼 위로 처지고, 머리를 숙이면(먹기) 귀가 앞으로 늘어진다 (흔들림 한계만 넓힌다)
     e.ax = clamp(e.ax, -0.25 - 0.3 * clamp(hwP - 0.5, 0, 1), 0.35); e.az = clamp(e.az, -0.1 - (e.side > 0 ? 0.3 * upE : 0), 0.1 + (e.side < 0 ? 0.3 * upE : 0)); // 귓볼이 볼에서 들뜨지 않게
-    e.g.rotation.set(e.ax, 0, e.az);
+    e.g.rotation.set(e.ax, 0, e.az - (d.dami ? e.side * DAMI_EAR_IN : 0)); // 담이: 귀가 옆으로 뻗지 않고 볼 옆으로 내려오게 안쪽으로 모은다
   }
 
   // 꼬리
