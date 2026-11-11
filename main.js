@@ -1184,6 +1184,7 @@ const selDogs = DOGS.map((info, i) => {
   d.meshes.forEach((m) => { m.userData.idx = i; });
   ped.children.forEach((m) => { m.userData.idx = i; });
   if (!info.ready) { d.wagAmpT = 0.15; d.wagSpeedT = 3; d.tgt.gaze = 0; d.cur.gaze = 0; }
+  if (info.id === 'dami') Object.assign(d, { pant: true, wagAmpT: 0.6, wagSpeedT: 12 }); // 담이: 받침대 위에서도 혀를 길게 빼고 헥헥, 꼬리를 신나게
   return d;
 });
 
@@ -2250,6 +2251,7 @@ const rope = (() => {
     kick(v, key) { const a = key == null ? 0 : idx(key), b = key == null ? N : a + 1; for (let i = a; i < b; i++) { Q[i * 3] -= v.x * H; Q[i * 3 + 1] -= v.y * H; Q[i * 3 + 2] -= v.z * H; } wake(); }, // 속도를 더한다 (m/s)
     move(dx, dy, dz) { for (let i = 0; i < N; i++) { P[i * 3] += dx; P[i * 3 + 1] += dy; P[i * 3 + 2] += dz; Q[i * 3] += dx; Q[i * 3 + 1] += dy; Q[i * 3 + 2] += dz; } wake(); },
     place, reset: () => place(), wake, step, skin,
+    frames: () => vis.flatMap((v) => v.tube.defs.map((d) => d.n0)), // 줄 단면의 기준 방향(이전 모양에서 이어받는다) — 장소를 바꿀 때 떠 두고 되돌린다
   };
   const _pin = V3();
   place();
@@ -2834,7 +2836,61 @@ const CMDS = {
     if (keep && napKeep()) { startCommand('cushion', CMDS.cushion, true); return; }
     camHome();
   },
+  async worm(tok) { await wormDance(tok); }, // 담이(놀이터)에만 있는 버튼
+  async zoom(tok) { await zoomies(tok); },
 };
+// ---------- 담이: 지렁이 댄스 — 벌러덩 드러누워 등을 바닥에 비비며 몸을 좌우로 꿈틀꿈틀, 다 하고 나면 부르르 털고 일어난다
+async function wormDance(tok, solo = false) {
+  if (!solo) await comeHere(tok, 0.85);
+  pinky.face = 'cam'; happy(true); pinky.eyeOpen = 0.7; pinky.cheerOn = false;
+  say('지렁이 댄스!', headTop, '', 1.4);
+  setPose(pinky, 'side', 3.6); await wait(tok, 0.8);
+  setPose(pinky, 'belly', 4); pinky.paddle = 0.4; await wait(tok, 0.8);
+  const B = poseFor('belly', pinky), t0 = clock;
+  pinky.tongueOut = 0.6; say('꿈틀꿈틀~', headTop, 'soft', 1.8);
+  await tween(tok, solo ? 3.6 : 4.8, (k) => {
+    const ph = (clock - t0) * 7.2, s = Math.sin(ph), e = ss(0, 0.1, k) * ss(1, 0.88, k);
+    pinky.poseRate = 10;
+    Object.assign(pinky.tgt, { roll: B.roll + 0.28 * s * e, bendY: B.bendY + 0.4 * s * e, headTilt: B.headTilt - 0.3 * s * e, headPitch: B.headPitch + 0.08 * Math.sin(ph * 0.5 + 0.6) * e });
+    pinky.paddle = 0.4 + 0.5 * e; pinky.wagAmpT = 0.6; pinky.wagSpeedT = 12;
+  });
+  pinky.paddle = 0.2; setPose(pinky, 'belly', 4); await wait(tok, 0.5);
+  setPose(pinky, 'side', 3.2); pinky.paddle = 0; pinky.tongueOut = 0; await wait(tok, 0.7);
+  setPose(pinky, 'stand', 3.4); await wait(tok, 0.9);
+  await shakeOff(tok); // 등에 묻은 모래를 부르르
+  pinky.face = 'cam'; happy(true); pinky.cheerOn = false; pinky.eyeOpen = 0.8;
+  say(rot('worm', ['등 시원하다!', '오늘 댄스 완료!', '한 번 더 할까요?']), headTop, 'soft', 1.8); await wait(tok, 1.8);
+  happy(false);
+}
+// ---------- 담이: 우다다 — 신이 나서 엉덩이를 들고 앞을 낮췄다가(놀자!) 모래밭 가운데를 크게 몇 바퀴 내달린다
+async function zoomies(tok, solo = false) {
+  const Z = RP.zoom || [[HOME.x + 0.6, HOME.z - 0.6], [HOME.x - 0.6, HOME.z - 0.6]];
+  happy(true); pinky.cheerOn = false; pinky.eyeOpen = 0.9; pinky.face = 'cam';
+  setPose(pinky, 'stand', 6); Object.assign(pinky.tgt, { pitch: 0.3, bodyY: POSES.stand.bodyY - 0.04, bodyZ: -0.03, headPitch: -0.2 }); pinky.wagAmpT = 0.9; pinky.wagSpeedT = 18; pinky.earPerk = 0.6;
+  say('우다다다!', headTop, '', 1.3); await wait(tok, 0.8);
+  setPose(pinky, 'stand', 8); pinky.walkSpeed = 1.15; pinky.earPerk = -0.4; pinky.tgt.headPitch = -0.05;
+  tok.cleanups.push(() => { pinky.walkTarget = null; });
+  const near = Z.reduce((b, p, i) => (Math.hypot(p[0] - pinky.x, p[1] - pinky.z) < Math.hypot(Z[b][0] - pinky.x, Z[b][1] - pinky.z) ? i : b), 0);
+  const dir = Math.random() < 0.5 ? 1 : -1, n = Z.length + 2 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < n; i++) { // 점마다 멈추지 않고 가까워지면 다음 점으로 (크게 돌며 내달린다)
+    const [x, z] = Z[(near + dir * i + Z.length * 9) % Z.length];
+    Object.assign(pinky, { walkTarget: { x, z }, stuckT: 0, lastP: null, path: null, ghost: false, stuckN: 0, walkT: 0 });
+    await until(tok, () => !pinky.walkTarget || Math.hypot(pinky.x - x, pinky.z - z) < 0.4);
+  }
+  pinky.walkSpeed = 0.7; pinky.earPerk = 0;
+  if (!solo) await walkTo(tok, HOME.x, HOME.z); else pinky.walkTarget = null;
+  pinky.walkSpeed = 0.5; sitFront(6); pinky.wagAmpT = 0.7; pinky.wagSpeedT = 14;
+  await wait(tok, 0.6); say(rot('zoom', ['헥헥, 신난다!', '오늘도 열일!', '한 바퀴 더?']), headTop, 'soft', 1.8); await wait(tok, 2.0);
+  happy(false); pinky.pant = true; await wait(tok, 1.2); pinky.pant = false; // 숨이 가라앉을 때까지 조금 더 헥헥
+}
+// 담이: 혼자 놀 때 기분이 좋아 자주 혀를 빼고 헥헥 (입이 바쁠 때 · 냄새 맡을 때는 다문다). 명령 중에는 손대지 않는다
+roomUpd.push((t, dt) => {
+  const d = pinky; if (!d.cheer) return;
+  if (!idleNow()) { d.cheerOn = false; return; }
+  d.cheerT = (d.cheerT + dt) % 12;
+  const want = d.cheerT < 7 && !d.chew && !(d.lick > 0) && !(d.sniff > 0) && !(d.jawOpen > 0) && ball.state !== 'mouth' && !rope.pinned() && ['stand', 'sit', 'down'].includes(d.tgt.name);
+  if (want && !d.pant) { d.pant = true; d.cheerOn = true; } else if (!want && d.cheerOn) { d.pant = false; d.cheerOn = false; }
+});
 
 // 혼자 있을 때: 집 안을 돌아다니기 — 무엇을 할지는 그때그때의 마음(배고픔 · 졸림 · 엄마 생각)과 방 안 사정(남긴 밥 · 떨어진 간식)에 따라 고른다
 function pickAct() {
@@ -3881,7 +3937,7 @@ function stepTouch(dt) {
 // 처음 들어갈 때 한 번만 짓는다 (핑키만 보러 오는 사람에게는 짓지 않는다). 보는 사람은 +z 쪽 모래밭 끝에 서서 -z를 본다
 // ================================================================
 const PARK = {
-  sand: [-4.0, 4.0, -5.0, 2.3, 1.1], // 모래밭(둥근 네모): x0, x1, z0, z1, 모서리 반지름
+  sand: [-4.0, 4.0, -5.0, 4.6, 1.1], // 모래밭(둥근 네모): x0, x1, z0, z1, 모서리 반지름 — 보는 사람 발밑까지 모래 (세로 화면 아래에 시멘트 테두리 띠가 걸리지 않게)
   slide: [-2.15, -3.75], swing: [2.3, -4.0], climb: [-3.2, -1.25], bench: [2.95, -0.15], // 벤치는 화면 오른쪽 끝에 걸치게 (냄새 맡으러 가도 보이게)
   riders: [[2.2, -2.4, -0.6, 0xeab640, 'duck'], [3.15, -1.8, -1.0, 0x74aacb, 'pony']], // 스프링 놀이기구: x, z, 방향, 색, 모양
   trees: [[-4.9, -5.8, 'gy', 1.0], [4.6, -7.2, 'zk', 1.15], [-5.8, -1.7, 'pn', 0.95], [7.4, -5.0, 'gy', 0.9], [0.9, -7.6, 'zk', 1.3], [-2.4, -8.2, 'pn', 1.1], [6.6, 5.2, 'zk', 1.0], [-5.7, 2.4, 'gy', 1.0], [-7.5, -9.5, 'zk', 1.4], [3.2, -11, 'gy', 1.25]], // 해 쪽(오른쪽)에는 나무를 멀리: 모래밭 가운데가 그늘지지 않게
@@ -3951,8 +4007,8 @@ function buildPark() {
   add(G, new THREE.PlaneGeometry(70, 70), M(0xffffff, { map: grassTex, roughness: 1 }), [0, 0, -8], [-Math.PI / 2, 0, 0], null, false);
   const sandTex = canvasTex(1024, 1024, (x, w) => { // 4 m 한 장 · 이음매 없이 (가장자리에 걸친 얼룩은 반대편에도 그린다)
     const r = rng(13);
-    x.fillStyle = '#d6c6a7'; x.fillRect(0, 0, w, w);
-    for (let i = 0; i < 110; i++) { const cx = r() * w, cy = r() * w, rad = 30 + r() * 120, c = r() < 0.55 ? '242,229,202' : '160,140,110', a = 0.25 + r() * 0.2; for (const ox of [-w, 0, w]) for (const oy of [-w, 0, w]) { const X = cx + ox, Y = cy + oy; if (X + rad < 0 || X - rad > w || Y + rad < 0 || Y - rad > w) continue; const g = x.createRadialGradient(X, Y, 0, X, Y, rad); g.addColorStop(0, `rgba(${c},${a})`); g.addColorStop(1, `rgba(${c},0)`); x.fillStyle = g; x.fillRect(X - rad, Y - rad, rad * 2, rad * 2); } }
+    x.fillStyle = '#ddc6a0'; x.fillRect(0, 0, w, w);
+    for (let i = 0; i < 110; i++) { const cx = r() * w, cy = r() * w, rad = 30 + r() * 120, c = r() < 0.55 ? '247,229,192' : '176,144,104', a = 0.25 + r() * 0.2; for (const ox of [-w, 0, w]) for (const oy of [-w, 0, w]) { const X = cx + ox, Y = cy + oy; if (X + rad < 0 || X - rad > w || Y + rad < 0 || Y - rad > w) continue; const g = x.createRadialGradient(X, Y, 0, X, Y, rad); g.addColorStop(0, `rgba(${c},${a})`); g.addColorStop(1, `rgba(${c},0)`); x.fillStyle = g; x.fillRect(X - rad, Y - rad, rad * 2, rad * 2); } }
     for (let i = 0; i < 46000; i++) { x.fillStyle = r() < 0.5 ? `rgba(118,98,76,${0.12 + r() * 0.25})` : `rgba(255,250,236,${0.15 + r() * 0.3})`; x.fillRect(r() * w, r() * w, r() < 0.15 ? 2 : 1, 1); }
     // 발자국 (강아지 · 사람): 움푹한 곳은 어둡고, 해 쪽 가장자리는 밝다
     const dent = (cx, cy, rx, ry, a, k = 1) => { x.save(); x.translate(cx, cy); x.rotate(a); x.fillStyle = `rgba(112,92,70,${0.3 * k})`; x.beginPath(); x.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); x.fill(); x.fillStyle = `rgba(255,247,228,${0.32 * k})`; x.beginPath(); x.ellipse(rx * 0.35, 0, rx * 0.55, ry * 0.8, 0, 0, Math.PI * 2); x.fill(); x.restore(); };
@@ -4091,15 +4147,15 @@ function buildPark() {
     im.receiveShadow = true; G.add(im);
   }
   // ---------- 빛: 낮은 해(긴 그림자) + 하늘빛
-  G.add(new THREE.HemisphereLight(0xd8e2f0, 0x9c8058, 1.05));
-  const sun = new THREE.DirectionalLight(0xffc488, 3.1);
+  G.add(new THREE.HemisphereLight(0xeae2d2, 0xa08258, 1.08)); // 하늘빛도 노을빛: 그늘이 잿빛으로 식지 않게
+  const sun = new THREE.DirectionalLight(0xffc68a, 3.3);
   sun.target.position.set(0, 0, -1.4); sun.position.copy(PARK.sun).multiplyScalar(20).add(sun.target.position);
   sun.castShadow = true; Object.assign(sun.shadow.camera, { left: -6.8, right: 6.8, top: 4.6, bottom: -4.6, near: 4, far: 40 }); sun.shadow.camera.updateProjectionMatrix();
   sun.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.025;
   G.add(sun, sun.target);
   roomUpd.push((t) => { if (RP === ROOM_PARK) for (const g of parkSeats) g.rotation.x = 0.045 * Math.sin(t * 1.7 + g.userData.ph) + 0.02 * Math.sin(t * 0.63 + g.userData.ph * 2); });
   // ---------- 담이 (이 방의 강아지)
-  DAMI = makeDami(); Object.assign(DAMI, { route, routeSee: navSee, collide }); DAMI.root.visible = false; roomScene.add(DAMI.root); fitCurl(DAMI);
+  DAMI = makeDami(); Object.assign(DAMI, { route, routeSee: navSee, collide, speedK: 1.2, talk: damiTalk, cheer: true, cheerT: 0 }); DAMI.root.visible = false; roomScene.add(DAMI.root); fitCurl(DAMI); // speedK: 핑키보다 발걸음이 가볍고 빠르다 · cheer: 혼자 놀 때 자주 혀를 빼고 헥헥
   // ---------- 다니는 길 · 냄새 맡는 곳
   const [cx, cz] = PARK.slide, [bx, bz] = PARK.bench, [wx, wz] = PARK.swing, slideEnd = cx + 2.75;
   Object.assign(ROOM_PARK, {
@@ -4114,7 +4170,7 @@ const ROOM_PARK = {
   clamp(d) { d.x = clamp(d.x, -4.8, 4.8); d.z = clamp(d.z, -4.85, 2.4); },
   ball: [-5.3, 5.3, -5.4, 2.9],
   NAV: { x0: -4.8, z0: -4.85, h: 0.1, nx: 97, nz: 73, pad: 0.15 },
-  HOME: { x: 0.1, z: 0.85 }, AIM: V3(0.08, 0.46, 0.62), camPos: (v, a) => v.set(0, a < 0.8 ? 1.42 : 1.22, a < 0.8 ? 3.65 : 3.0),
+  HOME: { x: 0.1, z: 0.85 }, AIM: V3(0.08, 0.46, 0.62), camPos: (v, a) => v.set(0, a < 0.8 ? 1.48 : 1.22, a < 0.8 ? 3.2 : 3.0), // 세로 화면: 조금 더 가까이 · 내려다보게 (담이가 작아 보이지 않고 하늘이 화면 반을 차지하지 않게)
   BOWL: V3(99, 0.006, 99), EAT: { x: 99, z: 99 }, CUSH: { x: 99, z: 99 }, // 밥그릇 · 방석은 없다 (멀리 치워 둔다: 방석 위로 떠오르거나 공이 튕기는 일이 없게)
   THROW: [[-0.7, -1.3], [1.2, -0.9], [1.1, 0.3], [-1.2, 0.9], [-0.2, -2.0], [0.6, -1.7], [-1.5, -0.4], [1.4, -2.7]],
   HIDE: [[-0.55, 0.45], [0.75, 0.4], [-0.8, 1.0], [0.9, 1.05], [0.45, 0.2], [-0.25, 1.2], [1.15, 0.75], [-1.05, 0.7]],
@@ -4122,7 +4178,11 @@ const ROOM_PARK = {
   entry: [[1.0, -0.9, 1.9, -1.7], [-1.0, -0.7, -1.8, -1.2], [0.3, -1.6, 0.4, -2.6]],
   wander: [-1.5, -1.0, 3.0, 2.2],
   off: { feed: true, cushion: true }, actW: { nap: 0, bowl: 0, left: 0 }, noBowl: true,
-  lines: { gifts: ['미끄럼틀 냄새!', '누가 여기 왔었네?', '킁킁, 친구 냄새~'], table: ['벤치 밑에 뭐 있다!', '과자 냄새 났는데!', '여긴 없네~'], window: ['저기 비둘기다!', '바람 좋다~', '친구 오나?'], tableSniff: '뭐 떨어진 거 없나~' },
+  lines: { gifts: ['미끄럼틀 냄새!', '누가 여기 왔었네?', '킁킁, 친구 냄새~'], table: ['벤치 밑에 뭐 있다!', '과자 냄새 났는데!', '여긴 없네~'], window: ['저기 비둘기다!', '바람 좋다~', '친구 오나?'], tableSniff: '뭐 떨어진 거 없나~', mid: ['오리야 안녕!', '여기도 친구 냄새!', '킁킁, 과자 냄새~'] },
+  sniffMid: { x: PARK.riders[0][0] - 0.55, z: PARK.riders[0][1] + 0.3, fx: PARK.riders[0][0], fz: PARK.riders[0][1] }, // 냄새 맡기 가운데 들르는 곳: 오리 스프링 놀이기구 옆 (미끄럼틀 끝 → 오리 → 벤치, 멀리 돌지 않게)
+  zoom: [[1.4, -0.9], [0.78, 0.18], [-0.48, 0.18], [-1.1, -0.9], [-0.48, -1.98], [0.78, -1.98]], // 우다다: 모래밭 가운데 빈 곳을 크게 도는 길
+  acts: (cd, d) => ({ worm: 0.55 * cd('worm', 80), zoom: (0.4 + 0.9 * d.play) * cd('zoom', 110) }), // 혼자 놀 때도 지렁이 댄스 · 우다다
+  roamActs: (tok) => ({ worm: () => wormDance(tok, true), zoom: () => zoomies(tok, true) }),
   bg: new THREE.Color(0xf3cf9f), fog: new THREE.Fog(0xf0cfa2, 15, 46), env: null,
   sound: { surf: (x, z) => (inSand(x, z) ? 'rug' : 'grass'), cush: [99, 99, 0.3], bowl: [99, 99] }, // 모래: 사각사각 부드럽게 · 풀: 바스락
 };
@@ -4136,14 +4196,28 @@ Object.assign(ROOM_HOME, {
   off: { worm: true, zoom: true }, wander: [-0.6, 0.2, 1.4, 1.0],
   lines: { gifts: GIFT_LINES, table: TABLE_LINES, window: ['단풍 예쁘다…', '새 왔다…', '바람 냄새…'], tableSniff: '뭐 떨어진 거 없나' },
 });
-function setDog(d) { // 방에 있는 강아지를 바꿔 끼운다 (코에 묻는 요거트도 그 얼굴로)
+function setDog(d) { // 방에 있는 강아지를 바꿔 끼운다 (코에 묻는 요거트도 그 얼굴로) · 강아지마다 따로 기억하는 것(옆으로 앉은 쪽 · 로프 놀이 횟수 · 혼자 로프 갖고 놀 때까지)도 바꿔 든다
   if (pinky === d) return;
+  pinky.mem = { sideSign, ropeRuns, toyIdle, lastSit };
+  ({ sideSign, ropeRuns, toyIdle, lastSit } = d.mem || { sideSign: 1, ropeRuns: 0, toyIdle: 60, lastSit: '' });
   pinky.root.visible = false; d.root.visible = true; pinky = d; d.head.add(yogurtDab.g);
 }
+// 담이 말투: 명랑 쾌활한 '담과장' — 핑키의 나긋한 말을 담이답게 바꾼다 (소리는 원래 말에 맞춰 그대로 난다)
+const DAMI_TALK = {
+  '왔어? ♥': '담과장 출근했습니다! ♥', '왔다 왔다! ♥': '엄마 왔다~! ♥', '놀아줘 ♥': '놀아 주세요! ♥',
+  '좋아…': '좋아요!', '더 해줘…': '한 번 더요!', '포근해…': '포근해요~', '…하나 더?': '하나 더 결재해 주세요!', '…더 없어?': '더 없어요?',
+  '간식이다!': '간식 타임!', '간식 있어?': '간식 결재 올립니다!', '심심해…': '심심해요~', '뭐 해?': '뭐 하세요?', '놀자?': '놀아요!', '엄마~ ♥': '엄마 최고! ♥',
+  '응…?': '네?!', '잘 잤다…': '푹 잤다!', '후우…': '휴~ 좋다!', '쭈욱…': '쭈욱~!', '하암…': '하암~', '재밌었다…': '재밌었다!',
+  '…같이 할래?': '같이 해요!', '…또 줘?': '또 주세요!', '…이번만이야': '이번만이에요~', '후우… 알았어': '네, 알겠습니다!', '안 들려~': '안 들려요~',
+  '또 던져!': '또 던져 주세요!', '또 하자!': '또 해요!', '…이따 주겠지': '이따 주시겠지~', '달다…': '달다!', '다 먹었다!': '다 먹었습니다!',
+  '뒹굴': '뒹굴!', '뒹굴뒹굴': '데굴데굴~', '찾았다!': '찾았습니다!', '헤헤, 주웠다': '헤헤, 득템!', '하나만 더…?': '하나만 더요?',
+};
+function damiTalk(s) { return DAMI_TALK[s] ?? (/[가-힣]…$/.test(s) ? s.slice(0, -1) + '~' : s); }
 function useRoom(id) {
   const R = id === 'park' ? ROOM_PARK : ROOM_HOME;
   if (R === RP) return;
   if (!R.built && R === ROOM_PARK) buildPark();
+  RP.ropeN0 = rope.frames().map((v) => v.clone()); if (R.ropeN0) rope.frames().forEach((v, i) => v.copy(R.ropeN0[i])); // 핑키 방의 로프는 놀이터에 다녀와도 그대로 (줄 단면 방향까지)
   RP = R;
   Object.assign(HOME, R.HOME); BOWL.copy(R.BOWL); Object.assign(EAT, R.EAT); Object.assign(SPOTS, R.SPOTS); Object.assign(CUSH, R.CUSH);
   OBST.length = 0; OBST.push(...R.OBST); Object.assign(NAV, R.NAV);
