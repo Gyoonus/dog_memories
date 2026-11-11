@@ -4574,7 +4574,7 @@ function damiPost(d, dt, t) {
     if (pit.age > 52) { pit.g.visible = false; pit.pile.visible = false; continue; }
     pit.age += dt; const f = 1 - ss(40, 52, pit.age), r = 0.03 + 0.06 * pit.k;
     pit.g.visible = pit.k > 0.01; pit.hole.scale.setScalar(r * 1.5); pit.rim.scale.set(r * 1.6, r * 1.6, 0.016 + 0.034 * pit.k); pit.hole.material.opacity = f; pit.rim.material.opacity = f;
-    pit.pile.visible = pit.pk > 0.01; pit.pile.scale.set(0.052 + 0.117 * pit.pk, (0.01 + 0.046 * pit.pk) * f + 0.001, 0.045 + 0.091 * pit.pk); // 뒤에 쌓인 모래 더미 (눈에 띄게) pit.pile.material.opacity = f;
+    pit.pile.visible = pit.pk > 0.01; pit.pile.scale.set(0.052 + 0.117 * pit.pk, (0.01 + 0.046 * pit.pk) * f + 0.001, 0.045 + 0.091 * pit.pk); pit.pile.material.opacity = f; // 뒤에 쌓인 모래 더미 (눈에 띄게)
   }
   for (const k of ['bottle', 'stick']) if (DP[k].state === 'fly') stepFly(DP[k], dt);
   const K = DP.duck, dist = Math.hypot(d.x - K.x, d.z - K.z);
