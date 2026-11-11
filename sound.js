@@ -424,7 +424,7 @@ function setScene(s) {
   if (s !== 'room') stopAll(300, true);
   else if (ctx) { mainBus.gain.setTargetAtTime(1, ctx.currentTime, 0.1); if (enabled && ctx.state !== 'running' && !(typeof document !== 'undefined' && document.hidden)) ctx.resume().catch(() => {}); }
 }
-const surfaceAt = (x, z) => (Math.hypot(x - cfg.cush[0], z - cfg.cush[1]) < cfg.cush[2] + 0.12 ? 'cushion' : ((x - cfg.rug[0]) / cfg.rug[2]) ** 2 + ((z - cfg.rug[1]) / cfg.rug[3]) ** 2 < 1 ? 'rug' : 'wood');
+const surfaceAt = (x, z) => cfg.surf ? cfg.surf(x, z) : (Math.hypot(x - cfg.cush[0], z - cfg.cush[1]) < cfg.cush[2] + 0.12 ? 'cushion' : ((x - cfg.rug[0]) / cfg.rug[2]) ** 2 + ((z - cfg.rug[1]) / cfg.rug[3]) ** 2 < 1 ? 'rug' : 'wood');
 // 듣는 자리(카메라)에서 본 방향과 거리 → 좌우 · 크기 · 먹먹함 · 울림
 function spatial(pos) {
   const dx = pos[0] - L.p[0], dy = pos[1] - L.p[1], dz = pos[2] - L.p[2], d = clamp(Math.hypot(dx, dy, dz), 0.6, 6);
@@ -746,6 +746,7 @@ export const sound = {
   get names() { return Object.keys(DEF); },
   get defs() { return DEF; },
   get stats() { return { renderMs: +renderMs.toFixed(1), buffers: bufs.size, pending: renderQ.length, voices: voices.length, state: ctx ? ctx.state : 'none', scene, enabled }; },
+  configure(o) { cfg = { ...cfg, ...o }; }, // 장소를 바꿀 때: 바닥(rug · cush · bowl, 또는 surf(x, z) → 'wood' · 'rug' · 'cushion' · 'grass')
   setListener(p, r) { L = { p, r }; },
   setChewKind(k) { chewKind = k || 'auto'; },
   setLickKind(k) { lickKind = k || 'auto'; },

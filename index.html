@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <title>다섯 강아지의 추억</title>
-  <meta name="description" content="강아지를 골라 추억의 장소로 들어가는 3D 공간. 첫 장소는 핑키와 함께하는 푸맘네 집." />
+  <meta name="description" content="강아지를 골라 추억의 장소로 들어가는 3D 공간. 핑키와 함께하는 푸맘네 집, 담이와 함께하는 동네 놀이터." />
   <meta name="theme-color" content="#16100c" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" />
-  <link rel="stylesheet" href="style.css?v=16" />
+  <link rel="stylesheet" href="style.css?v=17" />
 </head>
 <body>
 <div id="stage"><canvas id="c" aria-label="강아지와 추억의 장소 3D 화면"></canvas></div>
@@ -54,6 +54,8 @@
       <button type="button" data-cmd="roll"><span class="ic" aria-hidden="true">🫠</span>드러눕기</button>
       <button type="button" data-cmd="sniff"><span class="ic" aria-hidden="true">👃</span>냄새 맡기</button>
       <button type="button" data-cmd="cushion"><span class="ic" aria-hidden="true">🍩</span>방석</button>
+      <button type="button" data-cmd="worm" hidden><span class="ic" aria-hidden="true">🪱</span>지렁이 댄스</button>
+      <button type="button" data-cmd="zoom" hidden><span class="ic" aria-hidden="true">💨</span>우다다</button>
     </nav>
   </div>
   <div id="picker" class="picker glass" role="menu" hidden></div>
@@ -64,6 +66,6 @@
 <div id="boot">불을 켜는 중…</div>
 
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
-<script type="module" src="main.js?v=16"></script>
+<script type="module" src="main.js?v=17"></script>
 </body>
 </html>

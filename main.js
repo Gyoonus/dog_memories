@@ -4,7 +4,7 @@ import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from './vendor/jsm/postprocessing/ShaderPass.js';
-import { sound } from './sound.js?v=16';
+import { sound } from './sound.js?v=17';
 
 const $ = (s) => document.querySelector(s);
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -91,6 +91,10 @@ const COLORS = {
   generic: { base: 0xe9e1d6, tan: 0xc99a6c, saddle: 0x4a3c34, nose: 0x1c1513 },
 };
 const P = (x, y, z) => V3(x, y, z);
+// 담이 모델은 이 함수 하나에서만 만든다. variant 'dami'는 담이 모델(세모 귀 · 얄상한 몸 · 긴 혀 · 하네스, dami-model 가지)을 고른다 — 그 모델이 아직 없으면 buildDog가 variant를 모르는 채로 비글 몸에 담이 색만 입힌다
+// 임시 색: 담이 모델이 COLORS에 담이 색을 넣으면 그 색을 쓴다 (진한 나무 갈색 황갈 · 새까만 안장 · 하얀 다리와 가슴 · 회색 목줄)
+COLORS.dami ??= { base: 0xf5f1ea, tan: 0x9a5a26, headTan: 0xa8652b, ear: 0x8a4c1f, saddle: 0x15110f, grizzle: 0x221c18, nose: 0x0a0807, collar: 0x7c8186 };
+function makeDami(scale = 1, seed = 11) { return buildDog({ kind: 'beagle', variant: 'dami', colors: COLORS.dami, scale, seed }); }
 // paws: 발 위치(강아지 바닥 기준). lean: 발목 아래 마디 기울기(0 = 수직, π/2 = 바닥에 눕힘). free: 1이면 다리를 곧게 뻗음
 // 비글(핑키) 관절: 어깨 관절(견단) (±0.048, -0.022, 0.226 — 걸을 때 견갑골과 함께 앞뒤로 조금 미끄러진다) → 위팔 0.10(뒤·아래로) → 팔꿈치(뒤를 향함, 가슴 바닥 높이) → 아래팔 0.122(수직) → 손목 → 발허리 0.045
 //   고관절 (±0.062, 0.015, -0.175) → 무릎(앞을 향함) → 허벅지 0.118 → 정강이 0.105(뒤·아래로) → 비절(뒤를 향함, 바닥에서 ~0.12) → 뒷발허리 0.088(거의 수직)
@@ -1122,10 +1126,10 @@ function updateDog(d, dt, t, camPos) {
       const tl = Math.hypot(gx - d.x, gz - d.z) || 1, sx = (gx - d.x) / tl, sz = (gz - d.z) / tl;
       const want = Math.atan2(sx, sz), diff = angDiff(d.yaw, want), up = d.curlK > 0.3 ? 0 : 1; // 몸을 말고 있는 동안에는 돌지도 걷지도 않는다(먼저 몸을 편다)
       d.yaw += diff * (1 - Math.exp(-5 * dt)) * up;
-      const sp = d.walkSpeed * Math.max(0, 1 - Math.abs(diff) / 1.3) * Math.min(1, dist / 0.18 + 0.25) * up;
+      const sp = d.walkSpeed * (d.speedK || 1) * Math.max(0, 1 - Math.abs(diff) / 1.3) * Math.min(1, dist / 0.18 + 0.25) * up;
       d.x += Math.sin(d.yaw) * sp * dt; d.z += Math.cos(d.yaw) * sp * dt;
       if (d.collide && !d.ghost) d.collide(d);
-      moving = Math.max(sp / Math.max(d.walkSpeed, 0.01), Math.min(1, Math.abs(diff) * 1.5)) * up;
+      moving = Math.max(sp / Math.max(d.walkSpeed * (d.speedK || 1), 0.01), Math.min(1, Math.abs(diff) * 1.5)) * up;
       d.phase += Math.max(sp, 0.16) * dt * Math.PI / (d.J ? 2 * 0.055 * d.scale : (WALK_S * d.scale) / WALK_DUTY); // 딛고 있는 발이 바닥에서 미끄러지지 않는 박자
     }
   } else if (!d.external) {
@@ -1273,9 +1277,9 @@ function updateDog(d, dt, t, camPos) {
 const DOGS = [
   { id: 'pupu', name: '푸푸', place: '남산 산책길', ready: false, kind: 'jindo', colors: COLORS.pupu },
   { id: 'alpang', name: '알팡', place: '쇼핑센터', ready: false, kind: 'beagle', colors: COLORS.generic },
-  { id: 'pinky', name: '핑키', place: '푸맘네 집', ready: true, kind: 'beagle', colors: COLORS.pinky },
+  { id: 'pinky', name: '핑키', place: '푸맘네 집', ready: true, kind: 'beagle', colors: COLORS.pinky, room: 'home' },
   { id: 'jaerong', name: '재롱', place: '장소 정하는 중', ready: false, kind: 'beagle', colors: COLORS.generic },
-  { id: 'dami', name: '담이', place: '장소 정하는 중', ready: false, kind: 'beagle', variant: 'dami', colors: COLORS.dami },
+  { id: 'dami', name: '담이', place: '놀이터', ready: true, kind: 'beagle', variant: 'dami', colors: COLORS.dami, room: 'park', make: makeDami },
 ];
 const RING_R = 1.75, STEP = (Math.PI * 2) / DOGS.length;
 
@@ -1301,11 +1305,12 @@ const selDogs = DOGS.map((info, i) => {
     const halo = new THREE.Mesh(new THREE.TorusGeometry(0.47, 0.009, 8, 64), new THREE.MeshBasicMaterial({ color: 0xf3b466 }));
     halo.rotation.x = Math.PI / 2; halo.position.y = 0.101; ped.add(halo);
   }
-  const d = buildDog({ kind: info.kind, variant: info.variant, colors: info.colors, silhouette: !info.ready, scale: 1.3, seed: i });
+  const d = info.make ? info.make(1.3, i) : buildDog({ kind: info.kind, colors: info.colors, silhouette: !info.ready, scale: 1.3, seed: i });
   d.external = true; d.root.position.y = 0.1; ped.add(d.root);
   d.meshes.forEach((m) => { m.userData.idx = i; });
   ped.children.forEach((m) => { m.userData.idx = i; });
   if (!info.ready) { d.wagAmpT = 0.15; d.wagSpeedT = 3; d.tgt.gaze = 0; d.cur.gaze = 0; }
+  if (info.id === 'dami') Object.assign(d, { pant: true, wagAmpT: 0.6, wagSpeedT: 12 }); // 담이: 받침대 위에서도 혀를 길게 빼고 헥헥, 꼬리를 신나게
   return d;
 });
 
@@ -1756,6 +1761,10 @@ function buildRoom(S) {
   S.add(spot, spot.target);
 }
 buildRoom(roomScene);
+// 핑키 방에만 있는 것: 방을 바꾸면 이것들을 통째로 숨긴다 (원래 보이던 그대로 되돌릴 수 있게 처음 상태를 같이 적어 둔다). 방에서 매 프레임 하던 일도 핑키 방에서만 한다
+const HOME_KIDS = roomScene.children.map((o) => [o, o.visible]);
+const HOME_UPD = roomUpd.splice(0);
+roomUpd.push((t, dt) => { if (RP.id === 'home') for (const f of HOME_UPD) f(t, dt); });
 const plushAmb = new THREE.Color(0, 0, 0);
 { // 방석 자리에서 사방을 한 번 찍어 평균 밝기를 잰다(위쪽과 옆만): 환경맵 대신 방석 털이 받는 둘레빛
   const rt = new THREE.WebGLCubeRenderTarget(16), cc = new THREE.CubeCamera(0.05, 20, rt), px = new Uint8Array(16 * 16 * 4);
@@ -1793,7 +1802,15 @@ let cushGo = false, onCush = false, cushOn = false;
 const cushLift = (dist) => (dist < CUSH.R ? CUSH.lift + 0.065 * Math.exp(-(((dist - CUSH.R) / 0.1) ** 2)) : (CUSH.lift + 0.065) * ss(0.56, CUSH.R, dist)); // 방석 위에서 몸이 올라가는 높이: 테두리를 넘을 때 가장 높고 가운데 베개에서는 낮다
 // 길 찾기: 방을 8cm 격자로 나눠 A*로 장애물 사이를 지나는 길을 찾고, 곧게 갈 수 있는 구간은 곧게 편다 (가구 사이 좁은 틈에 끼어 제자리걸음을 하지 않게)
 const NAV = { x0: -2.85, z0: -2.25, h: 0.08, nx: 72, nz: 62, pad: 0.15 };
-const navIn = (x, z) => x >= -2.851 && z >= -2.251 && z <= 2.601 && x <= (z > -0.6 && z < 2.1 ? 2.351 : 2.851);
+// 장소마다 다른 경계: 다닐 수 있는 곳(navIn) · 몸을 붙들어 두는 곳(clamp) · 공이 튕겨 나오는 벽(ball: x0, x1, z0, z1). 핑키 방 값은 원래 그대로
+const ROOM_HOME = {
+  id: 'home', name: '핑키', place: '푸맘네 집 · 이태원동',
+  navIn: (x, z) => x >= -2.851 && z >= -2.251 && z <= 2.601 && x <= (z > -0.6 && z < 2.1 ? 2.351 : 2.851),
+  clamp(d) { d.x = clamp(d.x, -2.85, d.z > -0.6 && d.z < 2.1 ? 2.35 : 2.85); d.z = clamp(d.z, -2.25, 2.6); },
+  ball: [-3.0, 2.45, -2.3, 2.7],
+};
+let RP = ROOM_HOME; // 지금 들어와 있는 장소 (useRoom이 바꾼다)
+const navIn = (x, z) => RP.navIn(x, z);
 function navFree(x, z, pad = NAV.pad) {
   if (!navIn(x, z)) return false;
   for (const o of OBST) if (o.r > 0 && Math.hypot(x - o.x, z - o.z) < o.r + pad) return false;
@@ -1860,10 +1877,11 @@ function collide(d) {
     const dx = d.x - o.x, dz = d.z - o.z, l = Math.hypot(dx, dz), R = o.r + 0.12;
     if (l < R && l > 1e-4) { d.x = o.x + (dx / l) * R; d.z = o.z + (dz / l) * R; }
   }
-  d.x = clamp(d.x, -2.85, d.z > -0.6 && d.z < 2.1 ? 2.35 : 2.85);
-  d.z = clamp(d.z, -2.25, 2.6);
+  RP.clamp(d);
 }
-const pinky = buildDog({ kind: 'beagle', colors: COLORS.pinky, scale: 1, seed: 7 });
+// 지금 방에 있는 강아지. 이름은 늘 pinky지만 담이 방(놀이터)에서는 useRoom이 담이로 바꿔 끼운다 (모듈 변수라 모든 코드가 그때그때의 강아지를 본다)
+const PINKY = buildDog({ kind: 'beagle', colors: COLORS.pinky, scale: 1, seed: 7 });
+let pinky = PINKY;
 pinky.route = route; pinky.routeSee = navSee; pinky.collide = collide;
 roomScene.add(pinky.root);
 fitCurl(pinky);
@@ -2055,8 +2073,9 @@ function stepBall1(dt) {
     }
   }
   if (ball.state === 'fly' || ball.state === 'roll') {
-    if (p.x < -3.0 || p.x > 2.45) { ball.v.x *= -0.5; p.x = clamp(p.x, -3.0, 2.45); }
-    if (p.z < -2.3 || p.z > 2.7) { ball.v.z *= -0.5; p.z = clamp(p.z, -2.3, 2.7); }
+    const [bx0, bx1, bz0, bz1] = RP.ball;
+    if (p.x < bx0 || p.x > bx1) { ball.v.x *= -0.5; p.x = clamp(p.x, bx0, bx1); }
+    if (p.z < bz0 || p.z > bz1) { ball.v.z *= -0.5; p.z = clamp(p.z, bz0, bz1); }
     for (const o of OBST) if (o !== CUSH_OB && p.y < (o.h ?? 0.8)) {
       const dx = p.x - o.x, dz = p.z - o.z, l = Math.hypot(dx, dz), or = o.r;
       if (l < or && l > 1e-4) { const nx = dx / l, nz = dz / l, vn = ball.v.x * nx + ball.v.z * nz; if (vn < 0) { ball.v.x -= 1.6 * vn * nx; ball.v.z -= 1.6 * vn * nz; } p.x = o.x + nx * or; p.z = o.z + nz * or; }
@@ -2358,6 +2377,7 @@ const rope = (() => {
     kick(v, key) { const a = key == null ? 0 : idx(key), b = key == null ? N : a + 1; for (let i = a; i < b; i++) { Q[i * 3] -= v.x * H; Q[i * 3 + 1] -= v.y * H; Q[i * 3 + 2] -= v.z * H; } wake(); }, // 속도를 더한다 (m/s)
     move(dx, dy, dz) { for (let i = 0; i < N; i++) { P[i * 3] += dx; P[i * 3 + 1] += dy; P[i * 3 + 2] += dz; Q[i * 3] += dx; Q[i * 3 + 1] += dy; Q[i * 3 + 2] += dz; } wake(); },
     place, reset: () => place(), wake, step, skin,
+    frames: () => vis.flatMap((v) => v.tube.defs.map((d) => d.n0)), // 줄 단면의 기준 방향(이전 모양에서 이어받는다) — 장소를 바꿀 때 떠 두고 되돌린다
   };
   const _pin = V3();
   place();
@@ -2503,6 +2523,7 @@ function resetProps() { releaseProps(); yogurt.reset(); yogurtDab.set(0); goguma
 // ================================================================
 const bubbles = [], bubbleLayer = $('#bubbles'), _p = V3();
 function bubble(text, anchor, cls = '', life = 1.7, dx = null) { // 글자만 (소리 없이)
+  if (pinky.talk) text = pinky.talk(text); // 강아지마다 말투 (담이: 명랑한 담과장)
   const el = document.createElement('div'); el.className = 'bubble ' + cls; el.textContent = text; el.style.opacity = 0; // 자리를 잡기 전(다음 프레임)까지는 보이지 않게 — 화면 구석에 한 번 번쩍이지 않도록
   bubbleLayer.appendChild(el);
   bubbles.push({ el, anchor, age: 0, life, dx: dx ?? (Math.random() - 0.5) * 40 });
@@ -2540,6 +2561,7 @@ const look = { y: 0, p: 0, ty: 0, tp: 0 };
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function camTo(pos, aim, rate = 2.5) { cam.tPos.copy(pos); cam.tAim.copy(aim); cam.rate = rate; look.ty = 0; look.tp = 0; }
 function camHome() { camTo(CAM_POS, CAM_AIM, 2.2); }
+const setCamPos = (a) => (RP.camPos ? RP.camPos(CAM_POS, a) : CAM_POS.set(0, a < 0.8 ? 1.42 : 1.22, a < 0.8 ? 3.65 : 3.0)); // 보는 자리 (세로 화면은 조금 높고 멀리)
 function kneelFor(spot, dist = 0.82, h = 0.72, aimY = 0.27) {
   const dx = CAM_POS.x - spot.x, dz = CAM_POS.z - spot.z, L = Math.hypot(dx, dz) || 1;
   return [V3(spot.x + (dx / L) * dist, h, spot.z + (dz / L) * dist), V3(spot.x, aimY, spot.z)];
@@ -2577,6 +2599,7 @@ function resetTransient(d) {
 }
 function releaseHands() { handR.want = null; handL.want = null; treat.visible = false; roomScene.add(treat); scoop.visible = false; pouring = false; releaseProps(); }
 function startCommand(name, fn, keepCam = false) {
+  if (RP.off && RP.off[name]) return; // 이 장소에는 없는 것 (놀이터: 밥 주기 · 방석)
   cancelActive();
   const tok = { cancelled: false, cleanups: [], name };
   active = tok; setActiveBtn(name); idleT = 5;
@@ -2908,12 +2931,13 @@ const CMDS = {
     if (!drops.length && (brain.force.hide ?? (brain.sniffs === 0 || Math.random() < 0.6))) hideTreat();
     brain.sniffs++; let found = 0;
     const hunt = async (reach) => { const dr = found < 2 ? nearestDrop(reach) : null; if (dr && (await findTreat(tok, dr))) found++; };
-    await sniffAt(tok, SPOTS.gifts, nearestDrop(1.5) ? null : rot('gifts', GIFT_LINES));
+    await sniffAt(tok, SPOTS.gifts, nearestDrop(1.5) ? null : rot('gifts', RP.lines.gifts));
     if (nearestDrop(1.5)) await hunt(1.5); else if ((brain.force.sneeze ?? Math.random() < 0.2) && cdOK('sneeze', 45)) { brain.cd.sneeze = clock; await sneeze(tok); }
-    if (hasLeft()) await eatLeft(tok, false); // 밥이 남아 있으면 마저 먹는다
+    if (RP.noBowl) await sniffAt(tok, RP.sniffMid, nearestDrop(1.2) ? null : rot('mid', RP.lines.mid)); // 밥그릇이 없는 곳(놀이터)
+    else if (hasLeft()) await eatLeft(tok, false); // 밥이 남아 있으면 마저 먹는다
     else await sniffAt(tok, { x: EAT.x, z: EAT.z, fx: BOWL.x, fz: BOWL.z }, nearestDrop(1.2) ? null : '밥그릇 비었네…');
     await hunt(1.2);
-    await sniffAt(tok, SPOTS.table, drops.length ? null : found ? '더 없나…' : '뭐 떨어진 거 없나');
+    await sniffAt(tok, SPOTS.table, drops.length ? null : found ? '더 없나…' : RP.lines.tableSniff);
     await hunt(99);
     pinky.sniff = 0; pinky.tgt.gaze = 1; pinky.tgt.headPitch = 0;
     await walkTo(tok, HOME.x, HOME.z);
@@ -2938,7 +2962,61 @@ const CMDS = {
     if (keep && napKeep()) { startCommand('cushion', CMDS.cushion, true); return; }
     camHome();
   },
+  async worm(tok) { await wormDance(tok); }, // 담이(놀이터)에만 있는 버튼
+  async zoom(tok) { await zoomies(tok); },
 };
+// ---------- 담이: 지렁이 댄스 — 벌러덩 드러누워 등을 바닥에 비비며 몸을 좌우로 꿈틀꿈틀, 다 하고 나면 부르르 털고 일어난다
+async function wormDance(tok, solo = false) {
+  if (!solo) await comeHere(tok, 0.85);
+  pinky.face = 'cam'; happy(true); pinky.eyeOpen = 0.7; pinky.cheerOn = false;
+  say('지렁이 댄스!', headTop, '', 1.4);
+  setPose(pinky, 'side', 3.6); await wait(tok, 0.8);
+  setPose(pinky, 'belly', 4); pinky.paddle = 0.4; await wait(tok, 0.8);
+  const B = poseFor('belly', pinky), t0 = clock;
+  pinky.tongueOut = 0.6; say('꿈틀꿈틀~', headTop, 'soft', 1.8);
+  await tween(tok, solo ? 3.6 : 4.8, (k) => {
+    const ph = (clock - t0) * 7.2, s = Math.sin(ph), e = ss(0, 0.1, k) * ss(1, 0.88, k);
+    pinky.poseRate = 10;
+    Object.assign(pinky.tgt, { roll: B.roll + 0.28 * s * e, bendY: B.bendY + 0.4 * s * e, headTilt: B.headTilt - 0.3 * s * e, headPitch: B.headPitch + 0.08 * Math.sin(ph * 0.5 + 0.6) * e });
+    pinky.paddle = 0.4 + 0.5 * e; pinky.wagAmpT = 0.6; pinky.wagSpeedT = 12;
+  });
+  pinky.paddle = 0.2; setPose(pinky, 'belly', 4); await wait(tok, 0.5);
+  setPose(pinky, 'side', 3.2); pinky.paddle = 0; pinky.tongueOut = 0; await wait(tok, 0.7);
+  setPose(pinky, 'stand', 3.4); await wait(tok, 0.9);
+  await shakeOff(tok); // 등에 묻은 모래를 부르르
+  pinky.face = 'cam'; happy(true); pinky.cheerOn = false; pinky.eyeOpen = 0.8;
+  say(rot('worm', ['등 시원하다!', '오늘 댄스 완료!', '한 번 더 할까요?']), headTop, 'soft', 1.8); await wait(tok, 1.8);
+  happy(false);
+}
+// ---------- 담이: 우다다 — 신이 나서 엉덩이를 들고 앞을 낮췄다가(놀자!) 모래밭 가운데를 크게 몇 바퀴 내달린다
+async function zoomies(tok, solo = false) {
+  const Z = RP.zoom || [[HOME.x + 0.6, HOME.z - 0.6], [HOME.x - 0.6, HOME.z - 0.6]];
+  happy(true); pinky.cheerOn = false; pinky.eyeOpen = 0.9; pinky.face = 'cam';
+  setPose(pinky, 'stand', 6); Object.assign(pinky.tgt, { pitch: 0.3, bodyY: POSES.stand.bodyY - 0.04, bodyZ: -0.03, headPitch: -0.2 }); pinky.wagAmpT = 0.9; pinky.wagSpeedT = 18; pinky.earPerk = 0.6;
+  say('우다다다!', headTop, '', 1.3); await wait(tok, 0.8);
+  setPose(pinky, 'stand', 8); pinky.walkSpeed = 1.15; pinky.earPerk = -0.4; pinky.tgt.headPitch = -0.05;
+  tok.cleanups.push(() => { pinky.walkTarget = null; });
+  const near = Z.reduce((b, p, i) => (Math.hypot(p[0] - pinky.x, p[1] - pinky.z) < Math.hypot(Z[b][0] - pinky.x, Z[b][1] - pinky.z) ? i : b), 0);
+  const dir = Math.random() < 0.5 ? 1 : -1, n = Z.length + 2 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < n; i++) { // 점마다 멈추지 않고 가까워지면 다음 점으로 (크게 돌며 내달린다)
+    const [x, z] = Z[(near + dir * i + Z.length * 9) % Z.length];
+    Object.assign(pinky, { walkTarget: { x, z }, stuckT: 0, lastP: null, path: null, ghost: false, stuckN: 0, walkT: 0 });
+    await until(tok, () => !pinky.walkTarget || Math.hypot(pinky.x - x, pinky.z - z) < 0.4);
+  }
+  pinky.walkSpeed = 0.7; pinky.earPerk = 0;
+  if (!solo) await walkTo(tok, HOME.x, HOME.z); else pinky.walkTarget = null;
+  pinky.walkSpeed = 0.5; sitFront(6); pinky.wagAmpT = 0.7; pinky.wagSpeedT = 14;
+  await wait(tok, 0.6); say(rot('zoom', ['헥헥, 신난다!', '오늘도 열일!', '한 바퀴 더?']), headTop, 'soft', 1.8); await wait(tok, 2.0);
+  happy(false); pinky.pant = true; await wait(tok, 1.2); pinky.pant = false; // 숨이 가라앉을 때까지 조금 더 헥헥
+}
+// 담이: 혼자 놀 때 기분이 좋아 자주 혀를 빼고 헥헥 (입이 바쁠 때 · 냄새 맡을 때는 다문다). 명령 중에는 손대지 않는다
+roomUpd.push((t, dt) => {
+  const d = pinky; if (!d.cheer) return;
+  if (!idleNow()) { d.cheerOn = false; return; }
+  d.cheerT = (d.cheerT + dt) % 12;
+  const want = d.cheerT < 7 && !d.chew && !(d.lick > 0) && !(d.sniff > 0) && !(d.jawOpen > 0) && ball.state !== 'mouth' && !rope.pinned() && ['stand', 'sit', 'down'].includes(d.tgt.name);
+  if (want && !d.pant) { d.pant = true; d.cheerOn = true; } else if (!want && d.cheerOn) { d.pant = false; d.cheerOn = false; }
+});
 
 // 혼자 있을 때: 집 안을 돌아다니기 — 무엇을 할지는 그때그때의 마음(배고픔 · 졸림 · 엄마 생각)과 방 안 사정(남긴 밥 · 떨어진 간식)에 따라 고른다
 function pickAct() {
@@ -2954,6 +3032,8 @@ function pickAct() {
     forage: drop ? 2.6 + 2.5 * d.hunger : 0.45 * cd('forage', 60),
     pay: brain.payDue && ballOnFloor() ? 60 : 0,
   };
+  if (RP.acts) Object.assign(W, RP.acts(cd, d)); // 그 장소에서만 하는 것 (놀이터: 지렁이 댄스 · 우다다)
+  if (RP.actW) for (const k in RP.actW) W[k] *= RP.actW[k]; // 장소에 없는 것(놀이터: 방석 · 밥그릇)은 하지 않는다
   if (h.length) W[h[h.length - 1]] *= h[h.length - 1] === 'nap' ? 0 : 0.08;
   if (h.length > 1) W[h[h.length - 2]] *= 0.5;
   if (brain.force.act) { const a = brain.force.act; brain.force.act = null; return a; }
@@ -2966,7 +3046,7 @@ async function roam(tok) {
   const d = brain.d;
   const acts = {
     nap: async () => { await cushionNap(tok, 11 + Math.random() * 7); }, // 방석(애착 공간)에서 낮잠
-    gifts: async () => { pinky.walkSpeed = 0.4; await sniffAt(tok, SPOTS.gifts, nearestDrop(1.7) ? null : rot('gifts', GIFT_LINES)); await afterSniff(tok); },
+    gifts: async () => { pinky.walkSpeed = 0.4; await sniffAt(tok, SPOTS.gifts, nearestDrop(1.7) ? null : rot('gifts', RP.lines.gifts)); await afterSniff(tok); },
     bowl: async () => {
       pinky.walkSpeed = 0.4; await sniffAt(tok, { x: EAT.x, z: EAT.z, fx: BOWL.x, fz: BOWL.z }, nearestDrop(1.2) ? null : '밥그릇 비었네…');
       if (await afterSniff(tok, 1.2)) return;
@@ -2981,12 +3061,12 @@ async function roam(tok) {
       setPose(pinky, 'stand', 5); pinky.walkSpeed = 0.38;
       await walkTo(tok, SPOTS.window.x, SPOTS.window.z);
       pinky.face = { x: SPOTS.window.fx, z: SPOTS.window.fz }; await wait(tok, 0.6);
-      setPose(pinky, 'sit', 5); pinky.lookFn = () => V3(-4.6, 1.0, -0.6);
+      setPose(pinky, 'sit', 5); pinky.lookFn = () => WIN_PT;
       await wait(tok, 3 + Math.random() * 2);
-      say(rot('window', ['단풍 예쁘다…', '새 왔다…', '바람 냄새…']), headTop, 'soft', 1.9); await wait(tok, 2.2);
+      say(rot('window', RP.lines.window), headTop, 'soft', 1.9); await wait(tok, 2.2);
       pinky.lookFn = null; setPose(pinky, 'stand', 5); await wait(tok, 0.5);
     },
-    table: async () => { pinky.walkSpeed = 0.4; await sniffAt(tok, SPOTS.table, nearestDrop(1.7) ? null : rot('table', TABLE_LINES)); await afterSniff(tok); },
+    table: async () => { pinky.walkSpeed = 0.4; await sniffAt(tok, SPOTS.table, nearestDrop(1.7) ? null : rot('table', RP.lines.table)); await afterSniff(tok); },
     attend: async () => { // 나한테 와서 쳐다보기 (엄마 생각이 많이 나면 더 가까이) — 말하고 나서는 바라는 것 쪽을 슬쩍 본다
       const close = d.attach > 0.7, to = close ? nearSpot() : HOME, owe = brain.owe && ballOnFloor(), fun = d.play > 0.75 && d.hunger < 0.6;
       setPose(pinky, 'stand', 5); pinky.walkSpeed = 0.5;
@@ -3014,12 +3094,13 @@ async function roam(tok) {
     },
     wander: async () => { // 러그 위 어슬렁 (늘 나만 쳐다보지는 않는다)
       setPose(pinky, 'stand', 5); pinky.walkSpeed = 0.35;
-      await walkTo(tok, -0.6 + Math.random() * 1.4, 0.2 + Math.random() * 1.0);
+      const [wx, wz, ww, wd] = RP.wander; await walkTo(tok, wx + Math.random() * ww, wz + Math.random() * wd);
       d.play = Math.max(0, d.play - 0.12);
       if (Math.random() < 0.6) await idleLook(tok, 1.4 + Math.random() * 1.4);
       else { pinky.face = 'cam'; await wait(tok, 1.2 + Math.random() * 1.2); }
     },
   };
+  if (RP.roamActs) Object.assign(acts, RP.roamActs(tok));
   for (;;) {
     const name = pinky.tgt.name === 'curl' ? 'nap' : pickAct(); // 쓰다듬다 만 뒤에는 방석에서 그대로 다시 잔다
     brain.hist.push(name); if (brain.hist.length > 3) brain.hist.shift(); brain.cd['act:' + name] = clock; mark('act:' + name);
@@ -3565,7 +3646,7 @@ function nudgeTreat() { // "간식 주면…" 할 때 간식 버튼이 살짝 �
 // ---------- 눈길과 잔버릇: 늘 엄마만 쳐다보지 않는다 (공 · 장난감 · 밥그릇 · 창밖 · 소리 난 곳을 두리번, 하품 · 부르르 · 기지개)
 const WIN_PT = V3(-4.6, 1.0, -0.6);
 function lookSpot() {
-  const o = [() => BOWL, () => WIN_PT, () => V3(SPOTS.gifts.fx, 0.25, SPOTS.gifts.fz), () => V3(CUSH.x, 0.1, CUSH.z)];
+  const o = RP.looks ? RP.looks.map((q) => () => q) : [() => BOWL, () => WIN_PT, () => V3(SPOTS.gifts.fx, 0.25, SPOTS.gifts.fz), () => V3(CUSH.x, 0.1, CUSH.z)];
   if (ballOnFloor()) o.push(() => ball.g.position, () => ball.g.position);
   if (rope.state.asleep) o.push(() => rope.pos('B.bite'));
   const dr = nearestDrop(99); if (dr) o.push(() => dr.m.position, () => dr.m.position);
@@ -3940,7 +4021,7 @@ function stepBrain(dt) {
 }
 function brainEnter() { // 방에 들어설 때: 저쪽에서 냄새를 맡고 있다가 알아보고 달려온다
   brainReset();
-  const [x, z, fx, fz] = [[0.85, -0.5, 1.75, -1.15], [-0.35, -0.45, -1.3, -0.9], [0.3, -0.65, 0.2, -1.6]][Math.floor(Math.random() * 3)];
+  const E = RP.entry || [[0.85, -0.5, 1.75, -1.15], [-0.35, -0.45, -1.3, -0.9], [0.3, -0.65, 0.2, -1.6]], [x, z, fx, fz] = E[Math.floor(Math.random() * E.length)];
   Object.assign(pinky, { x, z, yaw: Math.atan2(fx - x, fz - z), face: { x: fx, z: fz }, sniff: 0.5, wagAmpT: 0.35, wagSpeedT: 7 });
   pinky.tgt.gaze = pinky.cur.gaze = 0; pinky.tgt.headPitch = pinky.cur.headPitch = 0.6;
   brain.entryAt = clock + 1.2;
@@ -3975,6 +4056,307 @@ function stepTouch(dt) {
   else if (++touch.miss > 45) { touch.active = false; return; }
   touch.heartT -= dt;
   if (touch.moved > 0.12 || touch.heartT <= 0) { touch.moved = 0; touch.heartT = 1.1; heart(); }
+}
+
+// ================================================================
+// 담이의 동네 놀이터 — 해 질 녘 모래밭과 마른 잔디 · 미끄럼틀 · 그네 · 정글짐 · 스프링 놀이기구 · 벤치 · 나무 · 낮은 울타리 · 멀리 아파트
+// 처음 들어갈 때 한 번만 짓는다 (핑키만 보러 오는 사람에게는 짓지 않는다). 보는 사람은 +z 쪽 모래밭 끝에 서서 -z를 본다
+// ================================================================
+const PARK = {
+  sand: [-4.0, 4.0, -5.0, 4.6, 1.1], // 모래밭(둥근 네모): x0, x1, z0, z1, 모서리 반지름 — 보는 사람 발밑까지 모래 (세로 화면 아래에 시멘트 테두리 띠가 걸리지 않게)
+  slide: [-2.15, -3.75], swing: [2.3, -4.0], climb: [-3.2, -1.25], bench: [2.95, -0.15], // 벤치는 화면 오른쪽 끝에 걸치게 (냄새 맡으러 가도 보이게)
+  riders: [[2.2, -2.4, -0.6, 0xeab640, 'duck'], [3.15, -1.8, -1.0, 0x74aacb, 'pony']], // 스프링 놀이기구: x, z, 방향, 색, 모양
+  trees: [[-4.9, -5.8, 'gy', 1.0], [4.6, -7.2, 'zk', 1.15], [-5.8, -1.7, 'pn', 0.95], [7.4, -5.0, 'gy', 0.9], [0.9, -7.6, 'zk', 1.3], [-2.4, -8.2, 'pn', 1.1], [6.6, 5.2, 'zk', 1.0], [-5.7, 2.4, 'gy', 1.0], [-7.5, -9.5, 'zk', 1.4], [3.2, -11, 'gy', 1.25]], // 해 쪽(오른쪽)에는 나무를 멀리: 모래밭 가운데가 그늘지지 않게
+  sun: V3(6, 2.4, -2.6).normalize(), // 해 쪽 (낮게 · 오른쪽 뒤): 그림자가 보는 사람 왼쪽 앞으로 길게 눕는다
+};
+const slideY = (u) => 0.3 + 0.9 * (1 - ss(0, 0.85, u)); // 미끄럼 바닥 높이 (u: 0 = 탑 위 … 1 = 끝)
+const inSand = (x, z) => { const [x0, x1, z0, z1, r] = PARK.sand, dx = Math.max(x0 + r - x, 0, x - (x1 - r)), dz = Math.max(z0 + r - z, 0, z - (z1 - r)); return Math.hypot(dx, dz) < r; };
+let parkG = null, DAMI = null;
+// 같은 재질끼리 한 메시로 합친다 (놀이터 소품이 많아도 그리기 호출은 적게). flat: 면마다 꺾인 그늘(나뭇잎 · 지붕)
+function batcher() {
+  const by = new Map(), o = new THREE.Object3D();
+  const push = (mat, geo, m, flat) => { const g = geo.index ? geo.toNonIndexed() : geo.clone(); g.applyMatrix4(m); if (flat) g.computeVertexNormals(); if (!by.has(mat)) by.set(mat, []); by.get(mat).push(g); };
+  return {
+    put(mat, geo, p, r, s, flat = false) {
+      o.position.set(p[0], p[1], p[2]); o.rotation.set(r ? r[0] : 0, r ? r[1] : 0, r ? r[2] : 0);
+      if (s == null) o.scale.set(1, 1, 1); else if (typeof s === 'number') o.scale.setScalar(s); else o.scale.set(s[0], s[1], s[2]);
+      o.updateMatrix(); push(mat, geo, o.matrix, flat);
+    },
+    putM: push,
+    flush(parent, cast = true) {
+      for (const [mat, gs] of by) {
+        const out = new THREE.BufferGeometry();
+        for (const [a, n] of [['position', 3], ['normal', 3], ['uv', 2]]) {
+          const arr = new Float32Array(gs.reduce((s, g) => s + g.attributes.position.count * n, 0)); let k = 0;
+          for (const g of gs) { if (g.attributes[a]) arr.set(g.attributes[a].array, k); k += g.attributes.position.count * n; }
+          out.setAttribute(a, new THREE.BufferAttribute(arr, n));
+        }
+        out.computeBoundingSphere(); gs.forEach((g) => g.dispose());
+        const m = new THREE.Mesh(out, mat); m.castShadow = cast; m.receiveShadow = true; parent.add(m);
+      }
+      by.clear();
+    },
+  };
+}
+const _ucyl = {}, _bq = new THREE.Quaternion(), _bm = new THREE.Matrix4(), _bd = V3(), _bc = V3(), _bs = V3();
+function bar(B, mat, a, b, r, seg = 8) { // 두 점을 잇는 둥근 막대
+  _bd.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]); const L = _bd.length();
+  _bq.setFromUnitVectors(_yAx, _bd.normalize());
+  B.putM(mat, _ucyl[seg] || (_ucyl[seg] = new THREE.CylinderGeometry(1, 1, 1, seg, 1)), _bm.compose(_bc.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2), _bq, _bs.set(r, L, r)));
+}
+const rrect = (s, x0, x1, y0, y1, r) => { s.moveTo(x0 + r, y0); s.lineTo(x1 - r, y0); s.absarc(x1 - r, y0 + r, r, -Math.PI / 2, 0); s.lineTo(x1, y1 - r); s.absarc(x1 - r, y1 - r, r, 0, Math.PI / 2); s.lineTo(x0 + r, y1); s.absarc(x0 + r, y1 - r, r, Math.PI / 2, Math.PI); s.lineTo(x0, y0 + r); s.absarc(x0 + r, y0 + r, r, Math.PI, Math.PI * 1.5); return s; };
+const parkSeats = [];
+function buildPark() {
+  const G = parkG = new THREE.Group(); G.visible = false; roomScene.add(G);
+  const R = rng(5), B = batcher(), [sx0, sx1, sz0, sz1, sr] = PARK.sand;
+  // ---------- 하늘: 지평선은 살구빛, 위로 갈수록 옅은 하늘색 · 해 쪽 지평선은 더 노랗고 밝다
+  const cA = new THREE.Color(0xffd9a6), cB = new THREE.Color(0xd2d6d6), cC = new THREE.Color(0x92b2d2), cS = new THREE.Color(0xfff0c8), cLow = new THREE.Color(0xf3cf9f);
+  {
+    const sky = new THREE.SphereGeometry(34, 32, 16), p = sky.attributes.position, col = [], c = new THREE.Color(), v = V3();
+    for (let i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i).normalize(); const h = Math.max(0, v.y);
+      c.copy(cA).lerp(cB, ss(0.02, 0.3, h)).lerp(cC, ss(0.3, 0.85, h)); if (v.y < 0) c.copy(cLow);
+      c.lerp(cS, 0.7 * Math.max(0, v.dot(PARK.sun)) ** 5 * (1 - ss(0.05, 0.45, h)));
+      col.push(c.r, c.g, c.b);
+    }
+    sky.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    const m = new THREE.Mesh(sky, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false })); m.renderOrder = -1; G.add(m);
+    const sg = glow(G, 0xffdcaa, 10, PARK.sun.clone().multiplyScalar(30).toArray(), 0.6); sg.material.fog = false;
+  }
+  // ---------- 바닥: 마른 잔디(넓게) + 모래밭(발자국) + 낮은 시멘트 테두리
+  const grassTex = canvasTex(512, 512, (x, w) => {
+    const r = rng(9);
+    x.fillStyle = '#a49b60'; x.fillRect(0, 0, w, w);
+    for (let i = 0; i < 70; i++) { const cx = r() * w, cy = r() * w, rad = 20 + r() * 70, g = x.createRadialGradient(cx, cy, 0, cx, cy, rad), c = ['118,126,64', '182,164,102', '140,120,84', '104,118,58'][Math.floor(r() * 4)]; g.addColorStop(0, `rgba(${c},0.5)`); g.addColorStop(1, `rgba(${c},0)`); x.fillStyle = g; x.fillRect(cx - rad, cy - rad, rad * 2, rad * 2); }
+    for (let i = 0; i < 7000; i++) { const px = r() * w, py = r() * w, l = 3 + r() * 7, a = -Math.PI / 2 + (r() - 0.5) * 1.3, c = r(); x.strokeStyle = c < 0.4 ? `rgba(200,186,124,${0.35 + r() * 0.4})` : c < 0.75 ? `rgba(122,118,64,${0.3 + r() * 0.4})` : `rgba(90,104,50,${0.3 + r() * 0.4})`; x.lineWidth = 1; x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(a) * l, py + Math.sin(a) * l); x.stroke(); }
+  }, [28, 28]);
+  add(G, new THREE.PlaneGeometry(70, 70), M(0xffffff, { map: grassTex, roughness: 1 }), [0, 0, -8], [-Math.PI / 2, 0, 0], null, false);
+  const sandTex = canvasTex(1024, 1024, (x, w) => { // 4 m 한 장 · 이음매 없이 (가장자리에 걸친 얼룩은 반대편에도 그린다)
+    const r = rng(13);
+    x.fillStyle = '#ddc6a0'; x.fillRect(0, 0, w, w);
+    for (let i = 0; i < 110; i++) { const cx = r() * w, cy = r() * w, rad = 30 + r() * 120, c = r() < 0.55 ? '247,229,192' : '176,144,104', a = 0.25 + r() * 0.2; for (const ox of [-w, 0, w]) for (const oy of [-w, 0, w]) { const X = cx + ox, Y = cy + oy; if (X + rad < 0 || X - rad > w || Y + rad < 0 || Y - rad > w) continue; const g = x.createRadialGradient(X, Y, 0, X, Y, rad); g.addColorStop(0, `rgba(${c},${a})`); g.addColorStop(1, `rgba(${c},0)`); x.fillStyle = g; x.fillRect(X - rad, Y - rad, rad * 2, rad * 2); } }
+    for (let i = 0; i < 46000; i++) { x.fillStyle = r() < 0.5 ? `rgba(118,98,76,${0.12 + r() * 0.25})` : `rgba(255,250,236,${0.15 + r() * 0.3})`; x.fillRect(r() * w, r() * w, r() < 0.15 ? 2 : 1, 1); }
+    // 발자국 (강아지 · 사람): 움푹한 곳은 어둡고, 해 쪽 가장자리는 밝다
+    const dent = (cx, cy, rx, ry, a, k = 1) => { x.save(); x.translate(cx, cy); x.rotate(a); x.fillStyle = `rgba(112,92,70,${0.3 * k})`; x.beginPath(); x.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); x.fill(); x.fillStyle = `rgba(255,247,228,${0.32 * k})`; x.beginPath(); x.ellipse(rx * 0.35, 0, rx * 0.55, ry * 0.8, 0, 0, Math.PI * 2); x.fill(); x.restore(); };
+    for (let t = 0; t < 16; t++) { // 강아지 발자국이 줄지어 지나간 자리
+      let px = 60 + r() * 900, py = 60 + r() * 900, a = r() * Math.PI * 2;
+      for (let k = 0; k < 10 && px > 24 && px < w - 24 && py > 24 && py < w - 24; k++) {
+        const side = k % 2 ? 1 : -1, ox = px + Math.cos(a) * side * 6, oy = py + Math.sin(a) * side * 6, c = Math.cos(a), s = Math.sin(a);
+        dent(ox, oy, 4.6, 4, a); for (const [tx, ty] of [[-4.5, -6.5], [-1.6, -8.6], [1.6, -8.6], [4.5, -6.5]]) dent(ox + tx * c - ty * s, oy + tx * s + ty * c, 1.9, 2.3, a);
+        px -= s * 20; py += c * 20; a += (r() - 0.5) * 0.4;
+      }
+    }
+    for (let t = 0; t < 4; t++) { const px = 120 + r() * 700, py = 120 + r() * 700, a = r() * Math.PI * 2; for (let k = 0; k < 4; k++) dent(px + Math.cos(a) * (k % 2 ? 14 : -14) - Math.sin(a) * k * 60, py + Math.sin(a) * (k % 2 ? 14 : -14) + Math.cos(a) * k * 60, 9, 23, a, 0.35); }
+  }, [0.25, 0.25]);
+  add(G, new THREE.ShapeGeometry(rrect(new THREE.Shape(), sx0, sx1, -sz1, -sz0, sr), 12), M(0xffffff, { map: sandTex, roughness: 1 }), [0, 0.004, 0], [-Math.PI / 2, 0, 0], null, false);
+  {
+    const s = rrect(new THREE.Shape(), sx0 - 0.15, sx1 + 0.15, -sz1 - 0.15, -sz0 + 0.15, sr + 0.15); s.holes.push(rrect(new THREE.Path(), sx0, sx1, -sz1, -sz0, sr));
+    add(G, new THREE.ExtrudeGeometry(s, { depth: 0.035, bevelEnabled: false, curveSegments: 10 }), M(0xa79e8f, { roughness: 0.95 }), [0, 0, 0], [-Math.PI / 2, 0, 0], null, false);
+  }
+  // ---------- 놀이기구 (빛바랜 페인트 색)
+  const teal = M(0x3f8a84, { roughness: 0.5, metalness: 0.15 }), red = M(0xc4583f, { roughness: 0.55 }), yel = M(0xe7b444, { roughness: 0.45, metalness: 0.1 }), blue = M(0x3f6ea6, { roughness: 0.5, metalness: 0.15 });
+  const roof = M(0xcc5c40, { roughness: 0.6 }), chainM = M(0xa29d96, { roughness: 0.35, metalness: 0.7 }), rubber = M(0x5e2a24, { roughness: 0.85 }), iron = M(0x3a3632, { roughness: 0.45, metalness: 0.5 }), grey = M(0x9b968e, { roughness: 0.8 });
+  const OB = []; // 장애물 (x, z, r, 공이 넘는 높이 h)
+  { // 미끄럼틀: 기둥 넷 · 발판 · 지붕 · 왼쪽 사다리 · 오른쪽(+x)으로 내려오는 노란 미끄럼
+    const [cx, cz] = PARK.slide, dy = 1.15, e = 0.48;
+    for (const a of [-1, 1]) for (const b of [-1, 1]) bar(B, teal, [cx + a * e, 0, cz + b * e], [cx + a * e, 2.42, cz + b * e], 0.045, 10);
+    B.put(red, box(1.04, 0.07, 1.04), [cx, dy, cz]);
+    for (const y of [1.48, 1.82]) {
+      bar(B, teal, [cx - e, y, cz - e], [cx + e, y, cz - e], 0.022);
+      for (const sx of [-1, 1]) { bar(B, teal, [cx + sx * e, y, cz - e], [cx + sx * e, y, cz - 0.27], 0.022); bar(B, teal, [cx + sx * e, y, cz + 0.27], [cx + sx * e, y, cz + e], 0.022); }
+    }
+    B.put(yel, box(0.92, 0.5, 0.035), [cx, dy + 0.33, cz + e]);
+    B.put(roof, new THREE.ConeGeometry(0.88, 0.52, 4, 1), [cx, 2.68, cz], [0, Math.PI / 4, 0], null, true);
+    for (const sz of [-0.21, 0.21]) bar(B, teal, [cx - 1.02, 0, cz + sz], [cx - e, dy + 0.35, cz + sz], 0.025);
+    for (let k = 1; k <= 4; k++) { const t = k / 5, x = lerp(cx - 1.02, cx - e, t), y = lerp(0, dy + 0.35, t); bar(B, yel, [x, y, cz - 0.21], [x, y, cz + 0.21], 0.018, 6); }
+    const x0 = cx + e, x1 = cx + 2.75, N = 26, prof = [[-0.26, 0.17], [-0.26, 0.02], [-0.21, -0.025], [-0.12, -0.045], [0, -0.05], [0.12, -0.045], [0.21, -0.025], [0.26, 0.02], [0.26, 0.17]];
+    const pos = [], idx = [], np = prof.length;
+    for (let i = 0; i <= N; i++) { const u = i / N, x = lerp(x0, x1, u), y = slideY(u); for (const [pz, py] of prof) pos.push(x, y + py, cz + pz); }
+    for (let i = 0; i < N; i++) for (let j = 0; j < np - 1; j++) { const a = i * np + j, b = a + np; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+    const cg = new THREE.BufferGeometry(); cg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); cg.setIndex(idx); cg.computeVertexNormals();
+    add(G, cg, M(0xf0b43c, { roughness: 0.32, side: THREE.DoubleSide }), [0, 0, 0]);
+    for (const u of [0.42, 0.9]) bar(B, teal, [lerp(x0, x1, u), 0, cz], [lerp(x0, x1, u), slideY(u) - 0.05, cz], 0.035);
+    OB.push({ x: cx, z: cz, r: 0.72, h: 2.5 }, { x: cx - 0.85, z: cz, r: 0.3, h: 1.2 });
+    for (const u of [0.18, 0.4, 0.62, 0.84, 1]) OB.push({ x: lerp(x0, x1, u), z: cz, r: 0.3, h: slideY(u) + 0.15 });
+  }
+  { // 그네: 파란 A자 기둥 · 노란 가로대 · 고무 의자 둘 (바람에 살랑)
+    const [sx, sz] = PARK.swing, top = 2.15, hw = 1.15;
+    for (const a of [-1, 1]) for (const b of [-1, 1]) { bar(B, blue, [sx + a * hw, top, sz], [sx + a * hw, 0, sz + b * 0.62], 0.045, 10); OB.push({ x: sx + a * hw, z: sz + b * 0.58, r: 0.12, h: 2.2 }); }
+    bar(B, yel, [sx - hw - 0.1, top, sz], [sx + hw + 0.1, top, sz], 0.055, 12);
+    for (const k of [-1, 1]) {
+      const g = new THREE.Group(); g.position.set(sx + k * 0.5, top - 0.03, sz); g.userData.ph = k * 1.7; G.add(g); parkSeats.push(g);
+      const SB = batcher(); for (const c of [-1, 1]) bar(SB, chainM, [c * 0.21, 0, 0], [c * 0.21, -1.66, 0], 0.008, 5);
+      SB.put(rubber, box(0.46, 0.035, 0.2), [0, -1.68, 0]); SB.flush(g);
+      OB.push({ x: sx + k * 0.5, z: sz, r: 0.32, h: 0.5 });
+    }
+  }
+  { // 정글짐: 빨강 세로대 · 노랑 · 파랑 가로대
+    const [kx, kz] = PARK.climb, c = 0.42, n = 3, o = (n * c) / 2, vm = M(0xc9503c, { roughness: 0.5, metalness: 0.15 });
+    for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) bar(B, vm, [kx - o + i * c, 0, kz - o + j * c], [kx - o + i * c, n * c, kz - o + j * c], 0.022, 6);
+    for (let l = 1; l <= n; l++) for (let j = 0; j <= n; j++) { bar(B, yel, [kx - o, l * c, kz - o + j * c], [kx + o, l * c, kz - o + j * c], 0.02, 6); bar(B, blue, [kx - o + j * c, l * c, kz - o], [kx - o + j * c, l * c, kz + o], 0.02, 6); }
+    OB.push({ x: kx, z: kz, r: 0.9, h: 1.3 });
+  }
+  for (const [rx, rz, ra, col, kind] of PARK.riders) { // 스프링 놀이기구 (오리 · 조랑말)
+    const g = new THREE.Group(); g.position.set(rx, 0, rz); g.rotation.y = ra; G.add(g);
+    const RB = batcher(), bm = M(col, { roughness: 0.38 }), dark = M(0x2b2826, { roughness: 0.4 }), seat = M(0xb8483a, { roughness: 0.6 });
+    RB.put(grey, cyl(0.2, 0.23, 0.04, 20), [0, 0.02, 0]);
+    const pts = []; for (let i = 0; i <= 72; i++) { const a = (i / 72) * Math.PI * 9; pts.push(V3(Math.cos(a) * 0.075, 0.04 + 0.34 * (i / 72), Math.sin(a) * 0.075)); }
+    RB.put(dark, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 144, 0.014, 6), [0, 0, 0]);
+    RB.put(bm, new THREE.CapsuleGeometry(0.14, 0.22, 6, 14), [0, 0.53, -0.02], [Math.PI / 2, 0, 0]);
+    RB.put(seat, box(0.2, 0.03, 0.2), [0, 0.68, -0.06]);
+    bar(RB, iron, [-0.13, 0.82, 0.13], [0.13, 0.82, 0.13], 0.014, 6); bar(RB, iron, [-0.15, 0.4, 0.06], [0.15, 0.4, 0.06], 0.014, 6);
+    if (kind === 'duck') {
+      RB.put(bm, SPH, [0, 0.8, 0.2], null, 0.12); RB.put(M(0xe8803a, { roughness: 0.45 }), new THREE.ConeGeometry(0.045, 0.12, 12), [0, 0.78, 0.35], [Math.PI / 2, 0, 0]);
+      RB.put(bm, new THREE.ConeGeometry(0.07, 0.16, 12), [0, 0.68, -0.27], [-1.0, 0, 0]);
+      for (const s of [-1, 1]) RB.put(dark, SPH, [s * 0.07, 0.84, 0.29], null, 0.016);
+    } else {
+      RB.put(bm, SPH, [0, 0.84, 0.22], [0.5, 0, 0], [0.09, 0.1, 0.16]); RB.put(bm, SPH, [0, 0.79, 0.34], null, [0.07, 0.065, 0.075]);
+      for (const s of [-1, 1]) { RB.put(bm, new THREE.ConeGeometry(0.03, 0.08, 10), [s * 0.05, 0.95, 0.16], [-0.3, 0, s * 0.3]); RB.put(dark, SPH, [s * 0.075, 0.87, 0.27], null, 0.014); }
+      RB.put(M(0x5a3b2a, { roughness: 0.8 }), new THREE.ConeGeometry(0.05, 0.22, 10), [0, 0.5, -0.3], [-2.4, 0, 0]);
+    }
+    RB.flush(g);
+    OB.push({ x: rx, z: rz, r: 0.33, h: 0.95 });
+  }
+  { // 벤치: 놀이터 쪽(-x)을 보고 앉는 나무 벤치 · 검은 주물 다리
+    const [bx, bz] = PARK.bench, wood = M(0xb27c4c, { roughness: 0.72 });
+    for (let i = 0; i < 4; i++) B.put(wood, box(0.085, 0.03, 1.5), [bx - 0.16 + i * 0.1, 0.44, bz]);
+    for (let i = 0; i < 3; i++) B.put(wood, box(0.03, 0.085, 1.5), [bx + 0.21 + i * 0.022, 0.58 + i * 0.11, bz], [0, 0, -0.2]);
+    for (const e of [-0.62, 0.62]) { B.put(iron, box(0.42, 0.04, 0.05), [bx + 0.02, 0.41, bz + e]); bar(B, iron, [bx - 0.17, 0, bz + e], [bx - 0.15, 0.42, bz + e], 0.025, 6); bar(B, iron, [bx + 0.2, 0, bz + e], [bx + 0.27, 0.9, bz + e], 0.025, 6); }
+    OB.push({ x: bx + 0.02, z: bz - 0.42, r: 0.4, h: 0.5 }, { x: bx + 0.02, z: bz + 0.42, r: 0.4, h: 0.5 });
+  }
+  { // 가로등 (아직 꺼져 있다)
+    bar(B, iron, [-4.6, 0, 1.3], [-4.6, 3.3, 1.3], 0.05, 10); B.put(iron, box(0.36, 0.1, 0.2), [-4.45, 3.32, 1.3]); B.put(M(0xf3ead6, { roughness: 0.4 }), box(0.3, 0.02, 0.15), [-4.45, 3.265, 1.3]);
+  }
+  // ---------- 나무 (은행나무 노랑 · 느티나무 주황 · 소나무) · 낮은 울타리와 산울타리 · 떨어진 잎
+  const trunk = M(0x5c4433, { roughness: 0.9 }), leaf = { gy: M(0xd9ad3a, { roughness: 0.85 }), zk: M(0xbe7a3c, { roughness: 0.85 }), pn: M(0x4e6a3d, { roughness: 0.9 }) }, ico = new THREE.IcosahedronGeometry(1, 1);
+  const trees = LITE ? PARK.trees.filter((q, i) => i % 4 !== 3) : PARK.trees;
+  for (const [tx, tz, kind, s] of trees) {
+    const h = (kind === 'pn' ? 1.4 : 2.2) * s;
+    bar(B, trunk, [tx, 0, tz], [tx + (R() - 0.5) * 0.2, h + 0.4 * s, tz], 0.13 * s, 8);
+    if (kind === 'pn') for (let k = 0; k < 3; k++) B.put(leaf.pn, new THREE.ConeGeometry(1.05 * s * (1 - k * 0.24), 1.3 * s, 9), [tx, h + 0.2 * s + k * 0.75 * s, tz], [0, R() * 3, 0], null, true);
+    else for (let k = 0; k < 7; k++) { const a = R() * Math.PI * 2, rr = 0.6 * s * R(), up = kind === 'gy' ? 1.3 : 0.8; B.put(leaf[kind], ico, [tx + Math.cos(a) * rr, h + 0.5 * s + R() * up * s, tz + Math.sin(a) * rr], [R() * 3, R() * 3, R() * 3], [(0.75 + R() * 0.4) * s, (0.65 + R() * 0.35) * s * (kind === 'gy' ? 1.25 : 0.9), (0.75 + R() * 0.4) * s], true); }
+  }
+  const hedge = M(0x5a703c, { roughness: 0.95 }), step = LITE ? 0.8 : 0.55;
+  const hedgeLine = (ax, az, bx, bz) => { const n = Math.ceil(Math.hypot(bx - ax, bz - az) / step); for (let i = 0; i <= n; i++) { const t = i / n; B.put(hedge, ico, [lerp(ax, bx, t) + (R() - 0.5) * 0.1, 0.3 + R() * 0.08, lerp(az, bz, t) + (R() - 0.5) * 0.1], [R() * 3, R() * 3, R() * 3], [0.42 + R() * 0.12, 0.36 + R() * 0.1, 0.42 + R() * 0.12], true); } };
+  hedgeLine(-6.8, -6.5, 6.8, -6.5); hedgeLine(-6.8, -6.5, -6.8, 3.6); hedgeLine(6.8, -6.5, 6.8, 3.6);
+  const fence = M(0x4f6b5c, { roughness: 0.55, metalness: 0.2 });
+  for (let x = -6.2; x <= 6.21; x += 1.0) bar(B, fence, [x, 0, -5.95], [x, 0.62, -5.95], 0.022, 6);
+  for (const y of [0.25, 0.55]) bar(B, fence, [-6.2, y, -5.95], [6.2, y, -5.95], 0.016, 6);
+  // ---------- 둘레 동네: 2~3층 빌라들 (벽돌 · 베이지 · 회색, 옥상 물탱크) + 양옆 멀리 아파트 (해를 받아 따뜻하게 · 안개에 흐리게)
+  const villaTex = canvasTex(256, 256, (x, w, h) => {
+    const r = rng(17), rows = 3, cols = 4, cw = w / cols, rh = h / rows;
+    x.fillStyle = '#f4efe6'; x.fillRect(0, 0, w, h);
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { x.fillStyle = r() < 0.15 ? '#f3d8a4' : '#7f8c97'; x.fillRect(i * cw + cw * 0.18, j * rh + rh * 0.3, cw * 0.64, rh * 0.42); x.fillStyle = 'rgba(80,70,60,0.35)'; x.fillRect(i * cw + cw * 0.14, j * rh + rh * 0.72, cw * 0.72, 3); }
+    x.fillStyle = 'rgba(90,80,70,0.35)'; x.fillRect(0, 0, w, 6);
+  });
+  for (const [col, list] of [[0xc98f72, [[-15, -28, 9, 6, 8, 0.25], [16, -27, 8, 6.5, 8, -0.3]]], [0xe3d3b8, [[-24, -21, 9, 5.5, 8, 0.6], [24, -20, 9, 5, 8, -0.6]]], [0xc9c6c0, [[-11, -33, 6, 4.5, 6, 0.1], [12, -32, 7, 5, 6, -0.1]]]]) { // 가운데 뒤는 비워 하늘과 나무가 보이게
+    const vm = M(col, { map: villaTex, roughness: 0.95 });
+    for (const [ax, az, aw, ah, ad, ry] of list) { B.put(vm, box(aw, ah, ad), [ax, ah / 2, az], [0, ry, 0]); B.put(grey, cyl(0.8, 0.8, 1.0, 12), [ax + aw * 0.25, ah + 0.5, az], null, null); }
+  }
+  const aptTex = canvasTex(256, 512, (x, w, h) => {
+    const r = rng(3), cols = 10, rows = 18, cw = w / cols, rh = h / rows;
+    x.fillStyle = '#eadfce'; x.fillRect(0, 0, w, h);
+    for (let j = 1; j < rows; j++) { x.fillStyle = 'rgba(140,122,104,0.35)'; x.fillRect(0, j * rh + rh * 0.8, w, 3); for (let i = 0; i < cols; i++) { const lit = r() < 0.1; x.fillStyle = lit ? '#f6d59c' : r() < 0.5 ? '#8f9ca7' : '#7e8c99'; x.fillRect(i * cw + cw * 0.14, j * rh + rh * 0.25, cw * 0.72, rh * 0.5); } }
+    x.fillStyle = 'rgba(120,100,84,0.3)'; x.fillRect(0, 0, w, rh * 0.6);
+  });
+  const apt = M(0xffffff, { map: aptTex, roughness: 0.95 });
+  for (const [ax, az, aw, ah, ad, ry] of [[29, -19, 10, 17, 8, -0.95], [-29, -17, 10, 15, 8, 0.95], [-30, -2, 9, 14, 8, 1.4]]) B.put(apt, box(aw, ah, ad), [ax, ah / 2, az], [0, ry, 0]);
+  B.flush(G);
+  if (!LITE) { // 떨어진 잎 (나무 밑에 많이, 모래밭에도 조금)
+    const N = 220, im = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.055, 0.04), new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide }), N), o = new THREE.Object3D(), c = new THREE.Color();
+    for (let i = 0; i < N; i++) {
+      const T = PARK.trees[Math.floor(R() * PARK.trees.length)], a = R() * 6.283, d = Math.sqrt(R()) * 2.6; let x = T[0] + Math.cos(a) * d, z = T[1] + Math.sin(a) * d;
+      if (R() < 0.07) { x = (R() - 0.5) * 7.5; z = -4.6 + R() * 6.4; }
+      o.position.set(x, 0.007 + R() * 0.004, z); o.rotation.set(-Math.PI / 2 + (R() - 0.5) * 0.3, 0, R() * 6.283); o.updateMatrix(); im.setMatrixAt(i, o.matrix);
+      im.setColorAt(i, c.set(T[2] === 'zk' ? 0xb57440 : 0xcfac4a).multiplyScalar(0.7 + R() * 0.3));
+    }
+    im.receiveShadow = true; G.add(im);
+  }
+  // ---------- 빛: 낮은 해(긴 그림자) + 하늘빛
+  G.add(new THREE.HemisphereLight(0xeae2d2, 0xa08258, 1.08)); // 하늘빛도 노을빛: 그늘이 잿빛으로 식지 않게
+  const sun = new THREE.DirectionalLight(0xffc68a, 3.3);
+  sun.target.position.set(0, 0, -1.4); sun.position.copy(PARK.sun).multiplyScalar(20).add(sun.target.position);
+  sun.castShadow = true; Object.assign(sun.shadow.camera, { left: -6.8, right: 6.8, top: 4.6, bottom: -4.6, near: 4, far: 40 }); sun.shadow.camera.updateProjectionMatrix();
+  sun.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.025;
+  G.add(sun, sun.target);
+  roomUpd.push((t) => { if (RP === ROOM_PARK) for (const g of parkSeats) g.rotation.x = 0.045 * Math.sin(t * 1.7 + g.userData.ph) + 0.02 * Math.sin(t * 0.63 + g.userData.ph * 2); });
+  // ---------- 담이 (이 방의 강아지)
+  DAMI = makeDami(); Object.assign(DAMI, { route, routeSee: navSee, collide, speedK: 1.2, talk: damiTalk, cheer: true, cheerT: 0 }); DAMI.root.visible = false; roomScene.add(DAMI.root); fitCurl(DAMI); // speedK: 핑키보다 발걸음이 가볍고 빠르다 · cheer: 혼자 놀 때 자주 혀를 빼고 헥헥
+  // ---------- 다니는 길 · 냄새 맡는 곳
+  const [cx, cz] = PARK.slide, [bx, bz] = PARK.bench, [wx, wz] = PARK.swing, slideEnd = cx + 2.75;
+  Object.assign(ROOM_PARK, {
+    built: true, OBST: OB,
+    SPOTS: { cushion: SPOTS.cushion, gifts: { x: slideEnd + 0.5, z: cz + 0.2, fx: slideEnd, fz: cz }, table: { x: bx - 0.66, z: bz + 0.05, fx: bx, fz: bz }, window: { x: 0.45, z: -4.55, fx: 0.5, fz: -6.5 } },
+    looks: [V3(slideEnd, 0.3, cz), V3(0.6, 0.9, -9), V3(wx - 0.5, 0.45, wz), V3(bx, 0.45, bz), V3(PARK.riders[0][0], 0.6, PARK.riders[0][1]), V3(-4.9, 2.5, -5.8)],
+  });
+}
+const ROOM_PARK = {
+  id: 'park', built: false, name: '담이', place: '동네 놀이터', hint: '담이를 만지면 좋아해요 · 화면을 끌어서 둘러보기', navLabel: '담이랑 하기',
+  navIn: (x, z) => x >= -4.801 && x <= 4.801 && z >= -4.851 && z <= 2.401,
+  clamp(d) { d.x = clamp(d.x, -4.8, 4.8); d.z = clamp(d.z, -4.85, 2.4); },
+  ball: [-5.3, 5.3, -5.4, 2.9],
+  NAV: { x0: -4.8, z0: -4.85, h: 0.1, nx: 97, nz: 73, pad: 0.15 },
+  HOME: { x: 0.1, z: 0.85 }, AIM: V3(0.08, 0.46, 0.62), camPos: (v, a) => v.set(0, a < 0.8 ? 1.48 : 1.22, a < 0.8 ? 3.2 : 3.0), // 세로 화면: 조금 더 가까이 · 내려다보게 (담이가 작아 보이지 않고 하늘이 화면 반을 차지하지 않게)
+  BOWL: V3(99, 0.006, 99), EAT: { x: 99, z: 99 }, CUSH: { x: 99, z: 99 }, // 밥그릇 · 방석은 없다 (멀리 치워 둔다: 방석 위로 떠오르거나 공이 튕기는 일이 없게)
+  THROW: [[-0.7, -1.3], [1.2, -0.9], [1.1, 0.3], [-1.2, 0.9], [-0.2, -2.0], [0.6, -1.7], [-1.5, -0.4], [1.4, -2.7]],
+  HIDE: [[-0.55, 0.45], [0.75, 0.4], [-0.8, 1.0], [0.9, 1.05], [0.45, 0.2], [-0.25, 1.2], [1.15, 0.75], [-1.05, 0.7]],
+  WIN: V3(0.6, 0.9, -9), ROPE: { x: -0.95, z: -0.55, yaw: -0.5 },
+  entry: [[1.0, -0.9, 1.9, -1.7], [-1.0, -0.7, -1.8, -1.2], [0.3, -1.6, 0.4, -2.6]],
+  wander: [-1.5, -1.0, 3.0, 2.2],
+  off: { feed: true, cushion: true }, actW: { nap: 0, bowl: 0, left: 0 }, noBowl: true,
+  lines: { gifts: ['미끄럼틀 냄새!', '누가 여기 왔었네?', '킁킁, 친구 냄새~'], table: ['벤치 밑에 뭐 있다!', '과자 냄새 났는데!', '여긴 없네~'], window: ['저기 비둘기다!', '바람 좋다~', '친구 오나?'], tableSniff: '뭐 떨어진 거 없나~', mid: ['오리야 안녕!', '여기도 친구 냄새!', '킁킁, 과자 냄새~'] },
+  sniffMid: { x: PARK.riders[0][0] - 0.55, z: PARK.riders[0][1] + 0.3, fx: PARK.riders[0][0], fz: PARK.riders[0][1] }, // 냄새 맡기 가운데 들르는 곳: 오리 스프링 놀이기구 옆 (미끄럼틀 끝 → 오리 → 벤치, 멀리 돌지 않게)
+  zoom: [[1.4, -0.9], [0.78, 0.18], [-0.48, 0.18], [-1.1, -0.9], [-0.48, -1.98], [0.78, -1.98]], // 우다다: 모래밭 가운데 빈 곳을 크게 도는 길
+  acts: (cd, d) => ({ worm: 0.55 * cd('worm', 80), zoom: (0.4 + 0.9 * d.play) * cd('zoom', 110) }), // 혼자 놀 때도 지렁이 댄스 · 우다다
+  roamActs: (tok) => ({ worm: () => wormDance(tok, true), zoom: () => zoomies(tok, true) }),
+  bg: new THREE.Color(0xf3cf9f), fog: new THREE.Fog(0xf0cfa2, 15, 46), env: null,
+  sound: { surf: (x, z) => (inSand(x, z) ? 'rug' : 'grass'), cush: [99, 99, 0.3], bowl: [99, 99] }, // 모래: 사각사각 부드럽게 · 풀: 바스락
+};
+// 핑키 방 프로필: 지금 값(핑키 방 그대로)을 떠 둔다 — 놀이터에 갔다 와도 똑같이 되돌린다
+Object.assign(ROOM_HOME, {
+  HOME: { ...HOME }, BOWL: BOWL.clone(), EAT: { ...EAT }, SPOTS: { ...SPOTS }, CUSH: { x: CUSH.x, z: CUSH.z }, OBST: [...OBST], NAV: { ...NAV },
+  THROW: THROW_SPOTS.map((q) => [...q]), HIDE: HIDE.map((q) => [...q]), WIN: WIN_PT.clone(), ROPE: { ...ROPE_REST }, AIM: CAM_AIM.clone(),
+  bg: roomScene.background, fog: roomScene.fog, env: roomScene.environment,
+  sound: { surf: null, rug: [0.1, 0.8, 1.45, 0.95], cush: [CUSH.x, CUSH.z, CUSH.R], bowl: [BOWL.x, BOWL.z] },
+  name: $('#roomUI .title .name').textContent, place: $('#roomUI .title .place').textContent, hint: $('#hint').textContent, navLabel: actionsEl.getAttribute('aria-label'),
+  off: { worm: true, zoom: true }, wander: [-0.6, 0.2, 1.4, 1.0],
+  lines: { gifts: GIFT_LINES, table: TABLE_LINES, window: ['단풍 예쁘다…', '새 왔다…', '바람 냄새…'], tableSniff: '뭐 떨어진 거 없나' },
+});
+function setDog(d) { // 방에 있는 강아지를 바꿔 끼운다 (코에 묻는 요거트도 그 얼굴로) · 강아지마다 따로 기억하는 것(옆으로 앉은 쪽 · 로프 놀이 횟수 · 혼자 로프 갖고 놀 때까지)도 바꿔 든다
+  if (pinky === d) return;
+  pinky.mem = { sideSign, ropeRuns, toyIdle, lastSit };
+  ({ sideSign, ropeRuns, toyIdle, lastSit } = d.mem || { sideSign: 1, ropeRuns: 0, toyIdle: 60, lastSit: '' });
+  pinky.root.visible = false; d.root.visible = true; pinky = d; d.head.add(yogurtDab.g);
+}
+// 담이 말투: 명랑 쾌활한 '담과장' — 핑키의 나긋한 말을 담이답게 바꾼다 (소리는 원래 말에 맞춰 그대로 난다)
+const DAMI_TALK = {
+  '왔어? ♥': '담과장 출근했습니다! ♥', '왔다 왔다! ♥': '엄마 왔다~! ♥', '놀아줘 ♥': '놀아 주세요! ♥',
+  '좋아…': '좋아요!', '더 해줘…': '한 번 더요!', '포근해…': '포근해요~', '…하나 더?': '하나 더 결재해 주세요!', '…더 없어?': '더 없어요?',
+  '간식이다!': '간식 타임!', '간식 있어?': '간식 결재 올립니다!', '심심해…': '심심해요~', '뭐 해?': '뭐 하세요?', '놀자?': '놀아요!', '엄마~ ♥': '엄마 최고! ♥',
+  '응…?': '네?!', '잘 잤다…': '푹 잤다!', '후우…': '휴~ 좋다!', '쭈욱…': '쭈욱~!', '하암…': '하암~', '재밌었다…': '재밌었다!',
+  '…같이 할래?': '같이 해요!', '…또 줘?': '또 주세요!', '…이번만이야': '이번만이에요~', '후우… 알았어': '네, 알겠습니다!', '안 들려~': '안 들려요~',
+  '또 던져!': '또 던져 주세요!', '또 하자!': '또 해요!', '…이따 주겠지': '이따 주시겠지~', '달다…': '달다!', '다 먹었다!': '다 먹었습니다!',
+  '뒹굴': '뒹굴!', '뒹굴뒹굴': '데굴데굴~', '찾았다!': '찾았습니다!', '헤헤, 주웠다': '헤헤, 득템!', '하나만 더…?': '하나만 더요?',
+};
+function damiTalk(s) { return DAMI_TALK[s] ?? (/[가-힣]…$/.test(s) ? s.slice(0, -1) + '~' : s); }
+function useRoom(id) {
+  const R = id === 'park' ? ROOM_PARK : ROOM_HOME;
+  if (R === RP) return;
+  if (!R.built && R === ROOM_PARK) buildPark();
+  RP.ropeN0 = rope.frames().map((v) => v.clone()); if (R.ropeN0) rope.frames().forEach((v, i) => v.copy(R.ropeN0[i])); // 핑키 방의 로프는 놀이터에 다녀와도 그대로 (줄 단면 방향까지)
+  RP = R;
+  Object.assign(HOME, R.HOME); BOWL.copy(R.BOWL); Object.assign(EAT, R.EAT); Object.assign(SPOTS, R.SPOTS); Object.assign(CUSH, R.CUSH);
+  OBST.length = 0; OBST.push(...R.OBST); Object.assign(NAV, R.NAV);
+  THROW_SPOTS.length = 0; THROW_SPOTS.push(...R.THROW); HIDE.length = 0; HIDE.push(...R.HIDE);
+  WIN_PT.copy(R.WIN); Object.assign(ROPE_REST, R.ROPE); CAM_AIM.copy(R.AIM); setCamPos(roomCam.aspect);
+  for (const [o, v] of HOME_KIDS) o.visible = R === ROOM_HOME && v;
+  if (parkG) parkG.visible = R === ROOM_PARK;
+  roomScene.background = R.bg; roomScene.fog = R.fog; roomScene.environment = R.env;
+  setDog(R === ROOM_PARK ? DAMI : PINKY);
+  snd('configure', R.sound);
+  $('#roomUI .title .name').textContent = R.name; $('#roomUI .title .place').textContent = R.place; $('#hint').textContent = R.hint; actionsEl.setAttribute('aria-label', R.navLabel);
+  for (const b of actionsEl.querySelectorAll('button[data-cmd]')) b.hidden = !!R.off[b.dataset.cmd];
+  if (R === ROOM_PARK && !R.compiled) { R.compiled = true; try { renderer.compile(roomScene, roomCam); } catch (e) { /* 처음 그릴 때 맞춰진다 */ } } // 화면이 어두운 동안 미리 셰이더를 만들어 둔다
 }
 
 // ================================================================
@@ -4030,8 +4412,9 @@ function fade(mid) {
   transitioning = true; fadeEl.classList.add('on');
   setTimeout(() => { mid(); requestAnimationFrame(() => requestAnimationFrame(() => { fadeEl.classList.remove('on'); transitioning = false; })); }, reduceMotion ? 0 : 560);
 }
-function goRoom() {
-  fade(() => { mode = 'room'; $('#selectUI').hidden = true; $('#roomUI').hidden = false; resetRoom(); $('#backBtn').focus({ preventScroll: true }); });
+function goRoom(id) { // id: 강아지 (없으면 지금 고른 강아지) — 그 강아지의 장소로 들어간다
+  const info = DOGS.find((q) => q.id === id) || DOGS[sel];
+  fade(() => { useRoom(info.room || 'home'); mode = 'room'; $('#selectUI').hidden = true; $('#roomUI').hidden = false; resetRoom(); $('#backBtn').focus({ preventScroll: true }); });
 }
 function goSelect() {
   if (transitioning) return;
@@ -4106,7 +4489,7 @@ function resize() {
   selCam.aspect = a; selCam.fov = a < 0.8 ? 48 : 38; selCam.updateProjectionMatrix();
   selCam.position.set(0, 1.25, a < 0.8 ? 6.0 : 5.2); selCam.lookAt(0, a < 0.8 ? 0.42 : 0.36, RING_R - 0.1);
   roomCam.aspect = a; roomCam.fov = a < 0.8 ? 64 : 50; roomCam.updateProjectionMatrix();
-  CAM_POS.set(0, a < 0.8 ? 1.42 : 1.22, a < 0.8 ? 3.65 : 3.0);
+  setCamPos(a);
 }
 window.addEventListener('resize', resize); resize();
 
@@ -4177,4 +4560,5 @@ if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCom
   NAP: (pk) => { Object.assign(pk, { x: SPOTS.cushion.x, z: SPOTS.cushion.z, yaw: CUSH.yaw, face: null, lift: cushLift(Math.hypot(CUSH.px, CUSH.pz)), eyeOpen: 0.04, wagAmpT: 0.03, curlK: 1, tailW: 1 }); setPose(pk, 'curl', 50); },
   SPOTS, HOME, handR, handL, treat, rope, ROPE_REST, yogurt, yogurtDab, goguma, buildYogurt, buildGoguma, releaseProps, resetProps, toy, sitAs, SIT_F, bringToy, sitCommand, sitLatch, faceFill,
   tick: (dt) => { clock += dt; stepTimers(); updateRoom(dt, clock); stepBubbles(dt, roomCam); }, isActive: () => active && active.name,
+  get dog() { return pinky; }, get dami() { return DAMI; }, get RP() { return RP; }, useRoom, PARK, ROOM_HOME, ROOM_PARK, HOME_KIDS, inSand,
   brain, BRAIN, drops, dropTreat, wait, until, idleGap, idleLook, yawn, shakeOff, stretch, momCheck, hideTreat, nearestDrop, mound, updateMound, brainPoke, startSpecial, momGreet, payBall, findTreat, eatLeft, sneeze, roam, resetRoom, special: () => (active && active.special) || null, bubbles: () => bubbles.map((b) => b.el.textContent) };
