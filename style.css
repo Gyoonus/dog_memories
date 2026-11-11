@@ -145,6 +145,12 @@ h1 {
   font-family: var(--body); font-weight: 400; font-size: 15px; padding: 7px 13px; border-radius: 16px;
   background: var(--glass); border: 1px solid var(--line); text-shadow: none;
 }
+.bubble.soft.dm { background: rgba(30, 21, 16, .86); border-color: rgba(248, 237, 221, .34); font-weight: 600; } /* 담이 (놀이터) */
+.bubble.fr { /* 울타리 밖 친구의 말: 꼬리 달린 밝은 말풍선 (멀리 있어도 누가 말하는지 보이게) */
+  font-size: 19px; padding: 3px 11px 4px; border-radius: 14px; margin-top: -9px;
+  background: rgba(250, 243, 230, .94); color: #3b2a1d; text-shadow: none; box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+}
+.bubble.fr::after { content: ''; position: absolute; left: 50%; bottom: -8px; margin-left: -7px; border-style: solid; border-width: 8px 7px 0; border-color: rgba(250, 243, 230, .94) transparent transparent; }
 #toast {
   position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 92px); transform: translate(-50%, -8px);
   padding: 9px 16px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none;
