@@ -325,8 +325,29 @@ def('pat', 4, -32, 'foley', () => mulf(nb(180, 'p', 'bp', 2200 * rr(0.9, 1.1), 0
 def('flap', 4, -27, 'foley', () => { const n0 = noise(N(60), 'p'); return mulf(sum(norm(bq(n0, 'bp', 500 * rr(0.9, 1.1), 1)), norm(bq(n0, 'bp', 1500 * rr(0.9, 1.1), 1)), 0.6), bell(60, 0.8)); }, { gap: 0.07 }); // 장난감을 물고 고개를 털 때: 귀와 줄이 퍼덕
 def('rope_drop', 3, -24, 'foley', () => mix(mix(mix(P(100), thud(45, 120, 75, 11), 0, 0.5), pap(50, 700), 1, 0.9), mulf(nb(70, 'p', 'bp', 1700, 0.8), bell(70, 1.3)), 6, 0.3), { gap: 0.15 }); // 로프가 바닥에 툭
 
+// --- 담이(놀이터)만 쓰는 소리: 덴탈껌 오독오독 · 패트병 바삭바삭 · 모래 파는 소리
+def('chomp_crunch', 6, -14, 'dog', (v) => { // 단단한 덴탈껌(칫솔껌 · 악어껌)을 어금니로 "오독" — 촵보다 마르고 알갱이가 많다
+  const out = chomp('kibble', v, false);
+  for (let i = ri(5, 8); i > 0; i--) mix(out, click(rr(1, 3), rr(3000, 7500), rr(4, 8)), rr(2, 48), db(-rr(2, 10))); // 잘게 부서지는 알갱이
+  return mix(out, mulf(sine(40, sweep(260, 150, 40)), ad(1.5, 9)), rr(3, 6), db(-9)); // 이가 박히는 단단한 툭
+}, { gap: 0.15 });
+def('crinkle', 6, -19, 'foley', (v) => { // 바삭 — 얇은 페트병이 우그러지며 따닥따닥 (짝수 번호: 병이 꺾이는 "뽁"이 섞인다)
+  const D = rr(220, 360), out = P(D + 30);
+  for (let i = ri(14, 24); i > 0; i--) mix(out, click(rr(0.8, 2.5), rr(2500, 9000), rr(2, 6)), Math.pow(R(), 1.6) * D, db(-rr(0, 14)));
+  mix(out, mulf(nb(D, 'w', 'hp', 3500, 0.7), (m) => Math.exp(-m / (D * 0.35)) * Math.min(1, m / 3)), 0, db(-14)); // 사르륵
+  if (v % 2 === 0) { const f = rr(700, 1100), at = rr(0, 20); mix(out, mulf(sine(70, sweep(f, f * 0.8, 70)), ad(1, 14)), at, db(-8)); mix(out, click(3, rr(1500, 2500), 3), at, 0.8); }
+  return out;
+}, { gap: 0.1 });
+def('dig_scratch', 6, -21, 'foley', () => { // 사각 — 앞발이 모래를 긁어 뒤로 차 낸다 (거친 알갱이 소리 + 발이 모래를 치는 툭)
+  const D = rr(70, 110), out = P(D + 40), y = nb(D, 'w', 'bp', rr(2200, 3600), 0.9), g = noise(y.length, 'w');
+  for (let i = 0; i < y.length; i++) y[i] *= 0.4 + 0.6 * Math.abs(g[i]) ** 3;
+  mix(out, mulf(norm(y), curve([[0, 0], [8, 1], [D * 0.6, 0.7], [D, 0]])));
+  for (let i = ri(5, 9); i > 0; i--) mix(out, click(rr(0.8, 2), rr(2500, 6000), rr(3, 6)), rr(5, D), db(-rr(6, 16)));
+  return mix(out, pap(40, 500), 0, db(-6));
+}, { gap: 0.06 });
+
 // 미리 그려 둘 순서(자주 쓰는 것부터, 드물게 쓰는 소리는 맨 뒤). 아직 안 그린 소리를 틀면 그 자리에서 그린다
-const RARE = ['bay_aroo', 'growl_play', 'sneeze', 'chomp_soft', 'crunch_big', 'lick_yogurt', 'swish', 'shake', 'kibble_floor', 'flap', 'rope_drop'];
+const RARE = ['bay_aroo', 'growl_play', 'sneeze', 'chomp_soft', 'crunch_big', 'lick_yogurt', 'swish', 'shake', 'kibble_floor', 'flap', 'rope_drop', 'chomp_crunch', 'crinkle', 'dig_scratch'];
 const NAMES = ['chomp_treat', 'chomp_kibble', 'sniff', 'bark_woof', 'bark_yip', 'step_wood', 'step_rug', 'lick', ...Object.keys(DEF).filter((n) => !RARE.includes(n)), ...RARE].filter((n, i, a) => a.indexOf(n) === i);
 const hash = (s) => { let h = 7; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0; return h; };
 /** 소리 하나를 그린다 (순수 함수: 같은 이름·번호·샘플레이트면 늘 같은 결과) */
@@ -540,6 +561,10 @@ function onSay(text) {
   if (has(s, '찾았다', '주웠다', '횡재', '맛있다', '다먹었다', '배불러')) return void voice('content', { gain: -1, why: text });
   if (has(s, '간식이다', '요거트다', '고구마다')) { play('gasp_alert', { why: text }); later(0.22, () => voice('whine', { vlo: 0, vhi: 2, gain: -3, rate: 1.12, why: text })); return; }
   if (has(s, '왈')) return void voice('yip', { why: text });
+  if (has(s, '컹')) { voice('yip', { why: text }); if (has(s, '컹컹')) later(0.24, () => voice('yip', { force: 1, rate: 1.05, gain: -2, why: text })); return; } // 담이: 컹! · 컹컹! (잘 짖는다)
+  if (has(s, '바삭')) { st.accent = true; play('crinkle', { gain: -3, why: text }); return; } // 담이: 패트병 바삭
+  if (has(s, '파바')) return void play('dig_scratch', { pos: feet(), gain: 2, why: text }); // 담이: 파바박! (땅 파기)
+  if (has(s, '와그작')) { st.accent = true; return; }
   if (has(s, '멍')) { if (T - (st.greetT ?? -9) > 1.5) voice('woof', { why: text }); return; } // 인사할 때의 '멍!'은 phrase('greet')가 이미 소리를 냈다
   if (has(s, '아우', '아루')) return void voice('aroo', { why: text });
   if (s === '앙') return void play(String(text).includes('!') ? 'chomp_ball' : 'treat_take', { why: text }); // 앙! = 공·로프를 덥석 · 앙 = 간식을 살며시 받아 문다
@@ -586,9 +611,17 @@ function lap(why, kind) {
 // main.js가 직접 알려 주는 박자 (요거트 핥기 · 고구마 말랑이/로프 씹기 · 물고 흔들기 · 로프가 떨어질 때): 그 움직임은 pinky.chew/lick을 쓰지 않아서 위의 상태 읽기로는 알 수 없다
 function chewHit(kind = 'soft') { // 턱이 닫힐 때마다 한 번. 'soft' = 쫀득한 간식(촉촉하게, 가끔 쩝) · 'rope' = 줄을 질겅(더 낮고 작게)
   if (!live() || !st) return;
+  if (kind === 'crunch' || kind === 'wood' || kind === 'bottle') return crunchHit(kind);
   const rope = kind === 'rope', acc = st.accent; st.accent = false; st.toyChewI = (st.toyChewI || 0) + 1;
   if (!rope && Math.random() < 0.45) later(0.28 + Math.random() * 0.06, () => play('smack', { gain: -1, why: 'mouth opens (chewy)' }));
   play('chomp_soft', { delay: Math.random() * 0.02, gain: ACC[st.toyChewI % 3] + (acc ? 1.5 : 0) + (rope ? -4 : 0), rate: rope ? 0.82 : 0.92, why: 'jaw close (' + kind + ')' + (acc ? ' +accent' : '') });
+}
+// 담이: 'crunch' = 덴탈껌 오독 · 'wood' = 나뭇가지 와그작(더 낮게) · 'bottle' = 페트병을 깨물면 바삭
+function crunchHit(kind) {
+  const acc = st.accent; st.accent = false; st.toyChewI = (st.toyChewI || 0) + 1;
+  if (kind === 'bottle') return void play('crinkle', { gain: -2 + (acc ? 2 : 0) + ACC[st.toyChewI % 3], why: 'bite (bottle)' + (acc ? ' +accent' : '') });
+  const wood = kind === 'wood';
+  play('chomp_crunch', { delay: Math.random() * 0.02, gain: ACC[st.toyChewI % 3] + (acc ? 1.5 : 0) + (wood ? -3 : 0), rate: wood ? 0.8 : 1, why: 'jaw close (' + kind + ')' + (acc ? ' +accent' : '') });
 }
 function shakeHit(amp = 1) { // 고개가 한쪽 끝에 닿을 때마다: 귀·줄이 퍼덕, 가끔 인식표. '부르르' 소리가 나는 동안에는 쉰다(그 소리에 이미 들어 있다)
   if (!live() || !st || T - (lastT.shake ?? -9) < 1.25) return;
@@ -691,9 +724,11 @@ function update(dt, t, s) {
 
   // 꼬리가 바닥을 탁탁
   const lying = s.pose === 'down' || s.pose === 'side' || s.pose === 'belly' || s.pose === 'curl';
-  if (s.wagAmp > 0.1 && Math.floor(s.wagPhase / TAU) !== Math.floor(p.wagPhase / TAU)) {
-    if (lying) play(surf === 'cushion' ? 'tail_cushion' : 'tail_floor', { pos: ft, gain: toDb(clamp(s.wagAmp / 0.5, 0.3, 1.2)) + (surf === 'rug' ? -4 : 0), why: 'tail' });
-    else if (s.pose === 'sit' && s.wagAmp > 0.6 && !lite) play('swish', { pos: ft, why: 'tail' });
+  const tc = cfg.tail; // 놀이터(담이): 모래 위라 작게, 아주 빨리 흔들 때는 북처럼 두드리지 않고 몇 번에 한 번만 (사락사락)
+  if (s.wagAmp > 0.1 && Math.floor(s.wagPhase / TAU) !== Math.floor(p.wagPhase / TAU) && !(tc && T - (st.tailT ?? -9) < tc.gap)) {
+    if (tc) st.tailT = T;
+    if (lying) play(surf === 'cushion' ? 'tail_cushion' : 'tail_floor', { pos: ft, gain: toDb(clamp(s.wagAmp / 0.5, 0.3, 1.2)) + (surf === 'rug' ? -4 : 0) + (tc ? tc.gain : 0), why: 'tail' });
+    else if (s.pose === 'sit' && s.wagAmp > 0.6 && !lite) play('swish', { pos: ft, ...(tc ? { gain: tc.gain } : {}), why: 'tail' });
   }
 
   // 자세가 바뀔 때: 눕는 소리 · 일어날 때 짤랑
@@ -753,6 +788,10 @@ export const sound = {
   ballBounce(speed, pos, surface) { play('ball_bounce', { pos, gain: clamp(20 * Math.log10(Math.max(speed, 0.01) / 3), -16, 4) + (surface && surface !== 'wood' ? -4 : 0), why: 'bounce' }); },
   lap(kind = 'mouth') { if (live() && st) lap('lap (' + kind + ')', kind); }, // 'yogurt' · 'mouth' · 'bowl'
   chewHit, shakeHit, ropeDrop, hush, cancelPhrase,
+  // 담이(놀이터)만: 모래를 한 번 긁을 때 · 패트병이 바삭 · 장난감이 모래에 떨어질 때 ('bottle' · 'stick')
+  digHit(pos, gain = 0) { play('dig_scratch', { pos, gain, why: 'dig stroke' }); },
+  crinkle(pos, gain = 0) { play('crinkle', { pos, gain, why: 'bottle crinkle' }); },
+  toyDrop(kind, pos, delay = 0) { if (!live()) return; later(Math.max(0, delay), () => (kind === 'bottle' ? play('crinkle', { pos, gain: -4, why: 'bottle lands' }) : play('rope_drop', { pos, rate: 0.8, gain: 3, why: kind + ' lands' }))); },
   kibbleHit(inBowl, pos, fill = 0) { const dull = Math.random() < fill; play(inBowl ? 'kibble_hit' : 'kibble_floor', { pos, ...(inBowl ? { vlo: dull ? 4 : 0, vhi: dull ? 8 : 4 } : {}), why: 'kibble' }); },
   exportWav(name, v = 0) { return new Blob([wav(render(name, v, 48000), 48000)], { type: 'audio/wav' }); },
   _fake(on = true) { fake = on; }, // 점검용: 소리 장치 없이 기록만
