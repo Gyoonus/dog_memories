@@ -1155,7 +1155,7 @@ function updateDog(d, dt, t, camPos) {
   d.torso.scale.set(1 + br * 2.5, 1 + br * 2.5, 1);
   if (d.neckRig) { const rc = c.reach || 0, na = (c.neck || 0) + 0.65; bendRig(d.neckRig, c.neck || 0, 0, Math.cos(na) * rc, Math.sin(na) * rc); if (d.collarFit) d.collarFit(); } // reach: 굽은 목 방향(쉬는 목은 수직에서 ~37° 앞으로 누워 있다)으로 목을 뺀다
   const pelvisYaw = d.J ? 0 : -Math.cos(d.phase) * 0.07 * d.gait; // 평보: 앞으로 나간 뒷발 쪽 골반이 앞으로 돈다(허리가 좌우로 굽는다)
-  if (d.lumbarRig) bendRig(d.lumbarRig, -(c.lumbar || 0), (c.bendY || 0) + pelvisYaw); // 양수 = 골반이 밑으로 말린다(엉덩이가 아래·앞으로) · bendY: 등이 옆으로 C자로 휜다
+  if (d.lumbarRig) bendRig(d.lumbarRig, -(c.lumbar || 0), (c.bendY || 0) + pelvisYaw + (d.wig || 0)); // wig: 담이가 간식을 보고 엉덩이를 씰룩 (핑키는 늘 0) // 양수 = 골반이 밑으로 말린다(엉덩이가 아래·앞으로) · bendY: 등이 옆으로 C자로 휜다
   if (d.medal) {
     // 메달은 아래로 늘어지되, 판 중심이 가슴 속에 파묻히면(앉기처럼 몸이 뒤로 기울 때) 가슴에 눕도록 앞으로 기울인다
     const md = d.medal; let rx = -c.pitch * 0.95 + Math.sin(d.phase * 2) * 0.12 * d.gait + Math.sin(t * 1.3) * 0.03;
@@ -1211,6 +1211,7 @@ function updateDog(d, dt, t, camPos) {
       }
     }
     if (d.paddle > 0.001 && (!d.paddleFront || L.front)) { const po = d.paddleFront ? i * Math.PI : i * 1.7; _paw.y += Math.max(d.paddleFront ? 0 : -1, Math.sin(t * 8 + po)) * 0.035 * d.paddle; _paw.z += Math.cos(t * 8 + po) * 0.03 * d.paddle; } // paddleFront: 앞발만 번갈아 꾹꾹(자리 다지기)
+    if (d.dig > 0.001 && L.front) { const ph = t * 15 + (L.sx > 0 ? 0 : Math.PI); _paw.y += Math.max(0, Math.sin(ph)) * 0.05 * d.dig; _paw.z -= Math.cos(ph) * 0.045 * d.dig; } // 담이: 땅 파기 — 앞발을 번갈아 빠르게 (들어 앞으로 뻗었다가 모래를 긁으며 뒤로)
     if (!d.J && L.front) L.hip.position.z = L.z0 + (_paw.z - c.paws[i].z) * 0.15; // 견갑골은 갈비 위에서 미끄러진다: 앞발이 나가면 어깨 관절도 조금 앞으로, 밀면 뒤로
     _hipS.copy(L.hip.position).applyMatrix4(d.body.matrix);
     const lean = c.lean[i] + up * (L.front ? -1.2 : 0.9) + (d.J || L.front ? 0 : (stZ - 0.3) * 0.16 * d.gait); // 뒷발허리: 디딜 때는 비절이 발 뒤에, 밀어낼수록 서서 뒤꿈치가 들린다(비절이 펴진다)
@@ -2087,9 +2088,9 @@ function ballToWorld(vel) { roomScene.attach(ball.g); ball.g.scale.setScalar(1);
 const THROW_SPOTS = [[-0.45, -0.8], [1.05, -0.35], [0.95, 0.25], [-1.0, 1.25], [-0.2, -1.3], [0.5, -0.9]];
 const crumbs = [];
 const crumbGeo = box(0.008, 0.008, 0.008), crumbMat = M(0xb87a40);
-function spawnCrumbs(p, n = 4) {
+function spawnCrumbs(p, n = 4, mat = crumbMat) { // mat: 부스러기 색 (담이의 덴탈껌 · 나뭇가지)
   for (let i = 0; i < n; i++) {
-    const m = new THREE.Mesh(crumbGeo, crumbMat); m.position.copy(p); m.castShadow = true; roomScene.add(m);
+    const m = new THREE.Mesh(crumbGeo, mat); m.position.copy(p); m.castShadow = true; roomScene.add(m);
     crumbs.push({ m, v: V3((Math.random() - 0.5) * 0.5, Math.random() * 0.6, (Math.random() - 0.2) * 0.5), age: 0 });
   }
 }
@@ -2515,6 +2516,7 @@ const goguma = buildGoguma(); goguma.g.visible = false; roomScene.add(goguma.g);
 function releaseProps() {
   for (const o of [yogurt.g, goguma.g]) { o.visible = false; roomScene.add(o); o.position.set(0, 0, 0); o.rotation.set(0, 0, 0); o.scale.setScalar(1); }
   rope.unpin();
+  damiRelease(); // 담이의 소품 (놀이터를 지은 뒤에만)
 }
 function resetProps() { releaseProps(); yogurt.reset(); yogurtDab.set(0); goguma.reset(); rope.reset(); toyOff(); closePicker(); sitCount = 0; }
 
@@ -2814,6 +2816,7 @@ const CMDS = {
     await wait(tok, 0.7); releaseHands(); await wait(tok, 0.6); camHome();
   },
   async play(tok, kind = 'ball') {
+    if (RP.toys && kind !== 'ball') return RP.toys(tok, kind); // 담이(놀이터): 패트병 · 나뭇가지 · 오둥이
     if (kind === 'rope') return ropePlay(tok);
     handR.rig.inner.add(ball.g); ball.g.position.set(0, -0.05, 0.03); ball.g.rotation.set(0, 0, 0); ball.g.scale.setScalar(1);
     ball.g.visible = true; ball.state = 'held';
@@ -2845,6 +2848,7 @@ const CMDS = {
     await ballGive(tok, '또 던져!');
   },
   async treat(tok, kind = 'gum') {
+    if (RP.treat) return RP.treat(tok, kind); // 담이(놀이터): 칫솔껌 · 악어껌
     if (TREATS[kind]) return TREATS[kind](tok);
     const [p, a] = kneelFor(HOME, 0.85); camTo(p, a);
     handR.rig.inner.add(treat); treat.position.set(0, -0.03, 0.02); treat.rotation.set(0, 0.5, 0); treat.scale.setScalar(1); treat.visible = true;
@@ -2964,6 +2968,7 @@ const CMDS = {
   },
   async worm(tok) { await wormDance(tok); }, // 담이(놀이터)에만 있는 버튼
   async zoom(tok) { await zoomies(tok); },
+  async dig(tok) { await damiDig(tok); }, // 담이(놀이터)에만 있는 버튼: 땅 파기
 };
 // ---------- 담이: 지렁이 댄스 — 벌러덩 드러누워 등을 바닥에 비비며 몸을 좌우로 꿈틀꿈틀, 다 하고 나면 부르르 털고 일어난다
 async function wormDance(tok, solo = false) {
@@ -3393,7 +3398,7 @@ roomUpd.push((t, dt) => {
   toyIdle -= dt; if (toyIdle > 0) return;
   if (pinky.tgt.name !== 'stand' || pinky.walkTarget || cushGo || pickerFor || touch.active || !rope.state.asleep || Math.hypot(pinky.x - CUSH.x, pinky.z - CUSH.z) < 0.6) { toyIdle = 3; return; } // 방석에서 기지개 켜고 내려온 뒤에
   toyIdle = 110 + Math.random() * 80;
-  startCommand('roam', (tok) => { tok.toy = true; return bringToy(tok); }, true);
+  startCommand('roam', (tok) => { tok.toy = true; return RP.toyIdle ? RP.toyIdle(tok) : bringToy(tok); }, true); // 담이: 모래 위의 나뭇가지 · 패트병 · 오둥이
 });
 
 // ---------- 요거트: 컵을 내밀면 마주 앉아 할짝할짝, 코에 묻히고 입맛을 다신다
@@ -3564,7 +3569,7 @@ function openPicker(btn, focus) {
   closePicker();
   pickerFor = btn; const menu = btn.dataset.menu;
   pickerEl.setAttribute('aria-label', menu === 'treat' ? '간식 고르기' : '장난감 고르기');
-  pickerEl.replaceChildren(...PICKS[menu].map(([kind, ic, label]) => {
+  pickerEl.replaceChildren(...(RP.picks || PICKS)[menu].map(([kind, ic, label]) => {
     const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.dataset.pick = kind; b.tabIndex = -1;
     const i = document.createElement('span'); i.className = 'ic'; i.setAttribute('aria-hidden', 'true'); i.textContent = ic;
     b.append(i, label); return b;
@@ -4282,6 +4287,7 @@ function buildPark() {
   roomUpd.push((t) => { if (RP === ROOM_PARK) for (const g of parkSeats) g.rotation.x = 0.045 * Math.sin(t * 1.7 + g.userData.ph) + 0.02 * Math.sin(t * 0.63 + g.userData.ph * 2); });
   // ---------- 담이 (이 방의 강아지)
   DAMI = makeDami(); Object.assign(DAMI, { route, routeSee: navSee, collide, speedK: 1.2, talk: damiTalk, cheer: true, cheerT: 0 }); DAMI.root.visible = false; roomScene.add(DAMI.root); fitCurl(DAMI); // speedK: 핑키보다 발걸음이 가볍고 빠르다 · cheer: 혼자 놀 때 자주 혀를 빼고 헥헥
+  buildDamiProps(G, OB); // 담이의 간식 · 장난감 · 땅 파기
   // ---------- 다니는 길 · 냄새 맡는 곳
   const [cx, cz] = PARK.slide, [bx, bz] = PARK.bench, [wx, wz] = PARK.swing, slideEnd = cx + 2.75;
   Object.assign(ROOM_PARK, {
@@ -4307,19 +4313,21 @@ const ROOM_PARK = {
   lines: { gifts: ['미끄럼틀 냄새!', '누가 여기 왔었네?', '킁킁, 친구 냄새~'], table: ['벤치 밑에 뭐 있다!', '과자 냄새 났는데!', '여긴 없네~'], window: ['저기 비둘기다!', '바람 좋다~', '친구 오나?'], tableSniff: '뭐 떨어진 거 없나~', mid: ['오리야 안녕!', '여기도 친구 냄새!', '킁킁, 과자 냄새~'] },
   sniffMid: { x: PARK.riders[0][0] - 0.55, z: PARK.riders[0][1] + 0.3, fx: PARK.riders[0][0], fz: PARK.riders[0][1] }, // 냄새 맡기 가운데 들르는 곳: 오리 스프링 놀이기구 옆 (미끄럼틀 끝 → 오리 → 벤치, 멀리 돌지 않게)
   zoom: [[1.4, -0.9], [0.78, 0.18], [-0.48, 0.18], [-1.1, -0.9], [-0.48, -1.98], [0.78, -1.98]], // 우다다: 모래밭 가운데 빈 곳을 크게 도는 길
-  acts: (cd, d) => ({ worm: 0.55 * cd('worm', 80), zoom: (0.4 + 0.9 * d.play) * cd('zoom', 110) }), // 혼자 놀 때도 지렁이 댄스 · 우다다
-  roamActs: (tok) => ({ worm: () => wormDance(tok, true), zoom: () => zoomies(tok, true) }),
+  acts: (cd, d) => ({ worm: 0.55 * cd('worm', 80), zoom: (0.4 + 0.9 * d.play) * cd('zoom', 110), dig: (2.4 + 0.8 * d.play) * cd('dig', 35) }), // 혼자 놀 때도 지렁이 댄스 · 우다다 · 땅 파기(자주)
+  roamActs: (tok) => ({ worm: () => wormDance(tok, true), zoom: () => zoomies(tok, true), dig: () => damiDig(tok, true) }),
+  picks: { treat: [['brush', '🪥', '칫솔껌'], ['gator', '🐊', '악어껌']], play: [['ball', '🎾', '공'], ['bottle', '🧴', '패트병'], ['stick', '🪵', '나뭇가지'], ['duck', '🦆', '오둥이']] }, // 담이의 간식 · 장난감
+  treat: (tok, kind) => damiTreat(tok, kind), toys: (tok, kind) => damiToy(tok, kind), toyIdle: (tok) => damiToyIdle(tok), post: (d, dt, t) => damiPost(d, dt, t),
   bg: new THREE.Color(0xf3cf9f), fog: new THREE.Fog(0xf0cfa2, 15, 46), env: null,
-  sound: { surf: (x, z) => (inSand(x, z) ? 'rug' : 'grass'), cush: [99, 99, 0.3], bowl: [99, 99] }, // 모래: 사각사각 부드럽게 · 풀: 바스락
+  sound: { surf: (x, z) => (inSand(x, z) ? 'rug' : 'grass'), cush: [99, 99, 0.3], bowl: [99, 99], tail: { gap: 0.42, gain: -6 } }, // 모래: 사각사각 부드럽게 · 풀: 바스락 · 꼬리는 모래 위라 작게, 신나서 아주 빨리 흔들 때도 북치듯 하지 않게
 };
 // 핑키 방 프로필: 지금 값(핑키 방 그대로)을 떠 둔다 — 놀이터에 갔다 와도 똑같이 되돌린다
 Object.assign(ROOM_HOME, {
   HOME: { ...HOME }, BOWL: BOWL.clone(), EAT: { ...EAT }, SPOTS: { ...SPOTS }, CUSH: { x: CUSH.x, z: CUSH.z }, OBST: [...OBST], NAV: { ...NAV },
   THROW: THROW_SPOTS.map((q) => [...q]), HIDE: HIDE.map((q) => [...q]), WIN: WIN_PT.clone(), ROPE: { ...ROPE_REST }, AIM: CAM_AIM.clone(),
   bg: roomScene.background, fog: roomScene.fog, env: roomScene.environment,
-  sound: { surf: null, rug: [0.1, 0.8, 1.45, 0.95], cush: [CUSH.x, CUSH.z, CUSH.R], bowl: [BOWL.x, BOWL.z] },
+  sound: { surf: null, tail: null, rug: [0.1, 0.8, 1.45, 0.95], cush: [CUSH.x, CUSH.z, CUSH.R], bowl: [BOWL.x, BOWL.z] },
   name: $('#roomUI .title .name').textContent, place: $('#roomUI .title .place').textContent, hint: $('#hint').textContent, navLabel: actionsEl.getAttribute('aria-label'),
-  off: { worm: true, zoom: true }, wander: [-0.6, 0.2, 1.4, 1.0],
+  off: { worm: true, zoom: true, dig: true }, wander: [-0.6, 0.2, 1.4, 1.0],
   lines: { gifts: GIFT_LINES, table: TABLE_LINES, window: ['단풍 예쁘다…', '새 왔다…', '바람 냄새…'], tableSniff: '뭐 떨어진 거 없나' },
 });
 function setDog(d) { // 방에 있는 강아지를 바꿔 끼운다 (코에 묻는 요거트도 그 얼굴로) · 강아지마다 따로 기억하는 것(옆으로 앉은 쪽 · 로프 놀이 횟수 · 혼자 로프 갖고 놀 때까지)도 바꿔 든다
@@ -4356,7 +4364,621 @@ function useRoom(id) {
   snd('configure', R.sound);
   $('#roomUI .title .name').textContent = R.name; $('#roomUI .title .place').textContent = R.place; $('#hint').textContent = R.hint; actionsEl.setAttribute('aria-label', R.navLabel);
   for (const b of actionsEl.querySelectorAll('button[data-cmd]')) b.hidden = !!R.off[b.dataset.cmd];
+  actionsEl.classList.toggle('many', actionsEl.querySelectorAll('button[data-cmd]:not([hidden])').length > 10); // 놀이터: 단추가 11개 (땅 파기)
+  rope.g.visible = R !== ROOM_PARK; // 놀이터에는 로프가 없다 (담이의 장난감은 패트병 · 나뭇가지 · 오둥이)
   if (R === ROOM_PARK && !R.compiled) { R.compiled = true; try { renderer.compile(roomScene, roomCam); } catch (e) { /* 처음 그릴 때 맞춰진다 */ } } // 화면이 어두운 동안 미리 셰이더를 만들어 둔다
+}
+
+// ================================================================
+// 담이의 간식 · 장난감 · 땅 파기 (놀이터에서만): 칫솔껌 · 악어껌 / 패트병 · 나뭇가지 · 오둥이 쿠션 / 모래 파기
+// 소품은 놀이터를 처음 지을 때 같이 만든다 (핑키 방에는 아무것도 더하지 않는다). 좌표는 모두 parkG(= 월드) 기준
+// ================================================================
+let DP = null;
+const DUCK_OB = { x: -1.3, z: 0.55, r: 0.27, h: 0.2 }, DUCK_S = 0.87; // 오둥이 쿠션: 평소에는 돌아서 다니고, 갖고 놀거나 위에 올라가 있을 때만 비켜 준다
+const DUCK_SPOTS = [[-1.3, 0.55, Math.PI + 0.45], [-0.68, 0.62, Math.PI + 0.25]]; // 오둥이가 놓이는 자리 (x, z, 방향: 머리가 저쪽 — 보는 사람에게 얼굴이 바로 보이게) · 갖고 놀고 나면 다른 자리로 끌려가 있다
+const _ox = V3(), _oy = V3(), _oz = V3(), _om = new THREE.Matrix4(), _oq = new THREE.Quaternion();
+function orientProp(o, at, dir, up) { // o의 원점을 at에, +z를 dir 쪽으로, +y를 up 쪽으로
+  _oz.copy(dir).normalize(); _ox.crossVectors(up, _oz); if (_ox.lengthSq() < 1e-8) _ox.set(_oz.z, 0, -_oz.x); if (_ox.lengthSq() < 1e-8) _ox.set(1, 0, 0);
+  _ox.normalize(); _oy.crossVectors(_oz, _ox); _om.makeBasis(_ox, _oy, _oz); o.quaternion.setFromRotationMatrix(_om); o.position.copy(at);
+}
+const jawW = (x, y, z) => pinky.jaw.localToWorld(V3(x, y, z));
+const jawDir = (x, y, z) => V3(x, y, z).transformDirection(pinky.jaw.matrixWorld);
+const rootW = (x, y, z) => pinky.root.localToWorld(V3(x, y, z));
+const rootDir = (x, y, z) => V3(x, y, z).transformDirection(pinky.root.matrixWorld);
+// z0 → z1로 누운 납작한 캡슐 (단면 반지름: 옆 rx · 위아래 ry)
+function capZ(par, mat, z0, z1, rx, ry, x = 0, y = 0) { return add(par, new THREE.CapsuleGeometry(rx, Math.max(1e-4, z1 - z0 - 2 * rx), 4, 10), mat, [x, y, (z0 + z1) / 2], [Math.PI / 2, 0, 0], [1, 1, ry / rx]); }
+function capX(par, mat, x0, x1, r, y, z) { return add(par, new THREE.CapsuleGeometry(r, Math.max(1e-4, Math.abs(x1 - x0) - 2 * r), 4, 8), mat, [(x0 + x1) / 2, y, z], [0, 0, Math.PI / 2]); }
+// 씹을수록 짧아지는 간식: 원점 = 씹는 쪽 끝, +z로 길이 L. 조각마다 끝나는 z를 적어 두고, 씹은 만큼(cut) 앞에서부터 사라진다
+function chewProp(L, crumb, build, S = 1.45) { // S: 화면에서 읽히게 실제보다 조금 크게
+  const g = new THREE.Group(), inner = new THREE.Group(), parts = []; g.add(inner); g.visible = false; g.scale.setScalar(S);
+  build(inner, (m, z1) => { parts.push([m, z1]); return m; });
+  const T = { g, L, k: 1, crumb, state: 'none',
+    get len() { return L * S * T.k; },
+    setLen(k) { T.k = clamp(k, 0, 1); const cut = L * (1 - T.k); inner.position.z = -cut; for (const [m, z1] of parts) m.visible = z1 > cut + 0.004; },
+    reset() { T.setLen(1); }, hide() { g.visible = false; T.state = 'none'; T.reset(); },
+  };
+  return T;
+}
+function buildDamiProps(G, OB) {
+  DP = {};
+  // ---------- 칫솔껌: 주황색 반투명 덴탈껌 — 오돌토돌한 솔머리(4줄 × 5줄) · 가는 목 · 가운데가 갈라진 손잡이
+  const brushM = new THREE.MeshStandardMaterial({ color: 0xf0892c, roughness: 0.4, emissive: 0x8a4400, emissiveIntensity: 0.24 });
+  const nubM = new THREE.MeshStandardMaterial({ color: 0xffa040, roughness: 0.36, emissive: 0xa05400, emissiveIntensity: 0.26 }); // 솔 돌기는 조금 더 밝게 (한 알 한 알 떨어져 보이게)
+  const nub = new THREE.CapsuleGeometry(0.0033, 0.0085, 3, 8);
+  DP.brush = chewProp(0.132, M(0xe39a52), (g, part) => {
+    part(capZ(g, brushM, 0, 0.047, 0.0138, 0.0062), 0.047);
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 4; c++) { const z = 0.0072 + r * 0.0081; part(add(g, nub, nubM, [(c - 1.5) * 0.0071, 0.0118, z]), z + 0.003); }
+    part(capZ(g, brushM, 0.04, 0.073, 0.0066, 0.0047), 0.073);
+    part(capZ(g, brushM, 0.065, 0.096, 0.0098, 0.0056), 0.096);
+    for (const sx of [-1, 1]) part(capZ(g, brushM, 0.088, 0.13, 0.0043, 0.0052, sx * 0.0062), 0.13);
+    part(capZ(g, brushM, 0.12, 0.132, 0.006, 0.0054, 0, 0), 0.132);
+  });
+  // ---------- 악어껌: 올리브색 — 납작한 주둥이 · 눈두덩 · 등에 오돌토돌한 돌기 줄 · 뼈다귀 모양 네 발 · 가늘어지는 꼬리
+  const gatorM = M(0x6d6a38, { roughness: 0.62 });
+  DP.gator = chewProp(0.126, M(0x7b7746), (g, part) => {
+    part(add(g, SPH, gatorM, [0, 0.0058, 0.02], null, [0.0098, 0.0064, 0.021]), 0.04);
+    for (const sx of [-1, 1]) part(add(g, SPH, gatorM, [sx * 0.0058, 0.0108, 0.032], null, 0.0041), 0.036);
+    part(add(g, SPH, gatorM, [0, 0.0078, 0.063], null, [0.0168, 0.0098, 0.035]), 0.097);
+    for (let r = 0; r < 7; r++) for (let c = -1; c <= 1; c++) {
+      const z = 0.04 + r * 0.0078, q = 1 - ((z - 0.063) / 0.035) ** 2, x = c * 0.0078 * Math.sqrt(Math.max(q, 0.2));
+      const y = 0.0078 + 0.0098 * Math.sqrt(Math.max(0.05, q - (x / 0.0168) ** 2));
+      part(add(g, SPH, gatorM, [x, y, z], null, c ? 0.0033 : 0.0038), z + 0.003);
+    }
+    for (const [z, sx] of [[0.046, 1], [0.046, -1], [0.082, 1], [0.082, -1]]) { // 뼈다귀 모양 발: 짧은 다리 끝에 동그란 마디 둘
+      part(capX(g, gatorM, sx * 0.011, sx * 0.027, 0.0036, 0.004, z), z + 0.006);
+      for (const dz of [-0.0036, 0.0036]) part(add(g, SPH, gatorM, [sx * 0.0275, 0.0042, z + dz], null, 0.0042), z + 0.006);
+    }
+    const tail = (z0, z1, r0, r1, x0, x1) => { const m = add(g, cyl(r1, r0, z1 - z0, 10), gatorM, [(x0 + x1) / 2, 0.0062, (z0 + z1) / 2], [Math.PI / 2, 0, Math.atan2(x1 - x0, z1 - z0)], [1, 1, 0.62]); return m; };
+    part(tail(0.09, 0.11, 0.0088, 0.0062, 0, 0.0015), 0.11); part(tail(0.108, 0.126, 0.0062, 0.0022, 0.0015, 0.0055), 0.126);
+    for (const z of [0.096, 0.106, 0.115]) part(add(g, SPH, gatorM, [(z - 0.09) * 0.12, 0.0098 - (z - 0.096) * 0.12, z], null, 0.0029), z + 0.002);
+  });
+  for (const k of ['brush', 'gator']) { DP[k].g.traverse((o) => { if (o.isMesh) o.castShadow = false; }); G.add(DP[k].g); } // 작은 간식은 그림자 없이 (얼굴에 점점이 찍히지 않게)
+
+  // ---------- 패트병: 투명한 몸통(골 두 줄) · 파란 띠 상표 · 파란 뚜껑. 원점 = 가운데, +z = 뚜껑 쪽. 깨물수록 우그러진다
+  {
+    const prof = [[0, 0.003], [0.02, 0], [0.029, 0.004], [0.033, 0.014], [0.033, 0.05], [0.0302, 0.056], [0.033, 0.062], [0.033, 0.118], [0.0302, 0.123], [0.033, 0.128], [0.033, 0.14], [0.029, 0.157], [0.02, 0.172], [0.0138, 0.181], [0.0138, 0.19]].map(([r, y]) => new THREE.Vector2(r, y));
+    const bodyGeo = new THREE.LatheGeometry(prof, 28), labelGeo = new THREE.CylinderGeometry(0.0338, 0.0338, 0.042, 28, 6, true); labelGeo.translate(0, 0.09, 0);
+    const labelTex = canvasTex(256, 64, (x, w, h) => {
+      x.fillStyle = '#f3f7fa'; x.fillRect(0, 0, w, h); x.fillStyle = '#2b6fc8'; x.fillRect(0, 0, w, h * 0.34); x.fillRect(0, h * 0.86, w, h * 0.14);
+      x.fillStyle = '#5aa0e6'; x.beginPath(); x.moveTo(0, h * 0.34); for (let i = 0; i <= w; i += 8) x.lineTo(i, h * 0.34 + Math.sin(i / 18) * 5 + 5); x.lineTo(w, h * 0.34); x.fill();
+      x.fillStyle = 'rgba(40,60,90,.55)'; for (let i = 0; i < 6; i++) x.fillRect(20 + i * 40, h * 0.6, 22, 4);
+    });
+    const plastic = new THREE.MeshPhysicalMaterial({ color: 0xd6eaf4, roughness: 0.1, metalness: 0, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false, clearcoat: 1, clearcoatRoughness: 0.08, emissive: 0x2a3a44, emissiveIntensity: 0.35 });
+    const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); inner.rotation.x = Math.PI / 2; inner.position.z = -0.1025; g.visible = false; G.add(g); g.scale.setScalar(1.2); // 화면에서 읽히게 조금 크게
+    const body = add(inner, bodyGeo, plastic, null, null, null, false), label = add(inner, labelGeo, M(0xffffff, { map: labelTex, roughness: 0.5, side: THREE.DoubleSide }));
+    add(inner, cyl(0.0148, 0.0148, 0.017, 20), M(0x2a68cf, { roughness: 0.45 }), [0, 0.1965, 0]);
+    add(inner, new THREE.TorusGeometry(0.016, 0.0019, 6, 20), M(0x9fc4dc, { roughness: 0.3, transparent: true, opacity: 0.8 }), [0, 0.1835, 0], [Math.PI / 2, 0, 0]);
+    body.renderOrder = 2;
+    const geos = [bodyGeo, labelGeo].map((q) => ({ q, base: q.attributes.position.array.slice() }));
+    const B = DP.bottle = { g, kind: 'bottle', L: 0.246, rest: 0.0396, sym: true, state: 'none', crush: 0, dents: [], a0: 0, v: V3(), spinAx: V3(1, 0, 0), spin: 0,
+      shape() { // 우그러진 모양: 가운데가 납작해지고(a0 방향으로 눌림) 깨문 자리마다 움푹
+        for (const { q, base } of geos) {
+          const p = q.attributes.position.array;
+          for (let i = 0; i < p.length; i += 3) {
+            const x = base[i], y = base[i + 1], z = base[i + 2], a = Math.atan2(z, x), w = ss(0.012, 0.045, y) * ss(0.162, 0.136, y);
+            let f = 1 - B.crush * w * (0.3 + 0.24 * Math.cos(2 * (a - B.a0)));
+            for (const d of B.dents) f -= d.k * w * Math.exp(-(((y - d.y) / 0.02) ** 2) - (angDiff(a, d.a) / 0.6) ** 2);
+            p[i] = x * f; p[i + 2] = z * f; p[i + 1] = y;
+          }
+          q.attributes.position.needsUpdate = true; q.computeVertexNormals();
+        }
+      },
+      reset() { B.crush = 0; B.dents.length = 0; B.shape(); },
+      bite(k = 0.12) { B.dents.push({ y: 0.06 + Math.random() * 0.06, a: Math.random() * 6.28, k: 0.12 + Math.random() * 0.1 }); if (B.dents.length > 9) B.dents.shift(); B.crush = Math.min(0.62, B.crush + k); B.shape(); },
+    };
+    B.reset();
+  }
+  // ---------- 나뭇가지: 굽은 가지 끝이 Y자로 갈라지고 잔가지 하나 · 마른 잎 두 장. 원점 = 가운데, 길이 방향 +z (담이 머리보다 훨씬 길다)
+  {
+    const barkTex = canvasTex(64, 256, (x, w, h) => {
+      x.fillStyle = '#76563a'; x.fillRect(0, 0, w, h); const r = rng(21);
+      for (let i = 0; i < 170; i++) { x.strokeStyle = r() < 0.55 ? `rgba(44,28,16,${0.3 + r() * 0.4})` : `rgba(170,140,104,${0.2 + r() * 0.3})`; x.lineWidth = 1 + r() * 1.6; const px = r() * w, py = r() * h, l = 10 + r() * 40; x.beginPath(); x.moveTo(px, py); x.lineTo(px + (r() - 0.5) * 3, py + l); x.stroke(); }
+    }, [1, 2]);
+    const bark = M(0xffffff, { map: barkTex, roughness: 0.92 }), wood = M(0xcfae80, { roughness: 0.8 }), leafM = M(0xa8873a, { roughness: 0.8, side: THREE.DoubleSide });
+    const g = new THREE.Group(); g.visible = false; G.add(g);
+    const tube = (pts, r0, r1, n) => {
+      const c = new THREE.CatmullRomCurve3(pts.map((q) => V3(q[0], q[1], q[2]))), geo = new THREE.TubeGeometry(c, n, 1, 7, false), p = geo.attributes.position, R = 8;
+      for (let i = 0; i <= n; i++) { const u = i / n, o = c.getPointAt(u), r = lerp(r0, r1, u); for (let j = 0; j < R; j++) { const k = i * R + j; p.setXYZ(k, o.x + (p.getX(k) - o.x) * r, o.y + (p.getY(k) - o.y) * r, o.z + (p.getZ(k) - o.z) * r); } }
+      geo.computeVertexNormals(); add(g, geo, bark);
+      for (const [u, r] of [[0, r0], [1, r1]]) add(g, SPH, wood, c.getPointAt(u).toArray(), null, [r, r, r]); // 부러진 끝은 밝은 속살
+    };
+    tube([[0.004, 0.0, -0.28], [0.013, 0.003, -0.15], [-0.004, 0.0, -0.02], [0.008, -0.002, 0.12], [0.02, 0.002, 0.28]], 0.0155, 0.0095, 26);
+    tube([[0.0, 0.0, 0.05], [0.045, 0.002, 0.13], [0.092, 0.004, 0.2]], 0.0095, 0.0052, 10);
+    tube([[0.011, 0.0, -0.19], [-0.03, 0.003, -0.235], [-0.052, 0.004, -0.255]], 0.0048, 0.0026, 6);
+    for (const [x, z, a] of [[0.1, 0.212, 0.5], [0.083, 0.216, -0.7]]) add(g, SPH, leafM, [x, 0.006, z], [0, a, 0], [0.012, 0.0025, 0.024]);
+    DP.stick = { g, kind: 'stick', L: 0.56, rest: 0.0155, sym: true, state: 'none', v: V3(), spinAx: V3(0, 1, 0), spin: 0 };
+  }
+  // ---------- 오둥이 쿠션: 커다란 하얀 오리 인형 (서양배 모양 몸 · 주황 부리와 발 · 작은 날개 · 테두리가 까만 동그란 눈). 등을 대고 누워 얼굴이 하늘을 본다
+  {
+    const w = (t) => 0.17 - 0.026 * t, h = (t) => 0.09 + 0.01 * t + 0.055 * ss(-0.2, 0.75, t), top = (x, t) => h(t) * Math.pow(Math.max(0, 1 - t * t - (x / w(t)) ** 2), 0.32); // t: -1 = 발 쪽 … 1 = 머리 쪽 · 배가 넓고 판판한 쿠션, 머리 쪽은 도톰하게 솟아 얼굴이 앞(보는 사람 쪽)을 향한다
+    const geo = new THREE.SphereGeometry(1, 44, 30), p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) { const sx = p.getX(i), t = -p.getY(i), sz = p.getZ(i); /* t를 뒤집어야 면의 앞뒤가 바로 선다 (축을 바꿔 끼우면 거울상이 된다) */ const y = Math.sign(sz) * Math.pow(Math.abs(sz), 0.64) * h(t); p.setXYZ(i, sx * w(t), y < 0 ? Math.max(-0.052, y * 0.7) : y, t * 0.3); }
+    geo.computeVertexNormals();
+    const plush = new THREE.MeshPhysicalMaterial({ color: 0xf3f0ea, roughness: 0.95, sheen: 1, sheenColor: new THREE.Color(0xffffff), sheenRoughness: 0.55 }), orange = M(0xf09a1e, { roughness: 0.75 });
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); body.position.y = 0.056; G.add(g); g.scale.setScalar(DUCK_S); // 담이보다 조금 작게
+    add(body, geo, plush);
+    const nrm = (x, t) => { const e = 0.004, dx = (top(x + e, t) - top(x - e, t)) / (2 * e), dz = (top(x, t + e / 0.3) - top(x, t - e / 0.3)) / (2 * e); return V3(-dx, 1, -dz).normalize(); };
+    const onTop = (par, geoD, mat, x, t, lift, s, spin = 0) => { const m = add(par, geoD, mat, [x, top(x, t) + lift, t * 0.3], null, s, false); m.quaternion.setFromUnitVectors(V3(0, 0, 1), nrm(x, t)); m.rotateZ(spin); return m; };
+    const disc = new THREE.CircleGeometry(1, 28), blk = M(0x161412, { roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }), wht = M(0xffffff, { roughness: 0.45, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), pup = M(0x0c0b0a, { roughness: 0.3, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+    for (const sx of [-1, 1]) { // 눈: 까만 테 · 흰자 · 안쪽으로 몰린 눈동자
+      onTop(body, disc, blk, sx * 0.053, 0.47, 0.0015, 0.041); onTop(body, disc, wht, sx * 0.053, 0.47, 0.0026, 0.0348);
+      onTop(body, disc, pup, sx * 0.053 - sx * 0.009, 0.485, 0.0037, 0.0135);
+    }
+    onTop(body, SPH, orange, 0.004, 0.25, 0.005, [0.086, 0.03, 0.03], 0.12); // 부리: 넓적하고 둥근 막대 (살짝 기울었다) · 사진처럼 크게
+    for (const sx of [-1, 1]) { add(body, SPH, plush, [sx * 0.185, -0.03, 0.02], [0, sx * 0.35, sx * -0.25], [0.06, 0.02, 0.07]); add(body, SPH, orange, [sx * 0.07, -0.036, -0.3], [0, sx * 0.25, 0], [0.042, 0.018, 0.055]); } // 날개 · 발
+    const K = DP.duck = { g, body, x: DUCK_SPOTS[0][0], z: DUCK_SPOTS[0][1], yaw: DUCK_SPOTS[0][2], state: 'ground', busy: false, on: false, sq: 0, sqT: 0, lift: 0, tilt: 0, top,
+      place(x, z, yaw) { K.x = x; K.z = z; K.yaw = yaw; g.position.set(x, 0, z); g.rotation.set(0, yaw, 0); DUCK_OB.x = x; DUCK_OB.z = z; },
+      local: (x, y, z) => { g.updateMatrixWorld(); return g.localToWorld(V3(x, y, z)); },
+      put() { K.state = 'ground'; K.lift = 0; K.tilt = 0; const q = { x: g.position.x, z: g.position.z }; RP.clamp(q); K.place(q.x, q.z, K.yaw); },
+    };
+    K.place(K.x, K.z, K.yaw);
+    OB.push(DUCK_OB);
+  }
+  // ---------- 땅 파기: 뒤로 튀는 모래 알갱이 · 구덩이(가운데가 어둡고 둘레에 모래 턱) · 뒤에 쌓이는 모래 더미 (한참 지나면 흐려진다)
+  {
+    const N = 160, grains = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), M(0x8c6a42, { roughness: 1 }), N); grains.count = 0; grains.frustumCulled = false; grains.castShadow = false; G.add(grains);
+    DP.sand = { grains, list: [], N };
+    const holeTex = canvasTex(128, 128, (x, w) => { const q = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); q.addColorStop(0, 'rgba(40,27,15,.98)'); q.addColorStop(0.36, 'rgba(58,41,24,.95)'); q.addColorStop(0.62, 'rgba(92,68,42,.8)'); q.addColorStop(0.84, 'rgba(132,104,72,.38)'); q.addColorStop(1, 'rgba(160,130,95,0)'); x.fillStyle = q; x.fillRect(0, 0, w, w); }); // 가운데가 깊어 보이게 진하게 · 벽은 그늘진 젖은 모래
+    const ring = new THREE.TorusGeometry(1, 0.34, 6, 28), dome = new THREE.SphereGeometry(1, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    { const p = ring.attributes.position, r = rng(5); const bump = Array.from({ length: 29 }, () => 0.75 + 0.5 * r()); bump[28] = bump[0]; // 둘레 턱을 울퉁불퉁하게 (파낸 모래가 고르게 쌓이지 않는다)
+      for (let i = 0; i < p.count; i++) { const a = (Math.atan2(p.getY(i), p.getX(i)) + Math.PI * 2) % (Math.PI * 2), u = (a / (Math.PI * 2)) * 28, j = Math.floor(u), b = lerp(bump[j], bump[j + 1], u - j); if (p.getZ(i) > 0) p.setZ(i, p.getZ(i) * b); }
+      ring.computeVertexNormals(); }
+    DP.pits = [];
+    for (let i = 0; i < 3; i++) {
+      const g = new THREE.Group(); g.visible = false; G.add(g);
+      const hole = add(g, new THREE.CircleGeometry(1, 28), new THREE.MeshStandardMaterial({ map: holeTex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), [0, 0.0058, 0], [-Math.PI / 2, 0, 0], 0.001, false);
+      const rim = add(g, ring, M(0xbd9e73, { roughness: 1, transparent: true }), [0, 0.002, 0], [-Math.PI / 2, 0, 0], 0.001, false);
+      const pile = add(G, dome, M(0xbf9f72, { roughness: 1, transparent: true }), [0, 0.003, 0], null, 0.001, false); pile.visible = false;
+      DP.pits.push({ g, hole, rim, pile, k: 0, pk: 0, age: 99, x: 0, z: 0 });
+    }
+  }
+  POSES.dig = { bodyY: 0.255, bodyZ: 0.0, pitch: 0.3, roll: 0, yawOff: 0, gaze: 0, headPitch: 0.6, headTilt: 0, tail: -0.45, level: 1, free: 0, neck: 0.55, reach: 0.02, abd: [0.1, 0.1, 0, 0],
+    lean: [0.85, 0.85, 0.16, 0.16], paws: [P(0.068, 0.03, 0.27), P(-0.068, 0.03, 0.27), P(0.072, 0.03, -0.2), P(-0.072, 0.03, -0.2)] }; // 땅 파기: 앞을 낮추고 엉덩이는 든 채 고개를 숙여 구덩이를 본다 · 꼬리는 깃발처럼 세운다
+  // 매 프레임(담이를 움직이기 전): 간식을 보면 꼬리가 난리 — 빠르고 크게, 엉덩이까지 씰룩씰룩
+  roomUpd.push((t, dt) => {
+    if (RP !== ROOM_PARK) return;
+    const d = pinky; if (d.twag) { d.wagAmpT = 1.2; d.wagSpeedT = 33; }
+    d.wigS = (d.wigS || 0) + ((d.twag ? 1 : 0) - (d.wigS || 0)) * (1 - Math.exp(-6 * dt));
+    d.wig = d.wigS > 0.01 ? Math.sin(d.wagPhase + 0.7) * 0.17 * d.wigS : 0;
+  });
+}
+// 간식을 본 순간부터: 꼬리를 아주 빠르고 크게 흔들고 엉덩이가 같이 씰룩거린다 (끄면 보통 신난 꼬리로)
+function damiTreatWag(on) {
+  const d = pinky; if (!d.dami) return;
+  if (on) { d.twag = true; d.wagSpeed = Math.max(d.wagSpeed, 26); d.wagAmp = Math.max(d.wagAmp, 0.95); d.wagAmpT = 1.2; d.wagSpeedT = 33; }
+  else if (d.twag) { d.twag = false; d.wagAmpT = 0.6; d.wagSpeedT = 12; }
+}
+// ---------- 놀이터에서 매 프레임 (담이를 움직인 뒤 · 입에 문 것을 맞추기 전)
+const _sv2 = V3(), _sq2 = new THREE.Quaternion(), _sm = new THREE.Matrix4();
+function damiPost(d, dt, t) {
+  if (!DP) return;
+  if (d.wigS > 0.01) d.root.rotation.y += Math.sin(d.wagPhase + 1.4) * 0.04 * d.wigS; // 엉덩이 씰룩 (몸통이 꼬리 반대로 살짝 돈다)
+  if (d.dig > 0.05) { // 앞발이 모래에 닿을 때마다: 사각 · 모래가 뒤로 휙 · 구덩이가 깊어진다
+    const beat = (w, ph) => Math.floor((w * t + ph) / (Math.PI * 2)) !== Math.floor((w * (t - dt) + ph) / (Math.PI * 2));
+    for (const [sx, ph] of [[1, Math.PI], [-1, 0]]) if (beat(15, ph)) {
+      d.root.updateMatrixWorld(true); const at = rootW(sx * 0.05, 0.03, 0.24);
+      snd('digHit', [at.x, 0.02, at.z], -2 + 2 * d.dig);
+      for (let i = 0; i < 6; i++) { const lx = (Math.random() - 0.5) * 0.7 + sx * 0.35, lz = -(1.5 + Math.random() * 1.1), cy = Math.cos(d.yaw), sy = Math.sin(d.yaw); sandSpray(at.clone().add(V3(0, 0.02, 0)), V3(lx * cy + lz * sy, 1.2 + Math.random() * 1.0, -lx * sy + lz * cy)); }
+      const pit = DP.digPit; if (pit) { pit.k = Math.min(1, pit.k + 0.05 * d.dig); pit.pk = Math.min(1, pit.pk + 0.04 * d.dig); pit.age = 0; }
+    }
+  }
+  const S = DP.sand; let n = 0;
+  for (let i = S.list.length - 1; i >= 0; i--) {
+    const q = S.list[i]; q.age += dt;
+    if (q.p.y > 0.006) { q.v.y -= 9.8 * dt; q.p.addScaledVector(q.v, dt); if (q.p.y <= 0.006) { q.p.y = 0.006; q.age = Math.max(q.age, 0.9); } }
+    if (q.age > 1.15) { S.list.splice(i, 1); continue; }
+  }
+  for (const q of S.list) { if (n >= S.N) break; _sm.compose(q.p, _sq2.set(0, 0, 0, 1), _sv2.setScalar(q.s * (q.age > 0.85 ? Math.max(0.05, (1.15 - q.age) / 0.3) : 1))); S.grains.setMatrixAt(n++, _sm); } // 떨어진 알갱이는 금방 모래에 섞인다
+  S.grains.count = n; if (n) S.grains.instanceMatrix.needsUpdate = true;
+  for (const pit of DP.pits) { // 구덩이: 파는 동안 커지고, 40초쯤 지나면 바람에 메워지듯 흐려진다
+    if (pit.age > 52) { pit.g.visible = false; pit.pile.visible = false; continue; }
+    pit.age += dt; const f = 1 - ss(40, 52, pit.age), r = 0.03 + 0.06 * pit.k;
+    pit.g.visible = pit.k > 0.01; pit.hole.scale.setScalar(r * 1.5); pit.rim.scale.set(r * 1.6, r * 1.6, 0.016 + 0.034 * pit.k); pit.hole.material.opacity = f; pit.rim.material.opacity = f;
+    pit.pile.visible = pit.pk > 0.01; pit.pile.scale.set(0.052 + 0.117 * pit.pk, (0.01 + 0.046 * pit.pk) * f + 0.001, 0.045 + 0.091 * pit.pk); // 뒤에 쌓인 모래 더미 (눈에 띄게) pit.pile.material.opacity = f;
+  }
+  for (const k of ['bottle', 'stick']) if (DP[k].state === 'fly') stepFly(DP[k], dt);
+  const K = DP.duck, dist = Math.hypot(d.x - K.x, d.z - K.z);
+  if (K.busy || K.state === 'drag' || dist < 0.33) K.on = true; else if (dist >= 0.56) K.on = false; // 위에 올라가 있거나 갖고 노는 동안만 비켜 준다 (방석과 같다)
+  DUCK_OB.x = K.x; DUCK_OB.z = K.z; DUCK_OB.r = K.on ? -9 : 0.27;
+  K.sq += (K.sqT - K.sq) * (1 - Math.exp(-7 * dt)); K.body.scale.set(1 + 0.05 * K.sq, 1 - 0.2 * K.sq, 1 + 0.03 * K.sq); // 담이가 엎어지면 푹 꺼진다
+}
+function sandSpray(p, v) { const S = DP.sand; if (S.list.length >= S.N) S.list.shift(); S.list.push({ p, v, age: 0, s: 0.006 + Math.random() * 0.006 }); }
+// 던진 패트병 · 나뭇가지: 날아가 모래에 떨어져 한두 번 튀고 눕는다
+function stepFly(Q, dt) {
+  const g = Q.g, p = g.position; Q.v.y -= 9.8 * dt; p.addScaledVector(Q.v, dt);
+  _sq2.setFromAxisAngle(Q.spinAx, Q.spin * dt); g.quaternion.premultiply(_sq2);
+  const q = { x: p.x, z: p.z }; RP.clamp(q); if ((p.x - q.x) * Q.v.x > 0) Q.v.x *= -0.4; if ((p.z - q.z) * Q.v.z > 0) Q.v.z *= -0.4; // 놀이터 끝에 닿으면 튕겨 나온다 (손에서 떠날 때는 아직 바깥이다)
+  if (p.y < Q.rest + 0.004) {
+    p.y = Q.rest;
+    if (Math.abs(Q.v.y) > 1.1) { Q.v.y *= -0.3; Q.v.x *= 0.5; Q.v.z *= 0.5; Q.spin *= 0.35; snd('toyDrop', Q.kind, [p.x, 0.02, p.z]); say(Q.kind === 'bottle' ? '통' : '툭', () => Q.g.position.clone().add(V3(0, 0.1, 0)), 'small', 0.8); }
+    else layFlat(Q, p.x, p.z);
+  }
+}
+function layFlat(Q, x, z) { // 모래 위에 눕힌다 (길이 방향만 남긴다)
+  _sv2.set(0, 0, 1).applyQuaternion(Q.g.quaternion); _sv2.y = 0; if (_sv2.lengthSq() < 1e-6) _sv2.set(0, 0, 1);
+  const q = { x, z }; RP.clamp(q); orientProp(Q.g, V3(q.x, Q.rest, q.z), _sv2, _yAx); Q.state = 'ground'; Q.v.set(0, 0, 0);
+}
+// 다른 명령이 끼어들 때: 물고 있던 장난감은 그 자리에 떨어뜨리고, 먹던 간식은 치운다
+function damiRelease() {
+  if (!DP) return;
+  DP.brush.hide(); DP.gator.hide();
+  for (const k of ['bottle', 'stick']) { const Q = DP[k]; if (Q.state === 'held') { const p = Q.g.position; layFlat(Q, p.x, p.z); } }
+  if (DP.duck.state === 'drag') DP.duck.put();
+  DP.duck.sqT = 0; DP.digPit = null; pinky.dig = 0;
+}
+// 소품을 자리(모드)마다 다르게 둔다: poses[mode](C, D, U) → 원점 · +z 방향 · 위 방향. to(mode)는 지금 자리에서 부드럽게 옮겨 간다
+function propDriver(Q, poses) {
+  const C0 = V3(), D0 = V3(), U0 = V3(), C = V3(), D = V3(), U = V3();
+  const drv = { mode: null, k: 1, flip: false,
+    tick() {
+      if (!drv.mode) return;
+      poses[drv.mode](C, D, U); if (drv.flip) D.negate();
+      if (drv.k < 1) { C.lerpVectors(C0, C, drv.k); D.lerpVectors(D0, D, drv.k).normalize(); U.lerpVectors(U0, U, drv.k).normalize(); }
+      orientProp(Q.g, C, D, U);
+    },
+    async to(tok, mode, dur = 0.25) {
+      C0.copy(Q.g.position); D0.set(0, 0, 1).applyQuaternion(Q.g.quaternion); U0.set(0, 1, 0).applyQuaternion(Q.g.quaternion);
+      poses[mode](C, D, U); drv.flip = !!Q.sym && D.dot(D0) < 0; drv.mode = mode;
+      if (dur > 0) { drv.k = 0; await tween(tok, dur, (q) => { drv.k = ease(q); }); }
+      drv.k = 1;
+    },
+    stop() { drv.mode = null; },
+  };
+  return drv;
+}
+const camUp = () => V3(0, 1, 0);
+const gripPt = () => handR.rig.inner.localToWorld(V3(0, -0.055, 0.035));
+// 입에 문 것을 놓는다: 그 자리에서 떨어져 모래에 눕는다
+function dropFromMouth(Q, drv, vel = null) { drv.stop(); Q.state = 'fly'; Q.v.copy(vel || V3(0, 0, 0)); Q.spin = 1.5; Q.spinAx.set(0, 1, 0); }
+// 엄마가 손에 들고 보여 준 다음 던진다 (패트병 · 나뭇가지). 던질 곳: 담이에게서 조금 떨어진, 화면에 보이는 빈 자리
+const BOTTLE_TOSS = [[0.95, 0.4], [-0.6, 0.15], [0.9, -0.2], [-0.45, -0.35], [0.55, -0.45]]; // 패트병은 가까이 옆으로 (엄마 앞에서 덮치고 깨문다)
+async function momToss(tok, Q, drv, squeeze, near = false) {
+  Q.g.visible = true; Q.state = 'held';
+  let wind = 0;
+  const hold = () => roomCam.localToWorld(V3(0.16, -0.19 + wind * 0.14, -0.52 + wind * 0.2));
+  handR.want = { pos: hold, up: () => V3(0, -1, 0), curl: 0.6, rate: 6 };
+  await drv.to(tok, 'hand', 0);
+  setPose(pinky, 'stand', 6); pinky.face = 'cam'; pinky.lookFn = () => Q.g.position; pinky.earPerk = 1; pinky.wagAmpT = 0.9; pinky.wagSpeedT = 18;
+  await wait(tok, 0.7);
+  if (squeeze) for (let i = 0; i < 2; i++) { // 손으로 쥐어 바삭바삭 소리를 내 보인다
+    snd('crinkle', Q.g.position.toArray(), 2); bubble('바삭!', () => Q.g.position.clone().add(V3(0, 0.09, 0)), 'small', 0.7, i ? 50 : -50);
+    await tween(tok, 0.32, (q) => { Q.crush = 0.3 * Math.sin(Math.PI * q); Q.shape(); });
+    await wait(tok, 0.12);
+  }
+  say('컹컹!', headTop, '', 1.1); pinky.wagAmpT = 1.05; pinky.wagSpeedT = 24; pinky.paddle = 0.3; pinky.paddleFront = true;
+  await wait(tok, 0.6); pinky.paddle = 0; pinky.paddleFront = false;
+  await tween(tok, 0.35, (q) => { wind = ease(q); });
+  const spots = (near ? BOTTLE_TOSS : RP.THROW).filter(([x, z]) => Math.hypot(x - pinky.x, z - pinky.z) > (near ? 0.6 : 0.9) && Math.hypot(x - DP.duck.x, z - DP.duck.z) > 0.6);
+  const [tx, tz] = spots.length ? spots[Math.floor(Math.random() * spots.length)] : RP.THROW[0];
+  const from = Q.g.position.clone(), T = 0.8;
+  drv.stop(); Q.state = 'fly'; Q.v.set((tx - from.x) / T, (Q.rest - from.y + 0.5 * 9.8 * T * T) / T, (tz - from.z) / T); Q.spinAx.set(0.3, 1, 0.2).normalize(); Q.spin = 7;
+  handR.want = { pos: () => roomCam.localToWorld(V3(0.12, -0.08, -0.75)), up: () => V3(0, -1, 0), curl: 0.2, rate: 14 };
+  await wait(tok, 0.3); handR.want = null;
+  await until(tok, () => Q.state !== 'fly');
+}
+// 가서 문다: 길이 방향의 가운데를 옆에서 가로로 (나뭇가지 · 패트병)
+async function fetchProp(tok, Q, drv, line) {
+  if (Q.state === 'fly') await until(tok, () => Q.state !== 'fly');
+  const C = Q.g.position.clone(), ax = V3(0, 0, 1).applyQuaternion(Q.g.quaternion); ax.y = 0; ax.normalize();
+  const n = V3(-ax.z, 0, ax.x); if (n.dot(V3(pinky.x - C.x, 0, pinky.z - C.z)) < 0) n.negate();
+  const st = { x: C.x + n.x * 0.3, z: C.z + n.z * 0.3 }; collide(st);
+  setPose(pinky, 'stand', 7); pinky.walkSpeed = 1.0; pinky.lookFn = () => Q.g.position; pinky.wagAmpT = 0.9; pinky.wagSpeedT = 18; pinky.earPerk = 0.5;
+  if (line) say(line, headTop, 'soft', 1.3);
+  if (Math.hypot(pinky.x - st.x, pinky.z - st.z) > 0.06) await walkTo(tok, st.x, st.z);
+  pinky.walkSpeed = 0.5; pinky.face = { x: C.x, z: C.z }; await wait(tok, 0.3);
+  setPose(pinky, 'eat', 6); pinky.tgt.headPitch += 0.25; pinky.lookFn = null; await wait(tok, 0.45);
+  pinky.jawOpen = 0.32; await wait(tok, 0.15);
+  Q.state = 'held'; await drv.to(tok, 'carry', 0.28); pinky.jawOpen = toy.rest = 0.14; say('앙!', headTop, 'small', 0.9);
+  await wait(tok, 0.2);
+}
+// 물고 한 바퀴 신나게 (엄마 앞을 지나 돌아온다)
+async function proudLap(tok, speed = 0.78) {
+  setPose(pinky, 'stand', 6); pinky.walkSpeed = speed; pinky.tgt.headPitch = -0.18; pinky.earPerk = 0.5; pinky.wagAmpT = 1.0; pinky.wagSpeedT = 20;
+  const H = HOME, L = [[H.x + 0.62, H.z - 0.5], [H.x + 0.05, H.z - 1.05], [H.x - 0.6, H.z - 0.55]], s = Math.random() < 0.5 ? 1 : -1;
+  for (let i = 0; i < L.length; i++) { const [x, z] = L[s > 0 ? i : L.length - 1 - i]; const q = { x, z }; collide(q); Object.assign(pinky, { walkTarget: { x: q.x, z: q.z }, stuckT: 0, lastP: null, path: null, ghost: false, stuckN: 0, walkT: 0 }); await until(tok, () => !pinky.walkTarget || Math.hypot(pinky.x - q.x, pinky.z - q.z) < 0.3); }
+  pinky.walkSpeed = 0.5;
+}
+
+// ---------- 간식: 칫솔껌 · 악어껌 — 보는 순간 꼬리가 난리, 받아 물고 엎드려 앞발 사이에 끼우고 오독오독, 점점 짧아지다 꿀꺽
+const DTREAT = { brush: ['칫솔껌 결재 완료!', '이빨 반짝반짝~!', '양치 끝! 하나 더요?'], gator: ['악어 퇴치 완료!', '악어껌 최고예요!', '악어 한 마리 더요!'] };
+async function damiTreat(tok, kind) {
+  if (!DTREAT[kind]) kind = rot('dtreat', ['brush', 'gator']);
+  const T = DP[kind], ph = phoneK(), UP = V3(0, 1, 0);
+  toy.tok = tok; tok.cleanups.push(() => { toyOff(); damiTreatWag(false); T.hide(); });
+  { const [p, a] = kneelFor(HOME, 1.05 * ph, 0.54, 0.3); camTo(p, a); } // 조금 물러나 살짝 높게: 건네는 손에 입이 덜 가린다
+  T.reset(); T.g.visible = true; T.state = 'held'; toy.fill = 1;
+  const pinch = () => handR.rig.inner.localToWorld(V3(0.012, -0.034, 0.072));
+  let side = 1;
+  const drv = propDriver(T, {
+    hand(C, D, U) { const B = pinch(), v = mouthPt().sub(B); v.y -= 0.04; v.normalize(); C.copy(B).addScaledVector(v, T.len); D.copy(v).negate(); U.copy(UP); }, // 손잡이 끝을 쥐고 솔머리를 담이 쪽으로
+    jaw(C, D, U) { C.copy(jawW(0.008, -0.01, 0.05)); D.copy(jawDir(0.8, -0.15, 0.55)).normalize(); U.copy(jawDir(0, 1, 0)); }, // 입가에 비스듬히 물고 있다 (앞에서도 보이게)
+    paws(C, D, U) { // 어금니 쪽으로 물고, 반대쪽 끝은 두 앞발 사이 바닥에
+      C.copy(jawW(side * 0.012, -0.012, 0.05)); const B = rootW(0, 0.012, 0.37), l = T.len, d = B.distanceTo(C), dy = Math.max(C.y - 0.008, 0);
+      D.copy(B).sub(C).normalize();
+      if (d < l) { if (dy >= l) D.set(0, -1, 0); else { const hx = B.x - C.x, hz = B.z - C.z, hl = Math.hypot(hx, hz) || 1, hh = Math.sqrt(l * l - dy * dy); D.set((hx / hl) * hh, -dy, (hz / hl) * hh).normalize(); } }
+      U.copy(UP);
+    },
+  });
+  toy.tick = () => drv.tick();
+  let target = () => roomCam.localToWorld(ph > 1 ? V3(0.05, -0.03, -0.5) : V3(0.13, -0.045, -0.46));
+  handR.want = { pos: () => target(), up: () => V3(0, 1, 0), curl: 0.75, rate: 5 };
+  await drv.to(tok, 'hand', 0);
+  pinky.lookFn = () => T.g.position;
+  await wait(tok, 0.35);
+  damiTreatWag(true); pinky.earPerk = 1; say('컹컹!', headTop, '', 1.0); // 보자마자 꼬리가 난리
+  await wait(tok, 0.55); say('간식이다!', headTop, 'soft', 1.3);
+  if (Math.hypot(pinky.x - HOME.x, pinky.z - HOME.z) > 0.08) { setPose(pinky, 'stand', 7); pinky.walkSpeed = 1.0; await walkTo(tok, HOME.x, HOME.z); pinky.walkSpeed = 0.5; }
+  await sitAs(tok, 'front', 8);
+  pinky.paddle = 0.4; pinky.paddleFront = true; // 앞발을 동동 (빨리 주세요!)
+  await wait(tok, 1.1); pinky.paddle = 0; pinky.paddleFront = false;
+  // 내밀면 목을 빼 덥석
+  const v0 = toCamDir().negate().multiplyScalar(0.6).addScaledVector(camRight(), -0.8); v0.y = 0.1; v0.normalize(); // 옆(오른쪽 아래)에서 내민다: 손이 입을 가리지 않고 덥석 무는 게 보이게
+  target = () => { const m = mouthPt().addScaledVector(toCamDir(), 0.014); return m.addScaledVector(v0, -T.len).sub(pinch().sub(handR.pos)); };
+  handR.want.rate = 4; await wait(tok, 0.85);
+  pinky.tgt.reach = 0.035; pinky.tgt.neck += 0.12; await wait(tok, 0.3);
+  pinky.jawOpen = 0.3; await wait(tok, 0.22);
+  say('앙', headTop, 'small', 1); handR.want.curl = 0.3;
+  await drv.to(tok, 'jaw', 0.2); pinky.jawOpen = toy.rest = 0.12;
+  handR.want = null; pinky.lookFn = null; pinky.tgt.reach = 0; pinky.tgt.neck = POSES.sit.neck;
+  await wait(tok, 0.8);
+  // 엎드려 앞발 사이에 끼우고
+  setPose(pinky, 'down', 3); pinky.tgt.yawOff = -0.45; damiTreatWag(false); pinky.wagAmpT = 0.75; pinky.wagSpeedT = 16; pinky.earPerk = 0;
+  { const [p, a] = kneelAt(0.92 * ph, 0.3, 0.14); camTo(p, a, 1.8); }
+  await wait(tok, 1.25);
+  const pawPt = () => rootW(0, 0.012, 0.37);
+  let lookUp = 0; pinky.lookFn = () => pawPt().add(V3(0, 0.1 + lookUp, 0)).addScaledVector(toCamDir(), 0.08 + lookUp * 1.5);
+  pinky.tgt.gaze = 0.6; pinky.tgt.neck = 0.2; pinky.tgt.reach = 0.02;
+  pinky.tgt.paws[0].set(0.043, 0.04, 0.335); pinky.tgt.paws[1].set(-0.043, 0.04, 0.335);
+  await wait(tok, 0.45);
+  await drv.to(tok, 'paws', 0.35); toy.rest = 0; pinky.eyeOpen = 0.85;
+  const words = kind === 'brush' ? ['오독', '오독오독', '아작아작', '오독오독', '아작'] : ['아작', '와작와작', '오독오독', '아작아작', '와작'];
+  toy.chewKind = 'crunch';
+  for (let i = 0; i < 5; i++) {
+    side = i < 2 ? 1 : i < 4 ? -1 : 1; pinky.tiltT = side * 0.42; toy.chew = 1; toy.chewRate = 10; pinky.tgt.gaze = 0.6 + 0.05 * i; // 어금니로 옆으로 물고 씹는다 (짧아질수록 고개를 더 숙인다)
+    sideSay(words[i], i);
+    await wait(tok, 1.0);
+    T.setLen(T.k - 0.19); spawnCrumbs(jawW(0, -0.012, 0.05), 3, T.crumb);
+    if (i === 1 || i === 3) { toy.chewRate = 13; lookUp = 0.16; pinky.eyeOpen = 1; pinky.wagAmpT = 1.0; pinky.wagSpeedT = 22; await wait(tok, 0.55); pinky.eyeOpen = 0.85; pinky.wagAmpT = 0.75; pinky.wagSpeedT = 16; }
+    lookUp = 0; await wait(tok, 0.12);
+  }
+  // 마지막 한 입
+  T.g.visible = false; T.state = 'none'; drv.stop(); pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.tgt.neck = 0; pinky.tgt.reach = 0; pinky.tiltT = 0;
+  { const dp = poseFor('down', pinky); pinky.tgt.paws[0].copy(dp.paws[0]); pinky.tgt.paws[1].copy(dp.paws[1]); }
+  toy.chewRate = 15; await wait(tok, 0.7); toy.chew = 0; say('꿀꺽', headTop, 'small', 1.0);
+  await wait(tok, 0.5);
+  pinky.lick = 1; say('쩝쩝', headTop, '', 1.2, 80); await wait(tok, 0.95); pinky.lick = 0; // 긴 혀로 입가를 쓱
+  await sitAs(tok, 'front', 5);
+  damiTreatWag(true); pinky.tiltT = 0.25; pinky.earPerk = 0.5;
+  say(rot('dt:' + kind, DTREAT[kind]), headTop, 'soft', 2.0); heart();
+  await wait(tok, 1.9); damiTreatWag(false); pinky.tiltT = 0; pinky.earPerk = 0;
+  T.hide(); toyOff(); camHome();
+}
+
+// ---------- 패트병: 덮쳐서 앞발로 누르고 바삭바삭 깨물고, 물고 한 바퀴 돌다 엄마 앞에 내려놓는다
+async function bottlePlay(tok, solo = false) {
+  const B = DP.bottle;
+  toy.tok = tok;
+  const drv = propDriver(B, {
+    hand(C, D, U) { C.copy(gripPt()); D.copy(V3(1, 0.35, 0).transformDirection(roomCam.matrixWorld)); U.copy(camUp()); },
+    pin(C, D, U) { C.copy(rootW(0, B.rest * (1 - 0.35 * B.crush), 0.37)); D.copy(rootDir(1, 0, 0)); U.set(0, 1, 0); }, // 앞발 밑에 가로로
+    carry(C, D, U) { C.copy(jawW(0, -0.004, 0.048)); D.copy(jawDir(1, 0, 0)); U.copy(jawDir(0, 1, 0)); }, // 가운데를 가로로 문다
+  });
+  toy.tick = () => drv.tick(); tok.cleanups.push(() => { drv.stop(); });
+  if (B.state !== 'ground' && B.state !== 'fly') { if (solo) return; B.reset(); await momToss(tok, B, drv, true, true); }
+  else if (!solo) say('내 패트병!', headTop, 'soft', 1.3);
+  if (B.state === 'fly') await until(tok, () => B.state !== 'fly');
+  mark('toy:bottle');
+  // 덮치기: 가까이 가서 놀자 자세 → 폴짝
+  const C = B.g.position.clone(); let f = V3(C.x - pinky.x, 0, C.z - pinky.z); const fl = f.length() || 1; f.multiplyScalar(1 / fl);
+  setPose(pinky, 'stand', 7); pinky.walkSpeed = 1.05; pinky.lookFn = () => B.g.position; pinky.wagAmpT = 0.95; pinky.wagSpeedT = 19; pinky.earPerk = 0.6;
+  if (fl > 0.75) { const q = { x: C.x - f.x * 0.62, z: C.z - f.z * 0.62 }; collide(q); await walkTo(tok, q.x, q.z); }
+  pinky.walkSpeed = 0.5; pinky.face = { x: C.x, z: C.z }; await wait(tok, 0.25);
+  setPose(pinky, 'bow', 8); pinky.wagAmpT = 1.0; pinky.wagSpeedT = 22; if (!solo) say('컹!', headTop, '', 0.9); await wait(tok, 0.65);
+  f = V3(C.x - pinky.x, 0, C.z - pinky.z).normalize();
+  const p0 = { x: pinky.x, z: pinky.z }, p1 = { x: C.x - f.x * 0.37, z: C.z - f.z * 0.37 }; collide(p1);
+  setPose(pinky, 'stand', 10); pinky.liftT = 0.06; pinky.lookFn = null; pinky.face = { x: C.x, z: C.z }; tok.hop = true; // 폴짝 (점검용 표시: 이때는 떠 있는 게 맞다)
+  await tween(tok, 0.32, (q) => { const e = ease(q); pinky.x = lerp(p0.x, p1.x, e); pinky.z = lerp(p0.z, p1.z, e); });
+  pinky.liftT = 0; setPose(pinky, 'down', 7); pinky.tgt.paws[0].set(0.052, 0.062, 0.35); pinky.tgt.paws[1].set(-0.052, 0.062, 0.35);
+  B.state = 'held'; B.a0 = Math.PI / 2; await drv.to(tok, 'pin', 0.3);
+  snd('crinkle', B.g.position.toArray(), 0);
+  if (!solo) { const fw = rootDir(0, 0, 1), tc = V3(CAM_POS.x - pinky.x, 0, CAM_POS.z - pinky.z).normalize(), dd = fw.clone().add(tc).normalize(), ph = phoneK() ** 2; camTo(V3(pinky.x + dd.x * 1.25 * ph, 0.55 * Math.sqrt(ph), pinky.z + dd.z * 1.25 * ph), V3(pinky.x + fw.x * 0.12, 0.1, pinky.z + fw.z * 0.12), 1.8); } // 덮친 담이를 앞쪽 비스듬히에서 본다 (세로 화면은 몸이 잘리지 않게 더 멀리)
+  // 바삭바삭 깨문다 (고개를 숙여 병 가운데를 물고 짧게 흔든다)
+  const biteAt = () => B.g.position.clone().add(V3(0, 0.01, 0)); pinky.lookFn = biteAt; pinky.tgt.gaze = 0.9; pinky.tgt.neck = 0.45; pinky.tgt.reach = 0.045; pinky.eyeOpen = 0.85;
+  toy.chewKind = 'bottle'; toy.chewRate = 8;
+  const words = ['바삭바삭', '와그작', '바삭!', '바삭바삭'];
+  for (let i = 0; i < (solo ? 3 : 4); i++) {
+    toy.chew = 1; sideSay(words[i], i); toy.shake = 0.4; toy.shakeHz = 4.2; toy.shakeAmp = 0.6; pinky.tiltT = (i % 2 ? -1 : 1) * 0.25;
+    await wait(tok, 0.85); B.bite(); toy.shake = 0; toy.chew = 0;
+    if (i === 1) { pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.tgt.neck = 0.2; pinky.tiltT = 0.2; pinky.wagAmpT = 1; pinky.wagSpeedT = 20; await wait(tok, 0.5); pinky.lookFn = biteAt; pinky.tgt.gaze = 0.9; pinky.tgt.neck = 0.45; } // 신나서 한 번 쳐다보고
+    await wait(tok, 0.15);
+  }
+  pinky.tiltT = 0; pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.tgt.neck = 0; pinky.tgt.reach = 0; tok.hop = false;
+  // 물고 일어나 한 바퀴
+  setPose(pinky, 'stand', 5); await wait(tok, 0.55);
+  pinky.jawOpen = 0.3; await wait(tok, 0.12); await drv.to(tok, 'carry', 0.28); pinky.jawOpen = toy.rest = 0.15;
+  bubble('내 패트병~', headTop, 'soft', 1.3);
+  if (!solo) camHome();
+  await proudLap(tok, 0.72);
+  if (!solo) { await walkTo(tok, HOME.x, HOME.z); await sitAs(tok, 'front', 6); await wait(tok, 0.5); }
+  else { pinky.face = 'cam'; await wait(tok, 0.6); }
+  pinky.jawOpen = 0.32; toy.rest = 0; dropFromMouth(B, drv, toCamDir().multiplyScalar(0.45).add(V3(0, 0.3, 0))); await wait(tok, 0.25); pinky.jawOpen = 0;
+  await until(tok, () => B.state !== 'fly');
+  pinky.tiltT = 0.25; pinky.earPerk = 0.6; pinky.wagAmpT = 0.95; pinky.wagSpeedT = 19;
+  say(solo ? '바삭바삭 최고!' : rot('bottle', ['또 던져 주세요!', '패트병 접수 완료!', '바삭바삭 최고!']), headTop, 'soft', 1.9);
+  await wait(tok, 2.0); pinky.tiltT = 0; pinky.earPerk = 0; toyOff();
+}
+
+// ---------- 나뭇가지: 입에 가로로 물고(머리보다 훨씬 넓다) 의기양양하게 한 바퀴, 엎드려 앞발 사이에 끼우고 와그작
+async function stickPlay(tok, solo = false) {
+  const S = DP.stick; let side = 1;
+  toy.tok = tok;
+  const drv = propDriver(S, {
+    hand(C, D, U) { const gp = gripPt(), d = V3(0.6, 0.75, -0.2).transformDirection(roomCam.matrixWorld); C.copy(gp).addScaledVector(d, S.L * 0.3); D.copy(d); U.copy(V3(0, 0, 1).transformDirection(roomCam.matrixWorld)); }, // 한쪽 끝 가까이를 쥐고 비스듬히 세워 보인다
+    carry(C, D, U) { C.copy(jawW(0, -0.004, 0.044)); D.copy(jawDir(1, 0, 0)); U.copy(jawDir(0, 1, 0)); },
+    paws(C, D, U) { // 한쪽 끝을 어금니로 물고, 나머지는 앞발 사이로 비스듬히 바닥에
+      const E = jawW(side * 0.01, -0.01, 0.05), B = rootW(0.5 * side, 0.0155, 0.36), dy = Math.max(E.y - 0.0125, 0), hx = B.x - E.x, hz = B.z - E.z, hl = Math.hypot(hx, hz) || 1, half = S.L;
+      const hh = Math.sqrt(Math.max(1e-6, half * half - Math.min(dy, half * 0.95) ** 2)); D.set((hx / hl) * hh, -Math.min(dy, half * 0.95), (hz / hl) * hh).normalize();
+      C.copy(E).addScaledVector(D, S.L * 0.5); U.set(0, 1, 0);
+    },
+  });
+  toy.tick = () => drv.tick(); tok.cleanups.push(() => { drv.stop(); });
+  if (S.state !== 'ground' && S.state !== 'fly') { if (solo) return; await momToss(tok, S, drv, false); }
+  mark('toy:stick');
+  await fetchProp(tok, S, drv, S.state === 'ground' && !solo && clock - tok.t0 < 1 ? '내 나뭇가지!' : null);
+  // 의기양양: 고개를 들고 꼬리를 세워 한 바퀴 (가지가 머리보다 훨씬 넓다)
+  setPose(pinky, 'stand', 5); pinky.tgt.headPitch = -0.2; pinky.earPerk = 0.6; pinky.wagAmpT = 1.0; pinky.wagSpeedT = 20; pinky.face = 'cam';
+  await wait(tok, 0.5); bubble(solo ? '득템!' : '나뭇가지 득템!', headTop, 'soft', 1.4); await wait(tok, 0.6);
+  await proudLap(tok, 0.75);
+  if (!solo) bubble('비켜요~ 담과장 지나갑니다!', headTop, 'soft', 1.6);
+  // 엄마 앞에 와서 엎드려 질겅질겅
+  const H = { x: HOME.x + (solo ? 0.3 : 0.05), z: HOME.z - (solo ? 0.6 : 0.12) }; collide(H);
+  setPose(pinky, 'stand', 6); pinky.walkSpeed = 0.6; await walkTo(tok, H.x, H.z); pinky.walkSpeed = 0.5;
+  pinky.face = 'cam'; pinky.tgt.yawOff = -0.5; await wait(tok, 0.5);
+  setPose(pinky, 'down', 4); pinky.tgt.yawOff = -0.5; pinky.wagAmpT = 0.6; pinky.wagSpeedT = 12; pinky.earPerk = 0;
+  if (!solo) { const [p, a] = kneelAt(1.25 * phoneK(), 0.5, 0.14); camTo(p, a, 1.8); }
+  await wait(tok, 1.2);
+  side = 1; await drv.to(tok, 'paws', 0.45); toy.rest = 0;
+  pinky.tgt.paws[0].set(0.05, 0.04, 0.34); pinky.lookFn = () => rootW(0.06, 0.1, 0.42); pinky.tgt.gaze = 0.65; pinky.tgt.neck = 0.18; pinky.tgt.reach = 0.02; pinky.eyeOpen = 0.85;
+  toy.chewKind = 'wood'; toy.chewRate = 8;
+  const words = ['와그작', '아작아작', '질겅질겅', '와그작'];
+  for (let i = 0; i < (solo ? 3 : 4); i++) {
+    toy.chew = 1; sideSay(words[i], i); pinky.tiltT = 0.4;
+    await wait(tok, 1.05); spawnCrumbs(jawW(0, -0.01, 0.05), 2, DP.stickCrumb || (DP.stickCrumb = M(0x8a6a48)));
+    if (i === 1) { toy.chew = 0; pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.tiltT = 0.15; pinky.wagAmpT = 0.95; pinky.wagSpeedT = 19; await wait(tok, 0.6); pinky.lookFn = () => rootW(0.06, 0.1, 0.42); pinky.tgt.gaze = 0.65; pinky.wagAmpT = 0.6; pinky.wagSpeedT = 12; }
+  }
+  toy.chew = 0; pinky.tiltT = 0; pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.tgt.neck = 0; pinky.tgt.reach = 0;
+  { const dp = poseFor('down', pinky); pinky.tgt.paws[0].copy(dp.paws[0]); }
+  drv.stop(); layFlat(S, S.g.position.x, S.g.position.z); // 앞발 앞에 내려놓는다
+  await wait(tok, 0.4);
+  pinky.earPerk = 0.5; pinky.tiltT = 0.22; pinky.wagAmpT = 0.85; pinky.wagSpeedT = 17;
+  say(solo ? '내 나뭇가지!' : rot('stick', ['이건 담과장 거예요!', '최고의 나뭇가지!', '아무한테도 안 줘요!']), headTop, 'soft', 1.9);
+  await wait(tok, 2.0); pinky.tiltT = 0; pinky.earPerk = 0; toyOff(); if (!solo) camHome();
+}
+
+// ---------- 오둥이 쿠션: 날개를 물고 뒷걸음질로 질질 끌고 와서 흔들어 혼내 주고(괜히 센 척), 털썩 엎어져 턱을 괴고 쉰다
+async function duckPlay(tok, solo = false) {
+  const K = DP.duck, ph = phoneK();
+  toy.tok = tok; K.busy = true;
+  tok.cleanups.push(() => { K.busy = false; K.sqT = 0; if (K.state === 'drag') K.put(); pinky.liftT = 0; pinky.shuffle = 0; });
+  mark('toy:duck');
+  const nI = Math.hypot(DUCK_SPOTS[0][0] - K.x, DUCK_SPOTS[0][1] - K.z) > Math.hypot(DUCK_SPOTS[1][0] - K.x, DUCK_SPOTS[1][1] - K.z) ? 0 : 1;
+  const [nx, nz, nyaw] = DUCK_SPOTS[nI], mv = { x: nx - K.x, z: nz - K.z }, dist = Math.hypot(mv.x, mv.z);
+  const xw = V3(Math.cos(K.yaw), 0, -Math.sin(K.yaw)), sideOf = Math.sign(xw.x * mv.x + xw.z * mv.z) || 1; // 끌고 갈 쪽 날개를 문다 (뒷걸음질로 똑바로 당기게)
+  if (!solo) { const [p, a] = kneelFor({ x: (K.x + nx) / 2, z: (K.z + nz) / 2 }, 1.75 * ph, 0.95, 0.12); camTo(p, a, 1.6); }
+  setPose(pinky, 'stand', 6); pinky.lookFn = () => K.g.position; pinky.wagAmpT = 0.95; pinky.wagSpeedT = 19; pinky.earPerk = 0.6;
+  say(solo ? '오둥아~' : '오둥아~!', headTop, 'soft', 1.3);
+  const grabL = V3(sideOf * 0.235, 0.026, 0.02), w0 = K.local(grabL.x, grabL.y, grabL.z), out = xw.clone().multiplyScalar(sideOf);
+  const st = { x: w0.x + out.x * 0.3, z: w0.z + out.z * 0.3 };
+  pinky.walkSpeed = 0.9; await walkTo(tok, st.x, st.z); pinky.walkSpeed = 0.5;
+  pinky.face = { x: w0.x, z: w0.z }; await wait(tok, 0.4);
+  setPose(pinky, 'eat', 6); pinky.tgt.headPitch -= 0.1; pinky.lookFn = null; await wait(tok, 0.4);
+  pinky.jawOpen = 0.32; await wait(tok, 0.15); pinky.jawOpen = toy.rest = 0.12; say('앙!', headTop, 'small', 0.9);
+  // 끌기: 뒷걸음질 치며 당긴다 (오둥이는 문 날개를 따라 질질, 한쪽이 들린다)
+  K.state = 'drag'; K.lift = 0; const off = V3(), yawA = K.yaw; let yawNow = K.yaw, wob = 0;
+  toy.tick = () => {
+    if (K.state !== 'drag') return;
+    const m = jawW(0, -0.01, 0.05), yaw = yawNow + wob, th = clamp(Math.atan2(m.y - 0.03, 0.42), 0, 0.5) * K.lift;
+    off.set(grabL.x * Math.cos(th), 0, grabL.z).multiplyScalar(DUCK_S).applyAxisAngle(_yAx, yaw);
+    K.x = m.x - off.x; K.z = m.z - off.z; K.yaw = yaw; K.g.position.set(K.x, 0.2 * Math.sin(th), K.z); K.g.rotation.set(0, yaw, sideOf * th);
+  };
+  setPose(pinky, 'tug', 5); pinky.tgt.gaze = 0.4; await tween(tok, 0.4, (q) => { K.lift = 0.6 * q; });
+  if (dist > 0.05) {
+    const yaw0 = pinky.yaw, from = { x: pinky.x, z: pinky.z };
+    pinky.face = null; pinky.shuffle = 0.9; bubble('영차영차!', headTop, 'soft', 1.4);
+    await tween(tok, Math.max(1.2, dist / 0.3), (q) => { const e = ease(q); pinky.x = from.x + mv.x * e; pinky.z = from.z + mv.z * e; pinky.yaw = yaw0; yawNow = yawA + angDiff(yawA, nyaw) * e; K.lift = 0.45 + 0.35 * Math.sin(q * Math.PI * 7) ** 2; });
+    pinky.shuffle = 0;
+  }
+  // 흔들어 혼내 주기 (괜히 센 척)
+  setPose(pinky, 'stand', 6); pinky.tgt.headPitch = -0.1; pinky.face = { x: K.x, z: K.z }; await tween(tok, 0.3, (q) => { K.lift = lerp(0.6, 1, q); });
+  say('으르르~!', headTop, '', 1.1); toy.shake = 1; toy.shakeHz = 3.2; toy.shakeAmp = 0.85;
+  await tween(tok, 1.5, () => { wob = pinky.hp.rotation.y * 0.5; });
+  toy.shake = 0; wob = 0; await wait(tok, 0.3);
+  if (!solo) say('내가 이겼다!', headTop, 'soft', 1.3);
+  pinky.jawOpen = 0.3; toy.rest = 0; toy.tick = null; K.put(); await wait(tok, 0.3); pinky.jawOpen = 0;
+  // 털썩: 오둥이 배 위로 폴짝 올라가 엎드려 턱을 괸다 (엄마 쪽을 보며)
+  const ax = V3(Math.sin(K.yaw), 0, Math.cos(K.yaw)), top = { x: K.x + ax.x * 0.05, z: K.z + ax.z * 0.05 };
+  const n = V3(pinky.x - top.x, 0, pinky.z - top.z); n.multiplyScalar(1 / (n.length() || 1));
+  const edge = { x: top.x + n.x * 0.45, z: top.z + n.z * 0.45 };
+  setPose(pinky, 'stand', 6); pinky.walkSpeed = 0.5; if (Math.hypot(pinky.x - edge.x, pinky.z - edge.z) > 0.05) await walkTo(tok, edge.x, edge.z);
+  pinky.face = { x: top.x, z: top.z }; await wait(tok, 0.45);
+  const p0 = { x: pinky.x, z: pinky.z }; pinky.liftT = 0.085;
+  await tween(tok, 0.45, (q) => { const e = ease(q); pinky.x = lerp(p0.x, top.x, e); pinky.z = lerp(p0.z, top.z, e); });
+  setPose(pinky, 'down', 5); pinky.face = 'cam'; pinky.tgt.yawOff = -0.35; pinky.wagAmpT = 0.7; pinky.wagSpeedT = 14; K.sqT = 1;
+  snd('sfx', 'flop_soft', { pos: [K.x, 0.08, K.z], gain: -1, why: 'flop on duck' }); bubble('털썩', headTop, 'small', 0.9);
+  await wait(tok, 0.7);
+  pinky.tgt.headPitch = 0.62; pinky.tgt.gaze = 0.15; pinky.tgt.neck = 0.25; pinky.eyeOpen = 0.5; pinky.wagAmpT = 0.4; pinky.wagSpeedT = 6; // 턱을 오둥이 배에 괴고 눈을 반쯤 감는다
+  await tween(tok, 2.0, (k) => { pinky.sigh = Math.sin(Math.PI * k) ** 2; }); pinky.sigh = 0;
+  say(rot('duck', ['푹신해요~', '오둥이 최고~', '여기가 명당이에요~']), headTop, 'soft', 1.8); if (!solo) heart();
+  await wait(tok, solo ? 4.0 : 2.4);
+  // 일어나 내려온다
+  pinky.eyeOpen = 1; K.sqT = 0; setPose(pinky, 'stand', 4); await wait(tok, 0.7);
+  const cr = camRight(), sg = (HOME.x - top.x) * cr.x + (HOME.z - top.z) * cr.z > 0 ? 1 : -1, off2 = { x: top.x + cr.x * sg * 0.64, z: top.z + cr.z * sg * 0.64 }; RP.clamp(off2); // 옆으로 내려온다 (엄마 쪽으로)
+  pinky.liftT = 0; await walkTo(tok, off2.x, off2.z);
+  K.busy = false; pinky.face = 'cam'; pinky.wagAmpT = 0.7; pinky.wagSpeedT = 14; await wait(tok, 0.5);
+  toyOff(); if (!solo) camHome();
+}
+
+// ---------- 땅 파기: 킁킁 → 파바박(앞발을 번갈아 빠르게, 모래가 뒤로 휙휙) → 구덩이에 코 박고 킁킁 → 가끔 뭘 찾는다 → 에취 → 뿌듯
+async function damiDig(tok, solo = false) {
+  mark('dig');
+  let S = null;
+  if (solo) { // 지금 있는 곳 근처 모래밭의 빈 자리
+    for (let i = 0; i < 8 && !S; i++) { const q = { x: pinky.x + (Math.random() - 0.5) * 1.4, z: pinky.z + (Math.random() - 0.5) * 1.4 }; if (inSand(q.x, q.z) && navFree(q.x, q.z, 0.4) && q.z < 1.6) S = q; }
+    if (!S) S = { x: pinky.x, z: pinky.z };
+  } else S = { x: HOME.x - 0.1, z: HOME.z - 0.42 };
+  const s = rot('digside', [1, -1]), c = roomCam.position, cy = Math.atan2(c.x - S.x, c.z - S.z), yaw = cy + s * 1.2; // 옆모습: 뒤로 튀는 모래가 보이게
+  setPose(pinky, 'stand', 6); pinky.walkSpeed = 0.8; pinky.tgt.gaze = 0; pinky.tgt.headPitch = 0.5; pinky.sniff = 0.5;
+  if (Math.hypot(pinky.x - S.x, pinky.z - S.z) > 0.06) await walkTo(tok, S.x, S.z);
+  pinky.walkSpeed = 0.5; pinky.face = { x: pinky.x + Math.sin(yaw), z: pinky.z + Math.cos(yaw) };
+  { const t0 = clock; await until(tok, () => Math.abs(angDiff(pinky.yaw, yaw)) < 0.15 || clock - t0 > 1.2); }
+  if (!solo) { const [p, a] = kneelFor({ x: pinky.x, z: pinky.z }, 1.65 * phoneK(), 0.8, 0.16); camTo(p, a, 1.8); }
+  setPose(pinky, 'eat', 6); pinky.sniff = 1; say('킁킁', noseTip); await wait(tok, 0.9);
+  pinky.sniff = 0; setPose(pinky, 'stand', 7); pinky.earPerk = 0.7; pinky.tgt.gaze = 0; pinky.tgt.headPitch = 0.45; say('여기다!', headTop, 'soft', 1.0); await wait(tok, 0.5);
+  // 구덩이 (가장 오래된 것을 다시 쓴다)
+  const pit = DP.pits.reduce((a, b) => (b.age > a.age ? b : a)), hp = rootW(0, 0, 0.29), bp = rootW(0, 0, -0.5);
+  Object.assign(pit, { k: 0, pk: 0, age: 0, x: hp.x, z: hp.z }); pit.g.position.set(hp.x, 0, hp.z); pit.pile.position.set(bp.x, 0.003, bp.z); pit.pile.rotation.y = pinky.yaw; DP.digPit = pit;
+  tok.cleanups.push(() => { pinky.dig = 0; DP.digPit = null; });
+  const bout = async (sec, line) => {
+    setPose(pinky, 'dig', 8); pinky.wagAmpT = 1.0; pinky.wagSpeedT = 20; pinky.earPerk = -0.2; pinky.eyeOpen = 0.8;
+    await wait(tok, 0.25); pinky.dig = 1; say(line, headTop, '', 1.1);
+    await wait(tok, sec); pinky.dig = 0;
+    setPose(pinky, 'eat', 6); pinky.tgt.headPitch += 0.35; pinky.tgt.reach = 0.1; pinky.sniff = 1; pinky.eyeOpen = 1; say('킁킁', noseTip); // 구덩이에 코를 박고
+    await wait(tok, 0.95); pinky.sniff = 0;
+  };
+  await bout(2.3, '파바박!');
+  await bout(solo ? 1.4 : 1.8, '파바바박!');
+  DP.digPit = null;
+  // 무엇이 나왔나
+  const r = brain.force.dig ?? Math.random(), stick = DP.stick;
+  if (r < 0.35) { // 간식 조각이 묻혀 있었다
+    mark('dig:treat'); setPose(pinky, 'stand', 6); pinky.earPerk = 1; bubble('!', headTop, '', 0.9); await wait(tok, 0.3);
+    const dr = dropTreat(pit.x, pit.z, 'bit'); await findTreat(tok, dr);
+  } else if (r < 0.6 && stick.state === 'none') { // 나뭇가지가 나왔다
+    mark('dig:stick'); stick.g.visible = true; orientProp(stick.g, V3(pit.x, 0.002, pit.z), rootDir(1, 0, 0.35), _yAx); stick.state = 'ground';
+    const drv = propDriver(stick, { carry(C, D, U) { C.copy(jawW(0, -0.004, 0.044)); D.copy(jawDir(1, 0, 0)); U.copy(jawDir(0, 1, 0)); } });
+    toy.tok = tok; toy.tick = () => drv.tick(); tok.cleanups.push(() => { drv.stop(); });
+    bubble('!', headTop, '', 0.9); pinky.earPerk = 1; await wait(tok, 0.4);
+    pinky.jawOpen = 0.3; await wait(tok, 0.15); stick.state = 'held'; await drv.to(tok, 'carry', 0.45); pinky.jawOpen = toy.rest = 0.14;
+    setPose(pinky, 'stand', 4); pinky.tgt.headPitch = -0.25; pinky.face = 'cam'; pinky.wagAmpT = 1.0; pinky.wagSpeedT = 21; pinky.earPerk = 0.6;
+    await wait(tok, 0.6); bubble('나뭇가지 발굴!', headTop, 'soft', 1.6); await wait(tok, 1.6);
+    pinky.jawOpen = 0.3; toy.rest = 0; dropFromMouth(stick, drv, rootDir(0.6, 0.4, 0.2)); await wait(tok, 0.3); pinky.jawOpen = 0; toyOff();
+    await until(tok, () => stick.state !== 'fly');
+  } else { setPose(pinky, 'stand', 6); pinky.tiltT = 0.2; say('여긴 없네~', headTop, 'soft', 1.4); await wait(tok, 1.3); pinky.tiltT = 0; }
+  // 모래가 코에 들어가 에취 · 또는 부르르
+  if ((brain.force.sneeze ?? Math.random() < 0.55) && cdOK('sneeze', 20)) { brain.cd.sneeze = clock; setPose(pinky, 'stand', 6); await sneeze(tok); }
+  else if (Math.random() < 0.5) await shakeOff(tok);
+  setPose(pinky, 'stand', 6); pinky.face = 'cam'; pinky.tgt.gaze = 1; pinky.tgt.headPitch = 0; pinky.earPerk = 0.5; pinky.wagAmpT = 0.9; pinky.wagSpeedT = 18; pinky.tiltT = 0.2;
+  await wait(tok, 0.4); say(rot('dig', ['땅 파기 완료!', '컹! 굴착 성공!', '여기 내 구역이에요!']), headTop, 'soft', 1.8);
+  await wait(tok, 1.8); pinky.tiltT = 0; pinky.earPerk = 0;
+  if (!solo) camHome();
+}
+// 장난감 고르기 (놀이터): 공은 원래대로 · 로프는 놀이터에 없다(나뭇가지로)
+function damiToy(tok, kind) { return kind === 'bottle' ? bottlePlay(tok) : kind === 'duck' ? duckPlay(tok) : stickPlay(tok); }
+// 혼자 놀 때 가끔: 모래 위에 있는 장난감으로 (없으면 오둥이에게)
+function damiToyIdle(tok) {
+  const c = ['duck']; if (DP.stick.state === 'ground') c.push('stick', 'stick'); if (DP.bottle.state === 'ground') c.push('bottle');
+  const k = brain.force.toy || c[Math.floor(Math.random() * c.length)];
+  return k === 'stick' ? stickPlay(tok, true) : k === 'bottle' ? bottlePlay(tok, true) : duckPlay(tok, true);
 }
 
 // ================================================================
@@ -4396,6 +5018,7 @@ function updateRoom(dt, t) {
   if (!active && !transitioning) { idleT -= dt; if (idleT <= 0) { if (!(pinky.tgt.name === 'curl' && napKeep())) camHome(); startCommand('roam', roam, true); } } // 혼자 돌아다니기 시작하면 시점도 제자리로(빈 방석만 보고 있지 않게)
   updateDog(pinky, dt, t, roomCam.position); napPost(pinky, dt, t);
   updateHand(handR, 1, dt); updateHand(handL, -1, dt);
+  if (RP.post) RP.post(pinky, dt, t); // 놀이터: 엉덩이 씰룩 · 땅 파기 · 모래 · 던진 장난감 · 오둥이
   toyPost(pinky, dt, t);
   stepCrumbs(dt); stepKibble(dt); stepBall(dt);
   stepRope(dt);
@@ -4560,5 +5183,5 @@ if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCom
   NAP: (pk) => { Object.assign(pk, { x: SPOTS.cushion.x, z: SPOTS.cushion.z, yaw: CUSH.yaw, face: null, lift: cushLift(Math.hypot(CUSH.px, CUSH.pz)), eyeOpen: 0.04, wagAmpT: 0.03, curlK: 1, tailW: 1 }); setPose(pk, 'curl', 50); },
   SPOTS, HOME, handR, handL, treat, rope, ROPE_REST, yogurt, yogurtDab, goguma, buildYogurt, buildGoguma, releaseProps, resetProps, toy, sitAs, SIT_F, bringToy, sitCommand, sitLatch, faceFill,
   tick: (dt) => { clock += dt; stepTimers(); updateRoom(dt, clock); stepBubbles(dt, roomCam); }, isActive: () => active && active.name,
-  get dog() { return pinky; }, get dami() { return DAMI; }, get RP() { return RP; }, useRoom, PARK, ROOM_HOME, ROOM_PARK, HOME_KIDS, inSand,
+  get dog() { return pinky; }, get dami() { return DAMI; }, get DP() { return DP; }, DUCK_OB, DUCK_SPOTS, damiTreatWag, damiDig, get RP() { return RP; }, useRoom, PARK, ROOM_HOME, ROOM_PARK, HOME_KIDS, inSand,
   brain, BRAIN, drops, dropTreat, wait, until, idleGap, idleLook, yawn, shakeOff, stretch, momCheck, hideTreat, nearestDrop, mound, updateMound, brainPoke, startSpecial, momGreet, payBall, findTreat, eatLeft, sneeze, roam, resetRoom, special: () => (active && active.special) || null, bubbles: () => bubbles.map((b) => b.el.textContent) };
