@@ -4,7 +4,7 @@ import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from './vendor/jsm/postprocessing/ShaderPass.js';
-import { sound } from './sound.js?v=20';
+import { sound } from './sound.js?v=21';
 
 const $ = (s) => document.querySelector(s);
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -5737,16 +5737,21 @@ function buildNamsan() {
   sun.castShadow = true; Object.assign(sun.shadow.camera, { left: -6.5, right: 6.5, top: 6.5, bottom: -6.5, near: 4, far: 40 }); sun.shadow.camera.updateProjectionMatrix();
   sun.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.025;
   G.add(sun, sun.target);
-  // ---------- 푸푸의 소품: 터키츄(길게 꼰 칠면조 힘줄 껌) · 볼일 본 것(작은 갈색 한 덩이) · 엄마 손의 배변 봉투
-  NS.turkey = chewProp(0.15, M(0xc78c4c), (g, part) => {
-    const a = new THREE.MeshStandardMaterial({ color: 0xdba660, roughness: 0.42, emissive: 0x5a3410, emissiveIntensity: 0.22 }), b = new THREE.MeshStandardMaterial({ color: 0xc48848, roughness: 0.5, emissive: 0x4a2a0c, emissiveIntensity: 0.18 }), L = 0.15, NSEG = 6;
-    for (let k = 0; k < 2; k++) for (let sg = 0; sg < NSEG; sg++) { // 두 가닥을 꼬아 만든 막대: 가닥마다 여섯 토막 (씹은 만큼 앞에서부터 사라진다)
-      const z0 = (sg / NSEG) * L, z1 = ((sg + 1) / NSEG) * L, pts = [];
-      for (let q = 0; q <= 8; q++) { const z = lerp(z0, z1, q / 8), an = (z / L) * Math.PI * 2 * 3.2 + k * Math.PI; pts.push(V3(Math.cos(an) * 0.0056, Math.sin(an) * 0.0056, z)); }
-      part(add(g, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, 0.0062, 7, false), k ? b : a), z1);
+  // ---------- 푸푸의 소품: 터키츄(칠면조 힘줄을 꽈배기처럼 꼬아 동그랗게 만 황금빛 도넛) · 볼일 본 것(작은 갈색 한 덩이) · 엄마 손의 배변 봉투
+  const TK_R = 0.026, TK_RS = 0.0058, TK_RT = 0.0066; // 고리 반지름 · 가닥이 도는 반지름 · 가닥 굵기
+  NS.turkey = chewProp(2 * TK_R + TK_RS + TK_RT, M(0xd99a52), (g, part) => {
+    const mA = new THREE.MeshPhysicalMaterial({ color: 0xe6aa5c, roughness: 0.34, clearcoat: 0.6, clearcoatRoughness: 0.3, emissive: 0x8e4a12, emissiveIntensity: 0.3 }); // 빛이 비치는 반투명 힘줄 (속에서 은은하게 빛나는 황금빛)
+    const mB = new THREE.MeshPhysicalMaterial({ color: 0xd08c42, roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.36, emissive: 0x6e330b, emissiveIntensity: 0.24 }); // 조금 더 진한 가닥
+    const TW = 7, NSEG = 7; // 한 바퀴에 꼬인 수 · 반 바퀴마다 토막 수
+    const at = (th, k) => { const p = TW * th + (k * Math.PI * 2) / 3, c = Math.cos(p) * TK_RS * (1 + 0.12 * Math.sin(th * 3 + k)); return V3((TK_R + c) * Math.sin(th), Math.sin(p) * TK_RS, TK_R - (TK_R + c) * Math.cos(th)); }; // 물리는 쪽(z=0)에서 시작해 동그랗게 돈다
+    for (const sd of [-1, 1]) for (let sg = 0; sg < NSEG; sg++) { // 세 가닥 × 양쪽 반 바퀴 × 일곱 토막: 물린 쪽부터 씹혀 사라지면 C 모양으로 남는다
+      const t0 = (sg / NSEG) * Math.PI, t1 = ((sg + 1) / NSEG) * Math.PI, z1 = TK_R * (1 - Math.cos(t1)) + 0.004;
+      for (let k = 0; k < 3; k++) {
+        const pts = []; for (let q = 0; q <= 10; q++) pts.push(at(sd * lerp(t0, t1, q / 10), k));
+        part(add(g, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, TK_RT * (0.9 + 0.1 * Math.sin(k * 2.1 + sg * 1.7)), 7, false), k === 1 ? mB : mA), z1);
+      }
     }
-    part(add(g, SPH, b, [0, 0, L - 0.003], null, [0.012, 0.012, 0.009]), L); // 끝 매듭
-  }, 1.35);
+  }, 1.5);
   NS.turkey.g.traverse((o) => { if (o.isMesh) o.castShadow = false; }); G.add(NS.turkey.g);
   NS.poop = (() => { const g = new THREE.Group(), m = M(0x6b4224, { roughness: 0.42 }); add(g, SPH, m, [0, 0.013, 0], null, [0.03, 0.017, 0.027]); add(g, SPH, m, [0.003, 0.028, 0.001], null, [0.021, 0.013, 0.019]); add(g, SPH, m, [0.005, 0.04, 0.002], null, [0.012, 0.01, 0.012]); add(g, SPH, m, [0.007, 0.049, 0.002], [0, 0, -0.5], [0.005, 0.007, 0.005]); g.traverse((o) => { if (o.isMesh) o.castShadow = false; }); g.visible = false; G.add(g); return g; })(); // 이모지처럼 동글동글 세 층 (아주 작게)
   NS.bag = (() => { const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color: 0x4fc1ad, roughness: 0.38 }); add(g, SPH, m, [0, -0.034, 0], null, [0.05, 0.058, 0.047]); for (const sx of [-1, 1]) add(g, SPH, m, [sx * 0.014, 0.026, 0], [0, 0, sx * 0.5], [0.011, 0.024, 0.009]); NS.bagKnot = add(g, SPH, m, [0, 0.03, 0], null, [0.016, 0.012, 0.014]); g.visible = false; return g; })(); // 푸푸 이름표 같은 민트색
@@ -6013,19 +6018,20 @@ async function pupuPoop(tok) {
   say('헤헤', headTop, 'soft', 1.3); await wait(tok, 0.6);
   camHome(); await comeHere(tok, 0.8); sitFront(6); happy(true); heart(); await wait(tok, 1.4); happy(false);
 }
-// ---------- 터키츄: 보자마자 신나서 제자리 빙글 → 앉아서 기다렸다가 살며시 받아 물고 → 엎드려 두 앞발로 붙잡고 오독오독 → 꿀꺽 · 터키츄 최고!
+// ---------- 터키츄: 엄마가 "츄츄츄~" 부르면 귀 쫑긋 · 갸웃 → "터키츄?" 하면 신나서 난리 (달려와 엎드려 뻗기 · 빙글빙글 · 동동) → 엄마 손에 황금빛 링이 나타나면
+//            앉아서 기다렸다가 살며시 받아 물고 → 엎드려 두 앞발 사이에 세워 붙잡고 오독오독 → 꿀꺽 · 터키츄 최고!
 const PTREAT = ['터키츄 최고!', '세상에서 제일 맛있어!', '터키츄 하나 더요?'];
 async function pupuTreat(tok) {
   const T = NS.turkey, ph = phoneK(), UP = V3(0, 1, 0);
-  toy.tok = tok; tok.cleanups.push(() => { toyOff(); T.hide(); pinky.smile = 1; });
+  toy.tok = tok; tok.cleanups.push(() => { toyOff(); T.hide(); pinky.smile = 1; pinky.tiltT = 0; pinky.paddle = 0; pinky.paddleFront = false; });
   { const [p, a] = kneelFor(HOME, 1.05 * ph, 0.56, 0.3); camTo(p, a); }
-  T.reset(); T.g.visible = true; T.state = 'held'; toy.fill = 1;
+  T.reset(); T.g.visible = false; T.state = 'held'; toy.fill = 1;
   const pinch = () => handR.rig.inner.localToWorld(V3(0.012, -0.034, 0.072));
   const dp = poseFor('down', pinky), pawZ = dp.paws[0].z + 0.04;
   let side = 1;
   const drv = propDriver(T, {
-    hand(C, D, U) { const Bp = pinch(), v = mouthPt().sub(Bp); v.y -= 0.04; v.normalize(); C.copy(Bp).addScaledVector(v, T.len); D.copy(v).negate(); U.copy(UP); }, // 한쪽 끝을 쥐고 씹을 쪽을 푸푸에게
-    jaw(C, D, U) { C.copy(jawW(0.008, -0.01, 0.05)); D.copy(jawDir(0.8, -0.15, 0.55)).normalize(); U.copy(jawDir(0, 1, 0)); },
+    hand(C, D, U) { const Bp = pinch(); C.copy(Bp).addScaledVector(UP, T.len); D.set(0, -1, 0); U.set(roomCam.position.x - Bp.x, 0, roomCam.position.z - Bp.z).normalize(); }, // 엄마는 링 아래쪽을 쥐고 (링은 화면을 보고 선다) 위쪽 가장자리를 푸푸 입에
+    jaw(C, D, U) { C.copy(jawW(0, -0.006, 0.056)); D.copy(jawDir(0, -1, 0.45)).normalize(); U.copy(jawDir(0, 0, 1)); }, // 앞니로 가장자리를 물면 링이 턱 밑에 동그랗게 매달린다
     paws(C, D, U) { // 어금니 쪽으로 물고, 반대쪽 끝은 두 앞발 사이 바닥에
       C.copy(jawW(side * 0.012, -0.012, 0.05)); const Bp = rootW(0, 0.014, pawZ), l = T.len, d = Bp.distanceTo(C), dy = Math.max(C.y - Bp.y + 0.004, 0);
       D.copy(Bp).sub(C).normalize();
@@ -6034,23 +6040,37 @@ async function pupuTreat(tok) {
     },
   });
   toy.tick = () => drv.tick();
-  let target = () => roomCam.localToWorld(ph > 1 ? V3(0.05, -0.03, -0.5) : V3(0.13, -0.045, -0.46));
-  handR.want = { pos: () => target(), up: () => V3(0, 1, 0), curl: 0.75, rate: 5 };
-  await drv.to(tok, 'hand', 0);
-  pinky.lookFn = () => T.g.position;
+  // 엄마가 부른다: 츄츄츄~ (엄마 말은 화면 오른쪽 아래, 엄마 쪽에서)
+  const momAt = () => roomCam.localToWorld(ph > 1 ? V3(0.03, -0.05, -0.5) : V3(0.12, -0.06, -0.5));
+  const chuchu = (text = '츄츄츄~') => { bubble(text, momAt, 'soft', 1.6, 0); snd('sfx', 'kiss_call', { force: 1, why: 'mom: ' + text }); };
+  await wait(tok, 0.3);
+  chuchu();
   await wait(tok, 0.35);
-  pinky.earPerk = 1; pinky.wagAmpT = 1.0; pinky.wagSpeedT = 20; say('터키츄다!', headTop, 'soft', 1.4);
-  await wait(tok, 0.6);
-  if (Math.hypot(pinky.x - HOME.x, pinky.z - HOME.z) > 0.08) { setPose(pinky, 'stand', 7); pinky.walkSpeed = 1.0; await walkTo(tok, HOME.x, HOME.z); pinky.walkSpeed = 0.5; }
-  // 좋아서 제자리에서 빙글
-  setPose(pinky, 'stand', 6); pinky.face = null; pinky.lookFn = null; pinky.tgt.gaze = 0.3; await wait(tok, 0.2);
-  { const y0 = pinky.yaw, dir = Math.random() < 0.5 ? 1 : -1; say('빙글!', headTop, 'small', 1.0, 0); await tween(tok, 1.05, (k) => { pinky.yaw = y0 + dir * Math.PI * 2 * ease(k); pinky.shuffle = 0.25 + 0.5 * Math.sin(Math.PI * k); }); pinky.shuffle = 0; }
+  pinky.face = 'cam'; pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.earPerk = 1; pinky.tiltT = 0.42; pinky.wagAmpT = 0.45; pinky.wagSpeedT = 12; // 귀 쫑긋 · 고개 갸웃
+  say('!', headTop, 'small', 0.9, 0);
+  await wait(tok, 1.0);
+  bubble('터키츄?', momAt, 'soft', 1.5, 0);
+  await wait(tok, 0.3); pinky.tiltT = -0.45; await wait(tok, 0.7); // 반대쪽으로 갸웃… 터키츄?!
+  pinky.tiltT = 0; pinky.earPerk = 1; pinky.wagAmpT = 1.0; pinky.wagSpeedT = 22; say('터키츄!!', headTop, 'soft', 1.3);
+  await wait(tok, 0.35);
+  if (Math.hypot(pinky.x - HOME.x, pinky.z - HOME.z) > 0.08) { setPose(pinky, 'stand', 7); pinky.walkSpeed = 1.3; await walkTo(tok, HOME.x, HOME.z); pinky.walkSpeed = 0.5; } // 신나서 엄마 앞으로 달려온다
+  // 신나서 난리: 엎드려 뻗기(놀자!) → 빙글빙글 두 바퀴 (한 번씩 반대로)
+  pinky.face = 'cam'; setPose(pinky, 'bow', 8); pinky.earPerk = 1; await wait(tok, 0.6);
+  setPose(pinky, 'stand', 7); await wait(tok, 0.25);
+  pinky.face = null; pinky.tgt.gaze = 0.3;
+  { let dir = Math.random() < 0.5 ? 1 : -1; say('빙글빙글!', headTop, 'small', 1.4, 0);
+    for (let r = 0; r < 2; r++, dir = -dir) { const y0 = pinky.yaw; await tween(tok, 0.85, (k) => { pinky.yaw = y0 + dir * Math.PI * 2 * ease(k); pinky.shuffle = 0.25 + 0.55 * Math.sin(Math.PI * k); }); } pinky.shuffle = 0; }
+  // 엄마 손에 터키츄가 나타난다
+  let target = () => roomCam.localToWorld(ph > 1 ? V3(0.05, -0.1, -0.5) : V3(0.13, -0.11, -0.46));
+  T.g.visible = true; await drv.to(tok, 'hand', 0);
+  handR.want = { pos: () => target(), up: () => V3(0, 1, 0), curl: 0.75, rate: 5 };
+  chuchu('츄츄츄~ 여기 있지!');
   pinky.face = 'cam'; pinky.lookFn = () => T.g.position; pinky.tgt.gaze = 1;
+  await wait(tok, 0.45); say('터키츄다!', headTop, 'soft', 1.4);
   await sitAs(tok, 'front', 8);
-  pinky.paddle = 0.35; pinky.paddleFront = true; await wait(tok, 1.0); pinky.paddle = 0; pinky.paddleFront = false; // 앞발을 동동
-  // 내밀면 살며시 받아 문다
-  const v0 = toCamDir().negate().multiplyScalar(0.6).addScaledVector(camRight(), -0.8); v0.y = 0.1; v0.normalize();
-  target = () => { const m = mouthPt().addScaledVector(toCamDir(), 0.014); return m.addScaledVector(v0, -T.len).sub(pinch().sub(handR.pos)); };
+  pinky.paddle = 0.4; pinky.paddleFront = true; await wait(tok, 1.1); pinky.paddle = 0; pinky.paddleFront = false; // 앞발을 동동
+  // 내밀면 살며시 받아 문다 (링 위쪽 가장자리를 입 앞에)
+  target = () => mouthPt().addScaledVector(toCamDir(), 0.012).addScaledVector(UP, -T.len).sub(pinch().sub(handR.pos));
   handR.want.rate = 4; await wait(tok, 0.85);
   pinky.tgt.reach = 0.03; pinky.tgt.neck += 0.1; await wait(tok, 0.3);
   pinky.jawOpen = 0.25; await wait(tok, 0.25);
@@ -6063,8 +6083,8 @@ async function pupuTreat(tok) {
   { const [p, a] = kneelAt(0.95 * ph, 0.32, 0.14); camTo(p, a, 1.8); }
   await wait(tok, 1.25);
   const pawPt = () => rootW(0, 0.014, pawZ);
-  let lookUp = 0; pinky.lookFn = () => pawPt().add(V3(0, 0.1 + lookUp, 0)).addScaledVector(toCamDir(), 0.08 + lookUp * 1.5);
-  pinky.tgt.gaze = 0.6; pinky.tgt.neck = 0.2; pinky.tgt.reach = 0.02;
+  let lookUp = 0; pinky.lookFn = () => pawPt().add(V3(0, 0.03 + lookUp, 0)).addScaledVector(toCamDir(), 0.06 + lookUp * 1.5); // 링이 작아서 고개를 앞발 쪽으로 푹 숙인다
+  pinky.tgt.gaze = 0.6; pinky.tgt.neck = 0.45; pinky.tgt.reach = 0.02;
   pinky.tgt.paws[0].set(dp.paws[0].x * 0.62, 0.04, pawZ - 0.01); pinky.tgt.paws[1].set(dp.paws[1].x * 0.62, 0.04, pawZ - 0.01);
   await wait(tok, 0.45);
   await drv.to(tok, 'paws', 0.35); toy.rest = 0; pinky.eyeOpen = 0.85;

@@ -420,9 +420,19 @@ def('paw_clap', 3, -17, 'foley', () => { // 짝! — 하이파이브: 손바닥�
   const out = P(90); mix(out, mulf(nb(40, 'w', 'bp', rr(1600, 2200), 0.9), ad(0.8, 7)), 0, 1);
   return mix(out, thud(30, 220, 150, 6), 0, 0.3);
 }, { gap: 0.2 });
+def('kiss_call', 3, -17, 'foley', () => { // 츄츄츄~ — 엄마가 입술로 쪽쪽쪽 부르는 소리 (짧고 높게 세 번, 마지막이 살짝 높다)
+  const out = P(430);
+  for (let i = 0; i < 3; i++) {
+    const at = i * rr(105, 125) + rr(0, 8), f = rr(2300, 2800) * (i === 2 ? 1.1 : 1), g = i === 2 ? 1 : 0.8;
+    mix(out, mulf(sine(45, sweep(f, f * 1.5, 45)), curve([[0, 0], [4, 1], [22, 0.45], [45, 0]])), at + 2, 0.55 * g); // 쪽 하고 올라가는 휘파람 같은 결
+    mix(out, mulf(nb(40, 'w', 'bp', f * 1.2, 1.4), ad(1, 9)), at, 0.6 * g); // 입술이 떨어지는 바람
+    mix(out, click(rr(0.8, 1.3), rr(3500, 5200), 3), at, 0.45 * g); // 쪽
+  }
+  return out;
+}, { gap: 0.4 });
 
 // 미리 그려 둘 순서(자주 쓰는 것부터, 드물게 쓰는 소리는 맨 뒤). 아직 안 그린 소리를 틀면 그 자리에서 그린다
-const RARE = ['bay_aroo', 'growl_play', 'sneeze', 'chomp_soft', 'crunch_big', 'lick_yogurt', 'swish', 'shake', 'kibble_floor', 'flap', 'rope_drop', 'chomp_crunch', 'crinkle', 'dig_scratch', 'dami_kk', 'dami_yip', 'dami_arr', 'dami_pant_out', 'dami_pant_in', 'splash', 'water_lap', 'step_splash', 'step_path', 'brook', 'paw_clap'];
+const RARE = ['bay_aroo', 'growl_play', 'sneeze', 'chomp_soft', 'crunch_big', 'lick_yogurt', 'swish', 'shake', 'kibble_floor', 'flap', 'rope_drop', 'chomp_crunch', 'crinkle', 'dig_scratch', 'dami_kk', 'dami_yip', 'dami_arr', 'dami_pant_out', 'dami_pant_in', 'splash', 'water_lap', 'step_splash', 'step_path', 'brook', 'paw_clap', 'kiss_call'];
 const NAMES = ['chomp_treat', 'chomp_kibble', 'sniff', 'bark_woof', 'bark_yip', 'step_wood', 'step_rug', 'lick', ...Object.keys(DEF).filter((n) => !RARE.includes(n)), ...RARE].filter((n, i, a) => a.indexOf(n) === i);
 const hash = (s) => { let h = 7; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0; return h; };
 /** 소리 하나를 그린다 (순수 함수: 같은 이름·번호·샘플레이트면 늘 같은 결과) */
@@ -719,6 +729,7 @@ function onSay(text) {
 function pupuSay(s) {
   if (has(s, '물이다', '터키츄다')) { play('gasp_alert', { why: s }); later(0.22, () => voice('whine', { vlo: 0, vhi: 2, gain: -3, rate: 1.12, why: s })); return true; }
   if (has(s, '하이파이브', '또해요', '최고')) return voice('yip', { gain: -5, why: s }), true;
+  if (s === '터키츄' || s === '츄츄츄') { voice('yip', { gain: -3, why: s }); later(0.19, () => voice('yip', { gain: -5, rate: 1.08, why: s })); return true; } // 터키츄!! — 신나서 깽깽
   if (has(s, '시원하다', '헤헤', '뿌듯', '깔끔')) return voice('content', { gain: -1, why: s }), true;
   if (s === '끙') return voice('content', { gain: -6, rate: 0.82, why: s }), true;
   if (s.startsWith('휴')) return voice('sigh', { gain: -4, why: s }), true;
