@@ -384,8 +384,45 @@ def('dig_scratch', 6, -21, 'foley', () => { // 사각 — 앞발이 모래를 �
   return mix(out, pap(40, 500), 0, db(-6));
 }, { gap: 0.06 });
 
+// --- 푸푸(남산 산책길)만 쓰는 소리: 물 첨벙 · 물 할짝 · 물속 발걸음 · 돌길 발걸음 · 졸졸 시냇물 · 하이파이브 짝
+const plip = (f0, dur) => mulf(sine(dur, sweep(f0, f0 * rr(1.4, 2.0), dur)), (m) => Math.exp(-m / (dur * 0.3)) * Math.min(1, m / 0.5)); // 물방울 "퐁": 짧게 올라가는 사인
+def('splash', 6, -15, 'foley', () => { // 첨벙 — 앞발이 물을 탁 치고 물보라가 흩어진다 (낮은 퍽 + 쏴 + 방울 퐁퐁)
+  const D = rr(280, 380), out = P(D + 60);
+  mix(out, mulf(nb(60, 'p', 'lp', 700, 0.7), ad(2, 18)), 0, 0.8);
+  mix(out, mulf(nb(D, 'w', 'bp', sweep(2600, 1400, D), 0.6), ad(4, D * 0.28)), 3, 0.55);
+  for (let i = ri(5, 9); i > 0; i--) mix(out, plip(rr(500, 1400), rr(18, 40)), rr(20, D), db(-rr(4, 12)));
+  for (let i = ri(6, 10); i > 0; i--) mix(out, click(rr(1, 3), rr(2000, 6000), rr(2, 5)), rr(40, D), db(-rr(8, 18))); // 떨어지는 물방울
+  return out;
+}, { gap: 0.12 });
+def('water_lap', 6, -19, 'dog', () => { // 할짝 (물) — 혀가 물을 떠 올리는 촵 + 작은 퐁
+  const out = P(160);
+  mix(out, mulf(nb(70, 'p', 'bp', sweep(900, 2200, 70), 1.6), curve([[0, 0], [15, 1], [60, 0.6], [70, 0]])), 0, 0.8);
+  mix(out, plip(rr(700, 1100), rr(25, 40)), rr(40, 60), 0.7);
+  return mix(out, click(6, rr(1500, 2200), 3), rr(70, 90), 0.5);
+}, { gap: 0.12 });
+def('step_splash', 6, -24, 'foley', () => { // 물속 한 걸음: 찰박
+  const D = rr(110, 170), out = P(D + 30);
+  mix(out, mulf(nb(D, 'p', 'bp', rr(1200, 1900), 0.8), ad(5, D * 0.3)), 0, 0.8);
+  for (let i = ri(2, 4); i > 0; i--) mix(out, plip(rr(600, 1300), rr(15, 30)), rr(10, D), db(-rr(4, 10)));
+  return mix(out, mulf(nb(40, 'p', 'lp', 500, 0.7), ad(2, 12)), 0, 0.4);
+}, { gap: 0.05 });
+def('step_path', 4, -30, 'foley', () => { // 돌길: 발바닥 톡 + 발톱 사각 (마루처럼 울리지 않는다)
+  const out = P(40); mix(out, pap(26, 900), 0, 0.8); mix(out, click(rr(1.2, 2), 4200 * rr(0.9, 1.1), 4), rr(1, 4), 0.35);
+  return mix(out, mulf(nb(25, 'w', 'hp', 4000, 0.7), bell(25)), 2, 0.12);
+}, { gap: 0.045 });
+def('brook', 6, -27, 'foley', () => { // 졸졸 — 얕은 시냇물이 돌 사이로 흐르는 소리 (1.4초 한 토막: 겹쳐 틀어 끊이지 않게)
+  const D = 1400, out = P(D), env = bell(D, 0.5);
+  mix(out, mulf(nb(D, 'p', 'bp', 900, 0.5), bell(D, 0.6)), 0, 0.22);
+  for (let i = ri(26, 36); i > 0; i--) { const at = rr(0, D - 60); mix(out, plip(rr(350, 1300), rr(20, 55)), at, db(-rr(3, 14)) * env(at)); }
+  return out;
+}, { gap: 0.3 });
+def('paw_clap', 3, -17, 'foley', () => { // 짝! — 하이파이브: 손바닥과 앞발바닥이 맞닿는 소리
+  const out = P(90); mix(out, mulf(nb(40, 'w', 'bp', rr(1600, 2200), 0.9), ad(0.8, 7)), 0, 1);
+  return mix(out, thud(30, 220, 150, 6), 0, 0.3);
+}, { gap: 0.2 });
+
 // 미리 그려 둘 순서(자주 쓰는 것부터, 드물게 쓰는 소리는 맨 뒤). 아직 안 그린 소리를 틀면 그 자리에서 그린다
-const RARE = ['bay_aroo', 'growl_play', 'sneeze', 'chomp_soft', 'crunch_big', 'lick_yogurt', 'swish', 'shake', 'kibble_floor', 'flap', 'rope_drop', 'chomp_crunch', 'crinkle', 'dig_scratch', 'dami_kk', 'dami_yip', 'dami_arr', 'dami_pant_out', 'dami_pant_in'];
+const RARE = ['bay_aroo', 'growl_play', 'sneeze', 'chomp_soft', 'crunch_big', 'lick_yogurt', 'swish', 'shake', 'kibble_floor', 'flap', 'rope_drop', 'chomp_crunch', 'crinkle', 'dig_scratch', 'dami_kk', 'dami_yip', 'dami_arr', 'dami_pant_out', 'dami_pant_in', 'splash', 'water_lap', 'step_splash', 'step_path', 'brook', 'paw_clap'];
 const NAMES = ['chomp_treat', 'chomp_kibble', 'sniff', 'bark_woof', 'bark_yip', 'step_wood', 'step_rug', 'lick', ...Object.keys(DEF).filter((n) => !RARE.includes(n)), ...RARE].filter((n, i, a) => a.indexOf(n) === i);
 const hash = (s) => { let h = 7; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0; return h; };
 /** 소리 하나를 그린다 (순수 함수: 같은 이름·번호·샘플레이트면 늘 같은 결과) */
@@ -546,8 +583,9 @@ const VOICE = { yip: 'bark_yip', woof: 'bark_woof', aroo: 'bay_aroo', whine: 'wh
 // 강아지마다 목소리 (configure({ voice })): 담이는 짖는 소리 · 그르렁이 따로 있고, 낑 소리는 조금 높다(어리다)
 const DAMI_V = { yip: 'dami_yip', woof: 'dami_kk', aroo: 'dami_kk', growl: 'dami_arr' };
 const isDami = () => cfg.voice === 'dami';
+const isPupu = () => cfg.voice === 'pupu'; // 푸푸(진돗개): 핑키 목소리를 조금 낮게
 const huff = () => (isDami() ? 'dami_pant_out' : 'pant_out'); // 흥정 · 조를 때 내쉬는 숨
-const voice = (name, o = {}) => (isDami() ? play(DAMI_V[name] || VOICE[name] || name, name === 'whine' || name === 'whimper' ? { ...o, rate: (o.rate || 1) * 1.08 } : o) : play(VOICE[name] || name, o));
+const voice = (name, o = {}) => (isDami() ? play(DAMI_V[name] || VOICE[name] || name, name === 'whine' || name === 'whimper' ? { ...o, rate: (o.rate || 1) * 1.08 } : o) : play(VOICE[name] || name, isPupu() ? { ...o, rate: (o.rate || 1) * 0.92 } : o));
 let lastAroo = -99;
 // 담이의 컹컹: 한 번에 둘셋씩 끊어서 (0.2초 남짓 간격, 뒤로 갈수록 조금 낮고 작게), 묶음 사이는 쉰다. 자주 짖지만 시끄럽지 않게 — 20초에 아홉 번을 넘으면 한 번씩만
 let kkEnd = -99, kkTimes = [];
@@ -623,6 +661,7 @@ function onSay(text) {
   if (s === '' && String(text).includes('!')) return void play('gasp_alert', { why: text });
   if (has(s, '엄마다', '엄마당')) return void phrase('mom');
   if (isDami() && damiSay(s, String(text))) return;
+  if (isPupu() && pupuSay(s)) return;
   // 핑키의 마음(엉뚱한 짓 · 주워 먹기 · 남긴 밥)에서 뜨는 말풍선
   if (has(s, '내꺼야')) return void voice('growl', { gain: -1, rate: 1.18, why: text }); // 장난스럽게 으르릉
   if (has(s, '놀아줘', '왔어', '왔다왔다', '엄마~')) return void voice('content', { gain: -1, rate: 1.08, why: text }); // 반가워서 음~ (조르는 낑이 아니다)
@@ -676,6 +715,16 @@ function onSay(text) {
 }
 
 // 담이만의 말풍선 → 소리 (못 알아들은 말은 핑키와 같은 규칙으로: 그때 나는 목소리는 담이 목소리)
+// 푸푸만의 말풍선 → 소리 (못 알아들은 말은 핑키와 같은 규칙으로)
+function pupuSay(s) {
+  if (has(s, '물이다', '터키츄다')) { play('gasp_alert', { why: s }); later(0.22, () => voice('whine', { vlo: 0, vhi: 2, gain: -3, rate: 1.12, why: s })); return true; }
+  if (has(s, '하이파이브', '또해요', '최고')) return voice('yip', { gain: -5, why: s }), true;
+  if (has(s, '시원하다', '헤헤', '뿌듯', '깔끔')) return voice('content', { gain: -1, why: s }), true;
+  if (s === '끙') return voice('content', { gain: -6, rate: 0.82, why: s }), true;
+  if (s.startsWith('휴')) return voice('sigh', { gain: -4, why: s }), true;
+  if (has(s, '손', '짝', '첨벙', '슥슥', '척', '똥츄', '빙글', '꼴깍', '퐁')) return true; // 소리는 main.js가 그 순간에 직접 낸다 (첨벙 · 짝 · 슥슥 · 바스락)
+  return false;
+}
 function damiSay(s, text) {
   const n = (s.match(/컹/g) || []).length;
   if (n) return barkBurst(n, { why: text }), true; // 컹! · 컹컹! · 컹컹컹!
@@ -697,7 +746,7 @@ const nearBowl = (s) => Math.hypot(s.x - cfg.bowl[0], s.z - cfg.bowl[1]) < 0.6;
 function lap(why, kind) {
   const s = prev, k = kind || (lickKind !== 'auto' ? lickKind : s && s.pose === 'eat' && nearBowl(s) ? 'bowl' : 'mouth');
   const smack = k === 'mouth' && T - (st.smackT ?? -9) < 1.6;
-  play(k === 'bowl' ? 'lick_bowl' : k === 'yogurt' ? 'lick_yogurt' : 'lick', { ...(k === 'mouth' ? (smack ? { vlo: 4, vhi: 6 } : { vlo: 0, vhi: 4 }) : {}), why });
+  play(k === 'bowl' ? 'lick_bowl' : k === 'yogurt' ? 'lick_yogurt' : k === 'water' ? 'water_lap' : 'lick', { ...(k === 'mouth' ? (smack ? { vlo: 4, vhi: 6 } : { vlo: 0, vhi: 4 }) : {}), why });
 }
 // main.js가 직접 알려 주는 박자 (요거트 핥기 · 고구마 말랑이/로프 씹기 · 물고 흔들기 · 로프가 떨어질 때): 그 움직임은 pinky.chew/lick을 쓰지 않아서 위의 상태 읽기로는 알 수 없다
 function chewHit(kind = 'soft') { // 턱이 닫힐 때마다 한 번. 'soft' = 쫀득한 간식(촉촉하게, 가끔 쩝) · 'rope' = 줄을 질겅(더 낮고 작게)
@@ -808,10 +857,17 @@ function update(dt, t, s) {
       const u = (((s.phase / TAU + cfg.off[i]) % 1) + 1) % 1, u0 = (((p.phase / TAU + cfg.off[i]) % 1) + 1) % 1;
       if (u < u0 && u0 - u > 0.5) {
         const front = i < 2; if (fastGait && !front) continue; // 빨리 달릴 때는 앞발만 (너무 다닥거리지 않게)
-        play(surf === 'wood' ? 'step_wood' : surf === 'rug' ? 'step_rug' : 'step_cushion', { pos: ft, gain: toDb(clamp(st.speed / 0.9, 0.5, 1.3)) + (front ? 0 : -2) + (turning ? -6 : 0), why: 'paw ' + i });
+        play(surf === 'water' ? 'step_splash' : surf === 'path' ? 'step_path' : surf === 'wood' ? 'step_wood' : surf === 'rug' ? 'step_rug' : 'step_cushion', { pos: ft, gain: toDb(clamp(st.speed / 0.9, 0.5, 1.3)) + (front ? 0 : -2) + (turning ? -6 : 0), why: 'paw ' + i });
         if (front && st.speed >= 0.8 && Math.random() < 0.4) play('tag_jingle', { pos: head, why: 'trot' });
       }
     }
+  }
+
+  // 시냇물 (남산 산책길): 졸졸 소리 토막을 겹쳐 튼다 — 듣는 자리에서 가장 가까운 물가 쪽에서
+  if (cfg.brook && T >= (st.brookT ?? 0)) {
+    st.brookT = T + 0.85 + Math.random() * 0.3; let bp = cfg.brook[0], bd = 1e9;
+    for (const q of cfg.brook) { const dd = Math.hypot(q[0] - L.p[0], q[2] - L.p[2]); if (dd < bd) { bd = dd; bp = q; } }
+    play('brook', { pos: bp, gain: cfg.brookGain ?? 0, force: 1, why: 'brook' });
   }
 
   // 꼬리가 바닥을 탁탁
@@ -873,7 +929,7 @@ export const sound = {
   get names() { return Object.keys(DEF); },
   get defs() { return DEF; },
   get stats() { return { renderMs: +renderMs.toFixed(1), buffers: bufs.size, pending: renderQ.length, voices: voices.length, state: ctx ? ctx.state : 'none', scene, enabled }; },
-  configure(o) { // 장소를 바꿀 때: 바닥(rug · cush · bowl, 또는 surf(x, z) → 'wood' · 'rug' · 'cushion' · 'grass') · 목소리(voice: 'pinky' · 'dami')
+  configure(o) { // 장소를 바꿀 때: 바닥(rug · cush · bowl, 또는 surf(x, z) → 'wood' · 'rug' · 'cushion' · 'grass' · 'path' · 'water') · 목소리(voice: 'pinky' · 'dami' · 'pupu') · 시냇물(brook: 물가의 점들, 없으면 null)
     cfg = { ...cfg, ...o };
     if (o && o.voice === 'dami' && renderQ.length) renderQ.sort((a, b) => (b[0].startsWith('dami_') ? 1 : 0) - (a[0].startsWith('dami_') ? 1 : 0)); // 담이 목소리부터 미리 그려 둔다
   },
