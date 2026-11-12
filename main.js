@@ -607,6 +607,11 @@ const DAMI_POSE = { stand: { tail: -0.42, px: 0.9 }, sit: { tail: 0.6, tailCurl:
 const PUPU_HS = 1.52; // 머리 배율: 머리(정수리~턱) ≈ 기갑 높이의 0.45 (핑키·담이의 큰 귀염 머리와 달리 머리 거리장 자체가 실제 진돗개 비율 — 몸에 맞는 머리)
 const PUPU_LEG = { f: [0.1, 0.146, 0.056], h: [0.122, 0.136, 0.098] }; // 다리 마디 길이 [위팔·허벅지, 아래팔·정강이, 발허리]: 길고 곧은 앞다리 · 각이 진 뒷다리와 높은 비절
 const PUPU_FUR = 1.2; // 털 셸이 정면에서도 비치는 정도 (furShells의 face)
+// 겉털 겹 수 · 메시 간격(h 배율): 1.25배 큰 몸 전체에 촘촘한 바탕 메시 그대로 겹을 씌우면 삼각형이 담이의 3배가 넘는다
+// 털 겹은 반쯤 비치는 털 가닥 무늬일 뿐이라 바탕보다 성긴 대역 메시(같은 거리장 · 같은 무늬, 간격 *F)에 씌운다 — 실루엣의 보송함은 그대로, 삼각형은 1/3
+// 털 겹 수: 몸통·꼬리 4 · 머리 3 · 가는 다리 1 (털 길이는 그대로) · 매끈한 기둥인 다리 · 꼬리 · 발 바탕 메시도 조금 성기게 (얼굴 · 몸통 바탕은 그대로)
+const PUPU_FURN = { body: 4, tail: 4, head: 3, leg: 1, legH: 1.3, tailH: 1.3, footH: 1.3, bodyF: 1.8, headF: 1.7, tailF: 1.8, legF: 1.6 };
+const PUPU_TONGUE_REST = [0.0016, 0.018, 0.0012, 0.004], PUPU_TONGUE_S = [0.0172, 0.0036, 0.027, 0.14]; // 입 안 혀(아래턱 좌표): 다물었을 때 자리(y, z)와 활짝 웃을 때 더 나오는 만큼(y, z) · 반폭 · 반두께 · 반길이 · 기울기(앞이 아래로 — 앞으로 낮아지는 아래턱 바닥에 눕는다)
 const PUPU_HZ = 0.032, PUPU_SMILE = 0.42, PUPU_COLLAR_C = [0.122, 0.196], PUPU_COLLAR_AX = [0.8, 0.6]; // PUPU_HZ: 뒷다리·골반을 앞으로 당긴 거리 · PUPU_SMILE: 웃는 입이 벌어지는 각(아래턱) · 목줄 고리 중심(y, z)·고리 면 법선(목을 따라 비스듬히)
 // 몸통: 20kg 넘는 다부진 진돗개 — 가슴은 깊고(바닥 = 팔꿈치 높이) 폭은 알맞으며, 갈비 뒤로 배가 살짝 올라붙는다. 목은 기갑에서 앞 위로 비스듬히 올라가고 목둘레에 복슬한 털, 엉덩이·허벅지는 단단하다
 const pupuBodySDF = (x, y, z) => {
@@ -723,8 +728,8 @@ const pupuFootSDF = (x, y, z) => {
   for (let i = 0; i < 4; i++) { const tx = (i - 1.5) * PUPU_TOE[0], tz = PUPU_TOE[1] + (Math.abs(i - 1.5) < 1 ? 0.005 : 0); d = smin(d, sdE(x, y, z, tx, -0.0188, tz, 0.0085, 0.0112, 0.0122), 0.005); } // 발가락: 사이의 골이 보이게 살짝만 이어 붙인다
   return Math.max(d, -0.03 - y);
 };
-// 자세: 다리가 길어 서 있을 때 몸이 높다(dy). 꼬리는 늘 등 위로 말려 있다. pz: 발 앞뒤 위치를 더한다 · 엄근진: 서도 앉아도 가슴을 살짝 펴고 꼬리를 높이 (더 꼿꼿이는 pupuTall) · 배 보이기: 목이 길어 뒤집히면 머리가 땅에 묻히므로 목을 가슴 쪽으로 굽히고(neck) 고개를 숙인다
-const PUPU_POSE = { stand: { dy: 0.042, pitch: -0.02, tail: 0.25, pz: [-0.006, -0.006, -0.03, -0.03], px: 1.08 }, eat: { dy: 0.042, tail: 0.3 }, sit: { dy: 0.042, pitch: -0.64, tail: 1.0 }, down: { dy: 0.006, tail: 0.3, pz: [0.03, 0.03, 0, 0] }, side: { dy: 0.0, tail: -0.6 }, belly: { tail: 1.8, neck: 1.05, headPitch: 0.6, dy: 0.025 }, held: { tail: 0 }, curl: { tail: -1.2 }, bow: { dy: 0.042 } };
+// 자세: 다리가 길어 서 있을 때 몸이 높다(dy). 꼬리는 늘 등 위로 말려 있다. pz: 발 앞뒤 위치를 더한다 · 엎드려: 긴 아래팔이 바닥에 묻히지 않게 가슴을 조금 들고 앞발은 팔꿈치 쪽으로 (아래팔이 바닥에 얹힌다) · 배 보이기: 뒤집힌 정수리가 땅에 묻히지 않게 목을 조금 더 굽힌다 · 엄근진: 서도 앉아도 가슴을 살짝 펴고 꼬리를 높이 (더 꼿꼿이는 pupuTall) · 배 보이기: 목이 길어 뒤집히면 머리가 땅에 묻히므로 목을 가슴 쪽으로 굽히고(neck) 고개를 숙인다
+const PUPU_POSE = { stand: { dy: 0.042, pitch: -0.02, tail: 0.25, pz: [-0.006, -0.006, -0.03, -0.03], px: 1.08 }, eat: { dy: 0.042, tail: 0.3 }, sit: { dy: 0.042, pitch: -0.64, tail: 1.0 }, down: { dy: 0.02, tail: 0.3, pz: [-0.01, -0.01, 0, 0] }, side: { dy: 0.0, tail: -0.6, neck: 0.5 }, belly: { tail: 1.8, neck: 1.2, headPitch: 0.6, dy: 0.025 }, held: { tail: 0 }, curl: { tail: -1.2 }, bow: { dy: 0.042 } };
 // 푸푸만의 자세: 손(앉아서 앞발 하나를 엄마 손바닥 높이로 내민다) · 하이파이브(몸을 세우고 앞발을 높이 들어 발바닥이 앞을 본다) — 다리 길이에 맞춰 몸 높이·기울기를 잡아 디딘 앞발이 바닥에 닿는다
 const PUPU_POSES = {
   paw: { bodyY: 0.244, bodyZ: -0.02, pitch: -0.56, roll: 0, yawOff: -0.6, gaze: 1, headPitch: 0, headTilt: 0.12, tail: 0.15, level: 1, free: 0, splay: 0.3, neck: 0.4, lumbar: 0.55,
@@ -809,7 +814,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
   const J = kind === 'jindo' && !PU, DM = !J && variant === 'dami'; // DM: 담이 (비글 변형 — 핑키는 variant 없이 그대로)
   const d = { kind, J, scale, seed, meshes: [], ears: [], eyes: [], legs: [] };
   if (DM) Object.assign(d, { dami: true, variant, hipX: 0.056 });
-  if (PU) Object.assign(d, { pupu: true, variant, hipX: 0.05, smile: 0, smileK: 0, wild: false, earSw: 0, headPts: { top: [0, 0.096, -0.01], nose: [0, 0.024, 0.1035], mouth: [0, 0.002, 0.092] } }); // 푸푸: 뒷다리 뿌리는 골반 폭에 맞게 · headPts: 머리 좌표의 정수리·코끝·입 앞 (말풍선·킁킁·간식 자리 — 핑키·담이는 큰 머리의 예전 값 그대로) · smile: 평소에는 입을 다문다(엄근진) · wild: 터키츄 앞에서 체통을 잃으면 꼬리를 마음껏 · earSw: 귀를 좌우로 돌려 소리를 살핀다
+  if (PU) Object.assign(d, { pupu: true, variant, hipX: 0.05, smile: 1, smileK: 1, wild: false, earSw: 0, headPts: { top: [0, 0.096, -0.01], say: [0, 0.142, -0.01], nose: [0, 0.024, 0.1035], mouth: [0, 0.002, 0.092] } }); // 푸푸: 뒷다리 뿌리는 골반 폭에 맞게 · headPts: 머리 좌표의 정수리·말풍선 자리(쫑긋 선 귀 끝 0.134 바로 위 — 말풍선이 귀를 덮지 않게)·코끝·입 앞 (킁킁·간식 자리 — 핑키·담이는 큰 머리의 예전 값 그대로) · smile: 웃는상 — 평소 얼굴은 입을 벌리고 활짝 웃는 입 (엄근진은 말투와 몸가짐으로. 경계 근무 · 놀람 · 까치 · 터키츄 앞에서 체통을 지킬 때만 잠깐 0) · wild: 터키츄 앞에서 체통을 잃으면 꼬리를 마음껏 · earSw: 귀를 좌우로 돌려 소리를 살핀다
   const CC = PU ? PUPU_COLLAR_C : COLLAR_C, CA = PU ? PUPU_COLLAR_AX : COLLAR_AX; // 목줄 고리 중심(y, z)·고리 면 법선 — 푸푸는 굵은 목 위쪽(턱 밑)에
   const silMat = silhouette ? new THREE.MeshStandardMaterial({ color: 0x2b201b, roughness: 0.9, emissive: 0x170f0b }) : null;
   // 짧고 촘촘한 털: 거친 무광 바탕 + 몸 축을 따라 길게 늘어진 털결 노이즈(차콜 속에 낱낱의 회색 털) + 실루엣 가장자리만 보송하게 밝아지는 솜털(프레넬, 어두운 털에서는 약하게)
@@ -1059,10 +1064,16 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
   const sc = new THREE.Group(); sc.scale.setScalar(scale); d.root.add(sc);
   const body = new THREE.Group(); sc.add(body); d.body = body;
 
+  // 푸푸 겉털 대역: 바탕 메시(m)의 자식으로 같은 거리장을 성기게(h) 다시 떠서 같은 무늬로 칠하고(바탕 좌표로 옮겨 칠한다), 보이지 않게 둔 채 겉털 겹만 씌운다
+  const _pf = new THREE.Vector3();
+  const furProxy = (m, key, sdf, b0, b1, h, s, paint, fur) => {
+    const q = put(m, sdfGeo(key, sdf, b0, b1, h, m.geometry.userData.smooth || 0), null, null, s, paint ? (p, c) => paint(_pf.copy(p).applyMatrix4(m.matrix), c) : null);
+    q.material = new THREE.MeshBasicMaterial({ visible: false }); q.castShadow = q.receiveShadow = false; q.userData.fur = fur; m.userData.fur = null; return q;
+  };
   // 몸통 (몸통 · 가슴 · 엉덩이 · 목을 매끈하게 이은 한 덩어리)
   d.torso = put(body, PU ? sdfGeo('pub29', pupuBodySDF, [-0.12, -0.14, -0.28], [0.12, 0.28, 0.3], 0.0042, 2) : sdfGeo(J ? 'jb' : DM ? 'bbd' : 'bb', DM ? damiBodySDF : bodySDF(J), J ? [-0.17, -0.17, -0.3] : [-0.15, -0.17, -0.27], J ? [0.17, 0.2, 0.33] : [0.15, 0.25, 0.3], 0.006, 2), null, null, null, bodyPaint);
   if (J) d.torso.userData.fur = [2, 0.002, 1600];
-  if (PU) d.torso.userData.fur = [5, 0.0055, 1300, PUPU_FUR]; // 푸푸: 복슬한 겉털 — 실루엣 가장자리가 보송하고 정면에서도 털결이 비친다
+  if (PU && !silhouette) d.torsoFur = furProxy(d.torso, 'pub29f', pupuBodySDF, [-0.12, -0.14, -0.28], [0.12, 0.28, 0.3], 0.0042 * PUPU_FURN.bodyF, null, bodyPaint, [PUPU_FURN.body, 0.0055, 1300, PUPU_FUR]); // 푸푸: 복슬한 겉털 — 실루엣 가장자리가 보송하고 정면에서도 털결이 비친다 (몸통과 함께 목 · 허리가 굽는다)
   if (!silhouette && C.collar) {
     const sdfB = DM ? damiBodySDF : PU ? pupuBodySDF : bodySDF(J), ring = J ? collarRing(sdfB, V3(0, 0.068, 0.148), V3(0, 0.72, 0.69).normalize(), 0.011) : collarRing(sdfB, V3(0, CC[0], CC[1]), V3(0, CA[0], CA[1]).normalize(), DM ? 0.016 : PU ? 0.0062 : 0.011); // 목 밑동(턱에서 손 한 뼘 아래), 가는 띠가 가슴 위로 V자로 늘어진다
     if (C.collar === 'band') { // 푸푸: 진한 청회색 납작한 띠 목줄 — 리본(안쪽 면)에 두께를 준 겉면·테두리를 붙인다 (목이 굽으면 굽은 목에 다시 두르고 두께도 따라간다)
@@ -1161,7 +1172,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     const NP = V3(0, NECK_P[0], NECK_P[1]), ny = 0.953, nz = 0.302;
     const nw = (x, y, z) => ss(NECK_W[0], NECK_W[1], (y - 0.07) * ny + (z - 0.11) * nz) * ss(NECK_W[2], NECK_W[3], z);
     const R = d.neckRig = makeRig(NP, nw);
-    rigMesh(R, d.torso.geometry);
+    rigMesh(R, d.torso.geometry); if (d.torsoFur) rigMesh(R, d.torsoFur.geometry); // 푸푸: 겉털 대역도 같이 굽힌다
     rigFollow(R, hp.position);
     if (d.harness) { for (let i = 0; i < 2; i++) rigMesh(R, d.harness[i].geometry); rigFollow(R, d.harness[2].position); }
     if (d.collarRing) {
@@ -1192,13 +1203,14 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
   const skull = PU ? put(head, sdfGeo('puh29', pupuHeadSDF, [-0.075, -0.045, -0.075], [0.075, 0.1, 0.135], 0.0017, 1), null, null, null, headPaint)
     : put(head, sdfGeo(J ? 'jh' : DM ? 'bhd' : 'bh', DM ? damiHeadSDF : headSDF(J), J ? [-0.135, -0.08, -0.13] : DM ? [-0.085, -0.055, -0.095] : [-0.075, -0.055, -0.095], J ? [0.135, 0.175, 0.25] : DM ? [0.085, 0.135, 0.16] : [0.075, 0.135, 0.165], J ? 0.004 : 0.0025, 1), null, null, null, headPaint);
   if (J) skull.userData.fur = [2, 0.0015, 1600];
-  if (PU && !silhouette) { // 푸푸 머리 겉털: 바깥 살갗에만 — 눈테·입술 가장자리·잘린 입천장은 빼서 검은 털이 속눈썹처럼 삐죽 서거나 입 안이 털로 얼룩지지 않게
-    const g = skull.geometry, pos = g.attributes.position, idx = g.index.array, keep = [], ok = new Uint8Array(pos.count);
+  if (PU && !silhouette) { // 푸푸 머리 겉털: 바깥 살갗에만 — 눈테·입술 가장자리·잘린 입천장은 빼서 검은 털이 속눈썹처럼 삐죽 서거나 입 안이 털로 얼룩지지 않게 (성긴 대역 메시에)
+    const fp = put(skull, sdfGeo('puh29f', pupuHeadSDF, [-0.075, -0.045, -0.075], [0.075, 0.1, 0.135], 0.0017 * PUPU_FURN.headF, 1), null, null, null, headPaint); skull.remove(fp); d.meshes.pop(); furry.pop(); // 칠한 대역 메시만 쓰고 장면에서는 뺀다
+    const g = fp.geometry, pos = g.attributes.position, idx = g.index.array, keep = [], ok = new Uint8Array(pos.count);
     if (!g.attributes.normal) g.computeVertexNormals();
-    for (let i = 0; i < pos.count; i++) { const X = pos.getX(i), Y = pos.getY(i), Z = pos.getZ(i); ok[i] = pupuHB0(X, Y, Z) > -0.0009 && pupuSocket(X, Y, Z) > 0.0024 && !(Z > 0.04 && Math.abs(pupuJawR(X, Y, Z)) < 0.0016) ? 1 : 0; }
+    for (let i = 0; i < pos.count; i++) { const X = pos.getX(i), Y = pos.getY(i), Z = pos.getZ(i); ok[i] = pupuHB0(X, Y, Z) > -0.0009 && pupuSocket(X, Y, Z) > 0.0024 && !(Z > 0.04 && Math.abs(pupuJawR(X, Y, Z)) < 0.0026) ? 1 : 0; } // 입선 둘레 2.6mm도 뺀다: 겉털 겹이 검은 입술 관 위로 떠서 크림색 부스러기처럼 얹히지 않게
     for (let t = 0; t < idx.length; t += 3) if (ok[idx[t]] && ok[idx[t + 1]] && ok[idx[t + 2]]) keep.push(idx[t], idx[t + 1], idx[t + 2]);
     const sg = new THREE.BufferGeometry(); sg.setAttribute('position', pos); sg.setAttribute('normal', g.attributes.normal); sg.setAttribute('color', g.attributes.color); sg.setIndex(keep);
-    const skin = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ visible: false })); skin.castShadow = false; skull.add(skin); furShells(skin, 3, 0.0024, 1800, PUPU_FUR);
+    const skin = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ visible: false })); skin.castShadow = false; skull.add(skin); furShells(skin, PUPU_FURN.head, 0.0024, 1800, PUPU_FUR);
   }
   const noseM = new THREE.MeshPhysicalMaterial({ color: C.nose, roughness: J ? 0.3 : 0.55, clearcoat: J ? 0.6 : 0.28, clearcoatRoughness: J ? 0.25 : 0.45 }); // 비글: 촉촉한 검은 가죽 코 (넓은 확산광 대신 작은 반짝임 — 회색 고무가 되지 않게)
   if (J) {
@@ -1254,10 +1266,10 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     if (!silhouette) { // 아래턱 겉털(머리와 같은 셸): 입 안(잘린 면)은 빼고 바깥 살갗에만 씌운다 — 다물면 볼과 아래턱 경계가 털에 묻히고, 벌리면 잇몸이 털로 얼룩지지 않는다
       const g = d.jawMesh.geometry, pos = g.attributes.position, idx = g.index.array, keep = [], out = new Uint8Array(pos.count);
       if (!g.attributes.normal) g.computeVertexNormals();
-      for (let i = 0; i < pos.count; i++) { const X = pos.getX(i), Y = pos.getY(i) + PJ[1], Z = pos.getZ(i) + PJ[2]; out[i] = pupuHB0(X, Y, Z) > -0.0009 && pupuJawR(X, Y, Z) < -0.0006 ? 1 : 0; }
+      for (let i = 0; i < pos.count; i++) { const X = pos.getX(i), Y = pos.getY(i) + PJ[1], Z = pos.getZ(i) + PJ[2]; out[i] = pupuHB0(X, Y, Z) > -0.0009 && pupuJawR(X, Y, Z) < -0.0022 ? 1 : 0; } // 아랫입술 둘레 2.2mm는 빼서 입술 관 위에 크림색 털 부스러기가 얹히지 않게
       for (let t = 0; t < idx.length; t += 3) if (out[idx[t]] && out[idx[t + 1]] && out[idx[t + 2]]) keep.push(idx[t], idx[t + 1], idx[t + 2]);
       const sg = new THREE.BufferGeometry(); sg.setAttribute('position', pos); sg.setAttribute('normal', g.attributes.normal); sg.setAttribute('color', g.attributes.color); sg.setIndex(keep);
-      const skin = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ visible: false })); skin.castShadow = false; d.jawMesh.add(skin); furShells(skin, 3, 0.0024, 1800, PUPU_FUR);
+      const skin = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ visible: false })); skin.castShadow = false; d.jawMesh.add(skin); furShells(skin, PUPU_FURN.head, 0.0024, 1800, PUPU_FUR);
     }
   } else if (DM) { // 담이: 머리에서 떼어 낸 아래턱(입을 벌리면 분홍 잇몸·혀 바닥이 보인다)
     put(jaw, sdfGeo('bjd', damiJawSDF, [-0.05, -0.04, -0.016], [0.05, 0.016, 0.092], 0.0022, 1), null, null, null, (p, c) => {
@@ -1283,7 +1295,10 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     const tm = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.4, clearcoat: 0.35, clearcoatRoughness: 0.35 });
     const tPaint = (p, c) => { c.setHex(0xf3929f).multiplyScalar(1 - 0.18 * Math.exp(-((p.x / 0.0035) ** 2)) - 0.1 * ss(0.002, -0.004, p.y + p.z * 0.1)); };
     tongueRoot.position.set(0, 0, 0);
-    const tb = put(tongueRoot, sph(16, 10), [0, 0.0004, PUPU_MZ - PJ[2] - 0.031], [-0.1, 0, 0], [0.0165, 0.0034, 0.027], null, tm); tb.geometry = tb.geometry.clone(); tb.scale.set(1, 1, 1); tb.geometry.scale(0.0165, 0.0034, 0.027); // 입을 다물면 아랫입술 안에 숨는다
+    const tbG = sph(24, 16).rotateX(Math.PI / 2), tbP = tbG.attributes.position; // 입 안에 누운 혀 (구의 극은 앞뒤로 — 윗면에 꼬집힌 자국이 없게): 앞으로 갈수록 조금 넓어지고, 윗면 가운데에 얕은 골, 혀끝은 살짝 들린다
+    for (let i = 0; i < tbP.count; i++) { const x = tbP.getX(i), y = tbP.getY(i), z = tbP.getZ(i); tbP.setXYZ(i, x * (0.9 + 0.16 * (0.5 + 0.5 * z)) * PUPU_TONGUE_S[0], (y > 0 ? y * (1 - 0.3 * Math.exp(-((x / 0.3) ** 2))) : y) * PUPU_TONGUE_S[1] + 0.001 * Math.max(0, z) ** 3, z * PUPU_TONGUE_S[2]); }
+    tbG.computeVertexNormals();
+    const tb = put(tongueRoot, tbG, [0, PUPU_TONGUE_REST[0], PUPU_TONGUE_REST[1]], [PUPU_TONGUE_S[3], 0, 0], null, null, tm); d.tongueRest = tb; // 입을 다물면 아랫입술 안에 숨는다 (updateDog가 벌린 만큼 앞으로)
     const hang = new THREE.Group(); hang.position.set(0, 0.0004, PUPU_MZ - PJ[2] - 0.013); tongueRoot.add(hang); // 아랫니 자리
     const tg = put(hang, sdfGeo('btd', damiTongueSDF, [-0.022, -0.064, -0.03], [0.022, 0.008, 0.02], 0.0014), null, null, [0.74, 0.7, 0.72], null, tm); // 담이 혀를 조금 작게 (푸푸 주둥이 폭에 맞게 — 웃으면 아랫입술 너머로 넓은 분홍 혀끝이 보인다)
     for (const m of [tb, tg]) { m.castShadow = false; const pos = m.geometry.attributes.position, col = new Float32Array(pos.count * 3); for (let i = 0; i < pos.count; i++) { _pv.fromBufferAttribute(pos, i); tPaint(_pv, _pc); col.set([_pc.r, _pc.g, _pc.b], i * 3); } m.geometry.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
@@ -1311,7 +1326,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     };
     for (const sx of [1, -1]) {
       tube(head, half.map((p) => V3(p.x * sx, p.y, p.z)), R, (s) => lerp(1, 0.3, ss(0.5, 1, s)));
-      tube(jaw, half.filter((p) => p.x > 0.008).map((p) => V3(p.x * sx, p.y - 0.0004 - PJ[1], p.z - PJ[2] - 0.0006)), R * 0.85, (s) => lerp(1, 0.4, ss(0.55, 1, s)) * lerp(0.2, 1, ss(0, 0.25, s))); // 아랫입술: 가운데는 혀가 덮는다 (안쪽 끝은 가늘게 사라져 다물었을 때 턱이 지지 않는다) · 다물면 윗입술 관 밑에 숨어 두 줄로 보이지 않는다
+      tube(jaw, [V3(-0.0015, half[0].y, half[0].z), ...half].map((p) => V3(p.x * sx, p.y - 0.0004 - PJ[1], p.z - PJ[2] - 0.0006)), R * 0.85, (s) => lerp(1, 0.4, ss(0.55, 1, s))); // 아랫입술: 가운데까지 이어진 검은 테 (좌우 관이 가운데서 조금 겹쳐 열린 끝이 보이지 않는다) (혀는 입 안에 누워 있어 가리지 않는다) · 다물면 윗입술 관 밑에 숨어 두 줄로 보이지 않는다
       for (const i of [1, 3]) { const q = half[i], k = 1 - 0.0034 / Math.hypot(q.x, q.z - ZA); put(head, sph(8, 6), [sx * q.x * k, q.y - 0.0013, ZA + (q.z - ZA) * k], null, [0.0013, 0.0021, 0.0011], null, toothM).castShadow = false; } // 윗앞니 넷: 웃으면 윗입술 밑으로 작고 하얗게 보인다 (다물면 아래턱 살 속에 숨는다)
     }
   }
@@ -1399,7 +1414,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
 
   // 꼬리
   const tp = new THREE.Group(); tp.position.set(0, J ? 0.07 : 0.053, J ? -0.196 : -0.25); if (PU) tp.position.set(0, 0.09, -0.178); body.add(tp); d.tail = tp;
-  if (PU) { const m = put(tp, sdfGeo('put21', pupuTailSDF, [-0.065, -0.055, -0.085], [0.1, 0.215, 0.16], 0.0022, 1), [0, 0, 0], [0, -0.38, 0], 1.08, tailPaint); m.userData.fur = [5, 0.0085, 1100, PUPU_FUR]; d.tailFluff = m; } // 푸푸: 등 위로 낫처럼 말린 굵은 털 꼬리 — 통째로 흔든다 (d.tailMesh가 아니라 굽히지 않는다)
+  if (PU) { const m = put(tp, sdfGeo('put21', pupuTailSDF, [-0.065, -0.055, -0.085], [0.1, 0.215, 0.16], 0.0022 * PUPU_FURN.tailH, 1), [0, 0, 0], [0, -0.38, 0], 1.08, tailPaint); if (!silhouette) furProxy(m, 'put21f', pupuTailSDF, [-0.065, -0.055, -0.085], [0.1, 0.215, 0.16], 0.0022 * PUPU_FURN.tailF, 1.08, tailPaint, [PUPU_FURN.tail, 0.0085, 1100, PUPU_FUR]); d.tailFluff = m; } // 푸푸: 등 위로 낫처럼 말린 굵은 털 꼬리 — 통째로 흔든다 (d.tailMesh가 아니라 굽히지 않는다)
   else if (J) put(tp, new THREE.TorusGeometry(0.055, 0.03, 10, 20, Math.PI * 1.5), [0, 0.06, 0], [0, Math.PI / 2, 0.5], null, tailPaint).userData.fur = [3, 0.006, 400];
   else if (DM) { d.tailMesh = put(tp, sdfGeo('btdt', damiTailSDF, [-0.052, -0.052, -0.055], [0.052, 0.325, 0.135], 0.0028), null, null, null, tailPaint); d.tailMesh.userData.fur = [2, 0.0045, 900]; } // 담이: 흰 붓 꼬리 (솜털 셸로 가장자리가 보송하게)
   else d.tailMesh = put(tp, sdfGeo('bt', tailSDF, [-0.048, -0.048, -0.05], [0.048, 0.3, 0.11], 0.003), null, null, null, tailPaint);
@@ -1429,17 +1444,18 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
         const r1 = front ? 0.02 : 0.04, r2 = front ? 0.04 : 0.034, r3 = front ? 0.027 : 0.0235, r4 = front ? 0.025 : 0.0235, m3 = 0.005, at = hip.position.clone(), bodySpace = (p, c) => bodyPaint(_pb.copy(p).add(at), c, 1); // 위팔·허벅지는 몸통 무늬를 이어받는다 · 앞다리는 팔꿈치 아래(굵은 아래팔 근육)에서 손목으로 가늘어진다
         const legP = (L, a, b) => (p, c) => tone(c.copy(cW).lerp(cSnow, lerp(a, b, clamp(-p.y / L, 0, 1))), p, 0.04); // 아래팔·정강이 → 발허리 → 발로 흰 기운이 끊김 없이 이어진다 (마디 경계에 색 띠가 생기지 않게)
         const box = (L, ra, rb, ex) => { const w = Math.max(ra, rb) + m3 + ex; return [[-w, -L - rb - m3, -w], [w, ra + m3, w]]; };
+        const pLeg = (par, key, sdf, b0, b1, h, paint, len, den) => { const m = put(par, sdfGeo(key, sdf, b0, b1, h * PUPU_FURN.legH), null, null, null, paint); if (!silhouette) furProxy(m, key + 'f', sdf, b0, b1, h * PUPU_FURN.legH * PUPU_FURN.legF, null, paint, [PUPU_FURN.leg, len, den, PUPU_FUR]); return m; }; // 다리 마디 + 성긴 겉털 대역
         if (front) {
-          put(hip, sdfGeo('pl1f7', (x, y, z) => smin(sdRoundCone(x, y, z, L1, r1, r2), sdE(x, y, z, 0, -L1 * 0.6, -0.006, 0.026, 0.038, 0.028), 0.022), ...box(L1, r1, r2, 0.008), 0.0025), null, null, null, bodySpace).userData.fur = [2, 0.003, 1500, PUPU_FUR]; // 위팔: 어깨 근육 속에서 팔꿈치로 (몸통과 같은 겉털)
-          put(knee, sdfGeo('pl2f6', (x, y, z) => smin(smin(sdRoundCone(x, y, z, L2, r2, r3), Math.hypot(x, y - 0.001, z + 0.014) - 0.0095, 0.012), sdE(x, y, z, 0, -L2 * 0.24, -0.004, r2 * 0.94, L2 * 0.3, r2 * 1.02), 0.03), ...box(L2, r2, r3, 0.008), 0.0025), null, null, null, legP(L2, 0.3, 0.55)).userData.fur = [2, 0.0026, 1600, PUPU_FUR]; // 아래팔: 위쪽 근육이 도톰하고 손목으로 고르게 가늘어지는 곧은 다리 · 작은 팔꿈치 머리
-          put(ank, sdfGeo('pl3f6', (x, y, z) => smin(sdRoundCone(x, y, z, L3, r3, r4), Math.hypot(x, y + 0.004, z + 0.012) - 0.0085, 0.009), ...box(L3, r3, r4, 0.004), 0.002), null, null, null, legP(L3, 0.55, 0.68)).userData.fur = [2, 0.0022, 1700, PUPU_FUR]; // 발허리 · 손목 뒤 볼록(덧손목뼈) — 아래팔과 같은 겉털
+          pLeg(hip, 'pl1f7', (x, y, z) => smin(sdRoundCone(x, y, z, L1, r1, r2), sdE(x, y, z, 0, -L1 * 0.6, -0.006, 0.026, 0.038, 0.028), 0.022), ...box(L1, r1, r2, 0.008), 0.0025, bodySpace, 0.003, 1500); // 위팔: 어깨 근육 속에서 팔꿈치로 (몸통과 같은 겉털)
+          pLeg(knee, 'pl2f6', (x, y, z) => smin(smin(sdRoundCone(x, y, z, L2, r2, r3), Math.hypot(x, y - 0.001, z + 0.014) - 0.0095, 0.012), sdE(x, y, z, 0, -L2 * 0.24, -0.004, r2 * 0.94, L2 * 0.3, r2 * 1.02), 0.03), ...box(L2, r2, r3, 0.008), 0.0025, legP(L2, 0.3, 0.55), 0.0026, 1600); // 아래팔: 위쪽 근육이 도톰하고 손목으로 고르게 가늘어지는 곧은 다리 · 작은 팔꿈치 머리
+          pLeg(ank, 'pl3f6', (x, y, z) => smin(sdRoundCone(x, y, z, L3, r3, r4), Math.hypot(x, y + 0.004, z + 0.012) - 0.0085, 0.009), ...box(L3, r3, r4, 0.004), 0.002, legP(L3, 0.55, 0.68), 0.0022, 1700); // 발허리 · 손목 뒤 볼록(덧손목뼈) — 아래팔과 같은 겉털
         } else {
-          thighM = put(hip, sdfGeo('pl1h8', (x, y, z) => smin(sdRoundCone(x, y, z, L1, r1, r2), smin(sdE(x, y, z, 0.002, -0.054, -0.012, 0.036, 0.066, 0.052), sdE(x, y, z, 0.002, -L1 * 0.66, -0.012, 0.032, 0.046, 0.04), 0.03), 0.03), [-0.065, -L1 - r2 - 0.008, -0.09], [0.065, 0.05, 0.08], 0.0028), null, null, null, bodySpace); thighM.userData.fur = [2, 0.003, 1500, PUPU_FUR]; // 허벅지: 넓고 단단한 '바지' (몸통과 같은 겉털)
-          put(knee, sdfGeo('pl2h4', (x, y, z) => smin(smin(sdRoundCone(x, y, z, L2, r2, r3), sdE(x, y, z, 0, -L2 * 0.06, 0.006, 0.03, 0.032, 0.032), 0.02), sdE(x, y, z, 0, -L2 * 0.32, -0.01, 0.026, 0.05, 0.028), 0.03), [-0.045, -L2 - r3 - m3, -0.05], [0.045, r2 + 0.008, 0.05], 0.0025), null, null, null, legP(L2, 0.3, 0.55)).userData.fur = [2, 0.0022, 1700, PUPU_FUR]; // 정강이: 앞으로 나온 무릎 · 뒤쪽 종아리 근육이 비절로 가늘어진다
-          put(ank, sdfGeo('pl3h5', (x, y, z) => smin(sdRoundCone(x, y, z, L3, r3, r4), Math.hypot(x, y - 0.002, z + 0.0135) - 0.0092, 0.012), [-r4 - m3 - 0.004, -L3 - r4 - m3, -0.04], [r4 + m3 + 0.004, r3 + m3, r4 + m3 + 0.004], 0.002), null, null, null, legP(L3, 0.55, 0.68)).userData.fur = [2, 0.0022, 1700, PUPU_FUR]; // 뒷발허리 · 작은 비절 끝(뒤꿈치뼈) — 정강이와 같은 겉털
+          thighM = pLeg(hip, 'pl1h8', (x, y, z) => smin(sdRoundCone(x, y, z, L1, r1, r2), smin(sdE(x, y, z, 0.002, -0.054, -0.012, 0.036, 0.066, 0.052), sdE(x, y, z, 0.002, -L1 * 0.66, -0.012, 0.032, 0.046, 0.04), 0.03), 0.03), [-0.065, -L1 - r2 - 0.008, -0.09], [0.065, 0.05, 0.08], 0.0028, bodySpace, 0.003, 1500); // 허벅지: 넓고 단단한 '바지' (몸통과 같은 겉털)
+          pLeg(knee, 'pl2h4', (x, y, z) => smin(smin(sdRoundCone(x, y, z, L2, r2, r3), sdE(x, y, z, 0, -L2 * 0.06, 0.006, 0.03, 0.032, 0.032), 0.02), sdE(x, y, z, 0, -L2 * 0.32, -0.01, 0.026, 0.05, 0.028), 0.03), [-0.045, -L2 - r3 - m3, -0.05], [0.045, r2 + 0.008, 0.05], 0.0025, legP(L2, 0.3, 0.55), 0.0022, 1700); // 정강이: 앞으로 나온 무릎 · 뒤쪽 종아리 근육이 비절로 가늘어진다
+          pLeg(ank, 'pl3h5', (x, y, z) => smin(sdRoundCone(x, y, z, L3, r3, r4), Math.hypot(x, y - 0.002, z + 0.0135) - 0.0092, 0.012), [-r4 - m3 - 0.004, -L3 - r4 - m3, -0.04], [r4 + m3 + 0.004, r3 + m3, r4 + m3 + 0.004], 0.002, legP(L3, 0.55, 0.68), 0.0022, 1700); // 뒷발허리 · 작은 비절 끝(뒤꿈치뼈) — 정강이와 같은 겉털
         }
         put(foot, sph(), [0, 0, 0], null, r4 * 0.92, pawPaint);
-        put(foot, sdfGeo('puf2', pupuFootSDF, [-0.036, -0.034, -0.032], [0.036, 0.01, 0.05], 0.0012), null, null, front ? [1.32, 1, 1.3] : [1.22, 1, 1.24], front ? pupuFootPaint(1.32, 1.3) : pupuFootPaint(1.22, 1.24)); // 둥글게 모인 큼직한 발 — 다리보다 넓고 앞발이 조금 크다 (바닥 높이는 그대로)
+        put(foot, sdfGeo('puf2', pupuFootSDF, [-0.036, -0.034, -0.032], [0.036, 0.01, 0.05], 0.0012 * PUPU_FURN.footH), null, null, front ? [1.32, 1, 1.3] : [1.22, 1, 1.24], front ? pupuFootPaint(1.32, 1.3) : pupuFootPaint(1.22, 1.24)); // 둥글게 모인 큼직한 발 — 다리보다 넓고 앞발이 조금 크다 (바닥 높이는 그대로)
       } else {
         const lk = DM ? 0.87 : 1, r1 = (front ? 0.027 : 0.052) * lk, r2 = (front ? 0.039 : 0.036) * (DM ? 0.93 : 1), r3 = (front ? 0.029 : 0.0235) * (DM ? 0.8 : 1), r4 = (front ? 0.03 : 0.0255) * (DM ? 0.82 : 1); // 담이: 다리가 가늘다(얄상) // 짧고 튼튼하지만 팔꿈치·무릎 아래로 가늘어지는 다리 (발목은 윗다리의 55%)
         const paintAt = front ? V3(sx * (DM ? 0.042 : 0.046), -0.048, 0.228) : hip.position.clone(); // 무늬는 예전 어깨 자리 기준 그대로 (관절을 옮겨도 털색은 그대로)
@@ -1466,7 +1482,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     // 허리 관절(흉요추·요천추): 갈비 뒤부터 엉덩이까지의 몸통 정점을 허리 축 둘레로 굽힌다 — 앉으면 가슴은 덜 눕고 골반이 밑으로 말려 엉덩이가 바닥에 앉는다.
     // 고관절·꼬리 뿌리도 골반과 함께 움직인다 (갈비뼈 구간 z > -0.02 는 한 덩어리로 굳어 있다)
     const R = d.lumbarRig = makeRig(V3(0, 0.02, -0.06), (x, y, z) => ss(0.0, -0.17, z));
-    rigMesh(R, d.torso.geometry);
+    rigMesh(R, d.torso.geometry); if (d.torsoFur) rigMesh(R, d.torsoFur.geometry);
     for (const L of d.legs) if (!L.front) L.fol = rigFollow(R, L.hip.position);
     rigFollow(R, tp.position);
   }
@@ -1593,7 +1609,8 @@ function updateDog(d, dt, t, camPos) {
   const bRoll = c.roll + (d.J ? 0 : Math.sin(d.phase) * 0.035 * d.gait);
   d.body.rotation.set(c.pitch + (d.J ? 0 : Math.sin(d.phase * 2) * 0.012 * d.gait), 0, d.wig ? bRoll + d.wig * 0.25 : bRoll); // wig: 담이가 엉덩이를 실룩실룩 (간식 · 쓰다듬기) // 걸을 때 몸이 좌우로 살짝 흔들리고, 어깨와 엉덩이가 번갈아 오르내린다
   d.torso.scale.set(1 + br * 2.5, 1 + br * 2.5, 1);
-  if (d.neckRig) { const rc = c.reach || 0, na = (c.neck || 0) + 0.65; bendRig(d.neckRig, c.neck || 0, 0, Math.cos(na) * rc, Math.sin(na) * rc); if (d.collarFit) d.collarFit(); } // reach: 굽은 목 방향(쉬는 목은 수직에서 ~37° 앞으로 누워 있다)으로 목을 뺀다
+  const nk = d.pupu ? (c.neck || 0) + 0.7 * Math.sin(Math.PI * clamp((c.roll - 1.6) / 1.25, 0, 1)) : c.neck || 0; // 푸푸: 옆으로 누운 자세와 배 보이기 사이를 구르는 동안은 목을 가슴 쪽으로 더 굽혀 고개를 든다 (긴 목 끝의 머리가 땅에 묻히지 않게 · 다 누우면 0)
+  if (d.neckRig) { const rc = c.reach || 0, na = nk + 0.65; bendRig(d.neckRig, nk, 0, Math.cos(na) * rc, Math.sin(na) * rc); if (d.collarFit) d.collarFit(); } // reach: 굽은 목 방향(쉬는 목은 수직에서 ~37° 앞으로 누워 있다)으로 목을 뺀다
   const pelvisYaw = d.J ? 0 : -Math.cos(d.phase) * 0.07 * d.gait; // 평보: 앞으로 나간 뒷발 쪽 골반이 앞으로 돈다(허리가 좌우로 굽는다)
   if (d.lumbarRig) bendRig(d.lumbarRig, -(c.lumbar || 0), (c.bendY || 0) + pelvisYaw + (d.wig || 0)); // wig: 담이가 간식을 보고 엉덩이를 씰룩 (핑키는 늘 0) // 양수 = 골반이 밑으로 말린다(엉덩이가 아래·앞으로) · bendY: 등이 옆으로 C자로 휜다
   if (d.medal) {
@@ -1612,7 +1629,7 @@ function updateDog(d, dt, t, camPos) {
   d.root.updateMatrixWorld(true);
 
   // 머리 · 시선
-  const h0 = d.neckRig ? (c.neck || 0) * d.neckRig.follow[0].w : 0; // 머리는 목 끝에 달려 있어 목이 굽은 만큼 같이 숙여진다 (시선이 없을 때의 기본 머리 각)
+  const h0 = d.neckRig ? nk * d.neckRig.follow[0].w : 0; // 머리는 목 끝에 달려 있어 목이 굽은 만큼 같이 숙여진다 (시선이 없을 때의 기본 머리 각)
   let yaw = 0, pitch = -h0;
   const look = d.lookFn ? d.lookFn() : camPos;
   if (look && c.gaze > 0.01) {
@@ -1717,12 +1734,18 @@ function updateDog(d, dt, t, camPos) {
   let jt = d.jawOpen;
   if (d.chew) jt = 0.06 + 0.2 * (0.5 + 0.5 * Math.sin(t * 15));
   if (d.pant) jt = Math.max(jt, d.dami ? 0.3 + 0.06 * Math.sin(t * 18) : d.pupu ? PUPU_SMILE + 0.07 + 0.05 * Math.sin(t * 14) : 0.16 + 0.04 * Math.sin(t * 14));
-  if (d.pupu) { d.smileK += ((d.chew ? 0 : d.smile * ss(0.15, 0.45, d.eyeOpen)) - d.smileK) * (1 - Math.exp(-6 * dt)); jt = Math.max(jt, PUPU_SMILE * d.smileK); } // 푸푸: 평소에는 입을 꾹 다문 엄근진 (d.smile = 1: 정말 기쁠 때만 입을 벌리고 웃는다. 씹을 때·졸거나 잘 때(eyeOpen < 0.3)는 다문다) // 담이는 입을 크게 벌리고 더 빠르게 헥헥 (sound.js DAMI_PANT_W = 18)
+  if (d.pupu) { // 푸푸: 웃는상 — 평소에는 입을 벌리고 활짝 웃는다 (d.smile = 1). 졸거나 잘 때(eyeOpen < 0.3)는 다문다
+    d.alertT = Math.max(0, (d.alertT || 0) - dt); // 놀람('!' · '…!' 말풍선): 그 순간만 입을 꾹 다물었다가 다시 웃는다
+    d.jawHold = d.chew || d.sniff > 0 || d.jawOpen > 0.02 ? 0.3 : Math.max(0, (d.jawHold || 0) - dt); // 다른 것이 턱을 움직이는 동안(월 짖기 · 킁킁 · 물기 · 씹기 · 물 마시기)과 그 뒤 0.3초는 웃는 입이 비켜선다 — 짖을 때 입이 닫혔다 열리는 게 보이게 (핥을 때(쩝쩝)는 웃는 입 그대로 혀만 내밀어 날름)
+    const sw = d.jawHold > 0 || d.alertT > 0 ? 0 : d.smile * ss(0.15, 0.45, d.eyeOpen);
+    d.smileK += (sw - d.smileK) * (1 - Math.exp(-(sw < d.smileK ? 16 : 6) * dt)); jt = Math.max(jt, PUPU_SMILE * d.smileK); // 다물 때는 얼른, 웃을 때는 천천히
+  } // 담이는 입을 크게 벌리고 더 빠르게 헥헥 (sound.js DAMI_PANT_W = 18)
   d.jaw.rotation.x += (jt - d.jaw.rotation.x) * (1 - Math.exp(-28 * dt));
-  const to = Math.max(d.tongueOut, d.lick, d.pant ? 0.7 : 0, d.pupu ? 0.6 * d.smileK : 0); // 푸푸: 웃으면 분홍 혀끝이 아랫입술 너머로 보인다
+  const to = Math.max(d.tongueOut, d.lick, d.pant ? 0.7 : 0); // 푸푸: 웃을 때 혀는 입 안 아래턱 바닥에 누워 있고(tongueRest), 헥헥·핥기·물 마시기에만 아랫입술 너머로 내민다
+  if (d.tongueRest) { const o = clamp(d.jaw.rotation.x / PUPU_SMILE, 0, 1.2), R = PUPU_TONGUE_REST; d.tongueRest.position.set(0, R[0] + R[2] * o, R[1] + R[3] * o); } // 푸푸: 입을 벌릴수록 혀가 앞니 쪽으로 올라와 분홍 혀가 입 안 가득 보인다 (혀끝은 아랫입술 선까지) · 다물면 입 속으로 물러난다
   if ((d.dami || d.pupu) && d.tongue.isGroup) { // 담이: 길게 늘어진 혀 — 턱이 벌어져도 아래로 늘어지고(중력), 헥헥할 때 살랑 흔들린다
     const tg = d.tongue, s = d.pupu ? ss(0.02, 0.2, to) : ss(0.02, 0.5, to) * (0.7 + 0.3 * to);
-    tg.visible = s > 0.01; if (d.pupu) tg.scale.set(1, Math.max(s * (0.3 + 0.7 * to), 0.01), Math.max(s * (0.3 + 0.7 * to), 0.01)); else tg.scale.set(1, Math.max(s, 0.01), Math.max(s, 0.01)); // 푸푸: 웃을 때는 혀끝만 살짝, 헥헥·핥기에 더 길게
+    tg.visible = s > 0.01; if (d.pupu) tg.scale.set(1, Math.max(s * (0.3 + 0.7 * to), 0.01), Math.max(s * (0.3 + 0.7 * to), 0.01)); else tg.scale.set(1, Math.max(s, 0.01), Math.max(s, 0.01)); // 푸푸: 헥헥·핥기·물 마시기에 내민 만큼 길게
     tg.rotation.set(-d.jaw.rotation.x * 0.75 + clamp(-(c.pitch + d.hp.rotation.x) * 0.5, -0.5, 0.5) + (d.pant ? Math.sin(t * 18 + 1) * 0.07 : 0), 0, d.pant ? Math.sin(t * 3.5) * 0.06 : 0);
     tg.position.x = d.lick ? Math.sin(t * 11) * 0.006 * d.lick : 0;
   } else {
@@ -2988,6 +3011,7 @@ function resetProps() { releaseProps(); yogurt.reset(); yogurtDab.set(0); goguma
 const bubbles = [], bubbleLayer = $('#bubbles'), _p = V3();
 function bubble(text, anchor, cls = '', life = 1.7, dx = null) { // 글자만 (소리 없이)
   if (pinky.talk) text = pinky.talk(text); // 강아지마다 말투 (담이: 명랑한 담과장)
+  if (pinky.pupu && anchor === headTop && /^…?!$/.test(text)) pinky.alertT = 1.0; // 푸푸: 놀라거나 귀를 세우고 알아챌 때('!' · '…!')는 웃던 입을 꾹 다문다 (1초 뒤 다시 웃는상)
   if (pinky.dami && cls === 'soft') cls = 'soft dm'; // 담이의 말: 해 질 녘 모래밭 위에서도 또렷하게 (조금 더 진한 바탕)
   const el = document.createElement('div'); el.className = 'bubble ' + cls; el.textContent = text; el.style.opacity = 0; // 자리를 잡기 전(다음 프레임)까지는 보이지 않게 — 화면 구석에 한 번 번쩍이지 않도록
   bubbleLayer.appendChild(el);
@@ -3001,7 +3025,7 @@ function say(text, anchor, cls = '', life = 1.7, dx = null) {
 function snd(fn, ...a) { try { return sound[fn](...a); } catch (e) { return null; } }
 // 머리 위의 자리(머리 좌표): 핑키·담이는 큰 머리의 예전 값, 머리 모양이 다른 강아지(푸푸)는 buildDog가 정한 headPts
 const headLocal = (k, x, y, z) => (pinky.headPts ? V3(...pinky.headPts[k]) : V3(x, y, z));
-const headTop = () => pinky.head.localToWorld(headLocal('top', 0, 0.125, 0.015));
+const headTop = () => pinky.head.localToWorld(pinky.headPts ? V3(...(pinky.headPts.say || pinky.headPts.top)) : V3(0, 0.125, 0.015)); // 말풍선은 귀 끝 위에 (푸푸: headPts.say)
 const noseTip = () => pinky.head.localToWorld(headLocal('nose', 0, 0.004, 0.14));
 const mouthPt = () => pinky.head.localToWorld(headLocal('mouth', 0, -0.025, 0.115));
 const heart = () => say('♥', headTop, 'heart', 1.4, (Math.random() - 0.5) * 90);
@@ -3116,7 +3140,7 @@ async function comeHere(tok, speed = 0.75) {
   pinky.face = 'cam'; pinky.walkSpeed = 0.5;
 }
 function happy(on) {
-  if (pinky.pupu) return void Object.assign(pinky, on ? { eyeOpen: 0.62, earPerk: -0.2, wagAmpT: 0.55, wagSpeedT: 9, pant: false, tiltT: 0.06 } : { eyeOpen: 1, earPerk: 0, wagAmpT: 0.3, wagSpeedT: 6, pant: false, tiltT: 0, paddle: 0 }); // 푸푸: 좋아도 점잖게 — 눈만 살짝 가늘게, 입은 다문 채 (정말 기쁠 때만 d.smile로 웃는다)
+  if (pinky.pupu) return void Object.assign(pinky, on ? { eyeOpen: 0.62, earPerk: -0.2, wagAmpT: 0.55, wagSpeedT: 9, pant: false, tiltT: 0.06 } : { eyeOpen: 1, earPerk: 0, wagAmpT: 0.3, wagSpeedT: 6, pant: false, tiltT: 0, paddle: 0 }); // 푸푸: 좋아도 점잖게 — 헥헥대지 않고 눈만 살짝 가늘게 (입은 늘 웃는상 그대로)
   if (on) Object.assign(pinky, { eyeOpen: 0.28, earPerk: -0.6, wagAmpT: 0.75, wagSpeedT: 15, pant: true, tiltT: 0.2 });
   else Object.assign(pinky, { eyeOpen: 1, earPerk: 0, wagAmpT: 0.4, wagSpeedT: 8, pant: false, tiltT: 0, paddle: 0 });
 }
@@ -3226,14 +3250,15 @@ const CMDS = {
     await nearFirst(tok);
     setPose(pinky, 'side', 3.2); pinky.eyeOpen = 0.75;
     await wait(tok, 1.2);
-    say('뒹굴', headTop);
+    const rb = pinky.pupu ? aboveHead : headTop; // 푸푸: 길게 누우면 귀 끝 위(headPts.say)가 옆으로 누워 말풍선이 얼굴을 덮는다 → 머리 바로 위 하늘 쪽에
+    say('뒹굴', rb);
     for (let i = 0; i < 3; i++) {
       setPose(pinky, 'belly', 3.8); pinky.paddle = 1; await wait(tok, 0.6);
       setPose(pinky, 'side', 3.8); await wait(tok, 0.55);
     }
     setPose(pinky, 'belly', 3); pinky.paddle = 0.3; pinky.tongueOut = 0.55; pinky.eyeOpen = 0.45;
     pinky.wagAmpT = 0.25; pinky.wagSpeedT = 4;
-    say('뒹굴뒹굴', headTop);
+    say('뒹굴뒹굴', rb);
     await wait(tok, 1.6); pinky.paddle = 0;
     await wait(tok, 3);
   },
@@ -3248,13 +3273,13 @@ const CMDS = {
     const pt = () => (onBack ? pinky.body.localToWorld(V3(0, 0.115, lerp(0.05, -0.08, s))) : pinky.head.localToWorld(pinky.headPts ? V3(0, pinky.headPts.top[1], lerp(0.03, -0.045, s)) : V3(0, 0.125, lerp(0.04, -0.06, s)))); // 머리 쓰다듬기: 정수리를 따라 (푸푸는 제 머리 크기대로)
     handR.want = { pos: () => pt().addScaledVector(upOf(), 0.02 + lift), up: upOf, curl: 0.12, rate: 12, shoulder: [0.36, -0.12, 0.05] };
     for (let i = 0; i < 5; i++) {
-      onBack = i >= 2; if (pinky.pupu && i === 2) pinky.smile = 1; // 푸푸: 한참 쓰다듬어 주면 그제야 입이 벌어진다
+      onBack = i >= 2;
       await tween(tok, 0.75, (k) => { s = ease(k); lift = 0; });
       heart();
       await tween(tok, 0.32, (k) => { lift = Math.sin(k * Math.PI) * 0.035; s = 1 - k; });
     }
     handR.want = null;
-    await wait(tok, 0.5); happy(false); if (pinky.pupu) pinky.smile = 0; pinky.tiltT = 0.3; say('더 해줘…', headTop, 'soft', 1.8);
+    await wait(tok, 0.5); happy(false); if (pinky.pupu) pinky.smile = 1; pinky.tiltT = 0.3; say('더 해줘…', headTop, 'soft', 1.8); // 푸푸: 웃는상 그대로
     await wait(tok, 1.6); pinky.tiltT = 0; camHome();
   },
   async hug(tok) {
@@ -3426,10 +3451,9 @@ const CMDS = {
     if (curled) { Object.assign(pinky, { face: null, pant: false, eyeOpen: 0.2, tiltT: 0.07, earPerk: 0.3, wagAmpT: 0.28, wagSpeedT: 7 }); pinky.tgt.headPitch = POSES.curl.headPitch + 0.05; wait(tok, 0.5).then(() => { pinky.earPerk = 0; }, () => {}); } // 손길에 귀를 한 번 쫑긋, 머리를 손 쪽으로 살짝 기댄다
     else if (pinky.tgt.name === 'stand' && Math.hypot(pinky.x - CUSH.x, pinky.z - CUSH.z) < 0.6) setPose(pinky, 'stand', 4); // 방석에서 빙글 돌거나 꾹꾹 하던 중이면 몸을 바로 하고 선다
     say('좋아…', headTop, 'soft', 1.6);
-    if (pinky.pupu) wait(tok, 2.4).then(() => { if (touch.active) pinky.smile = 1; }, () => {}); // 푸푸: 오래 쓰다듬어 주면 그제야 입이 벌어진다
     handR.want = { pos: () => touch.pt.clone().addScaledVector(touch.n, 0.02), up: () => touch.n, curl: 0.12, rate: 16, shoulder: [0.34, -0.15, 0.05] };
     await until(tok, () => !touch.active);
-    handR.want = null; pinky.paddle = 0; if (pinky.pupu) pinky.smile = 0;
+    handR.want = null; pinky.paddle = 0; if (pinky.pupu) pinky.smile = 1; // 푸푸: 웃는상 그대로
     await wait(tok, 0.6); happy(false); if (curled) { pinky.eyeOpen = 0.3; pinky.wagAmpT = 0.1; } else pinky.tiltT = 0.3; say('더 해줘…', headTop, 'soft', 1.8);
     if (curled) { pinky.tgt.headPitch = POSES.curl.headPitch; await tween(tok, 2.0, (k) => { pinky.sigh = Math.sin(Math.PI * k) ** 2; pinky.eyeOpen = lerp(0.3, 0.1, k); }); pinky.sigh = 0; } // 손이 떠나면 크게 한숨 쉬고 다시 눈을 감는다
     else await wait(tok, 1.6);
@@ -4401,7 +4425,7 @@ async function findTreat(tok, dr) {
   pinky.sniff = 0; pinky.earPerk = 1; bubble('!', headTop, '', 0.9);
   await wait(tok, 0.2); pinky.jawOpen = 0.35;
   await wait(tok, 0.12);
-  pinky.jaw.attach(dr.m); dr.m.position.set(0, -0.004, 0.088); dr.m.rotation.set(0, 0, 0); pinky.jawOpen = 0.08; // 덥석 (가로로 문다)
+  pinky.jaw.attach(dr.m); if (pinky.pupu) dr.m.position.set(0, 0.001, 0.049); else dr.m.position.set(0, -0.004, 0.088); dr.m.rotation.set(0, 0, 0); pinky.jawOpen = 0.08; // 덥석 (가로로 문다) · 푸푸: 아래턱이 짧아(앞니 = 아래턱 좌표 0.05) 앞니 사이에 문다
   await wait(tok, 0.15);
   pinky.lookFn = null; setPose(pinky, 'stand', 6); pinky.face = 'cam'; pinky.tgt.gaze = 1; pinky.tgt.headPitch = -0.2; pinky.earPerk = 0.9; pinky.wagAmpT = 0.9; pinky.wagSpeedT = 18; mark('found:' + dr.kind);
   await wait(tok, 0.7); // 물고서 고개를 번쩍 든다 — 이것 봐!
@@ -4476,6 +4500,7 @@ const MOM_LINES = { entry: '왔어? ♥', tab: '왔다 왔다! ♥', quiet: '놀
 const mouthBusy = () => pinky.chew || pinky.lick > 0 || toy.chew > 0 || toy.lap > 0 || toy.shake > 0 || ball.state === 'mouth' || pinky.jawOpen > 0.05 || (active && ['treat', 'feed', 'play'].includes(active.name));
 function momQuick() { // 다른 걸 하는 중이면 알아보기만 한다: 말풍선 + 작은 소리 (입에 뭘 물고 있으면 짖지 않는다)
   const busy = mouthBusy(); brain.lastMom = clock; bubble(pinky.pupu && busy ? '흠.' : '엄마다!', headTop, '', 1.5); snd('phrase', 'mom', { mode: busy ? 'busy' : 'quick' }); // 푸푸: 엄마다! → 월! (낮게 한 번) · 입에 뭘 물고 있으면 흠. (콧소리)
+  if (pinky.pupu && !busy) { const jo = (pinky.jawOpen = 0.52); wait(null, 0.15).then(() => { if (pinky.jawOpen === jo) pinky.jawOpen = 0; }); } // 푸푸: 월! 할 때 입을 한 번 벌렸다 닫는다 (그동안 웃던 입은 비켜선다)
   pinky.wagAmpT = Math.max(pinky.wagAmpT, 0.8); pinky.wagSpeedT = Math.max(pinky.wagSpeedT, 16); mark('mom:quick');
 }
 async function momGreet(tok, why = 'entry') {
@@ -5994,10 +6019,10 @@ function nsSplash(p, n = 16, power = 1) { // 물보라: 물방울이 사방으�
 function pupuRelease() {
   if (!NS) return;
   NS.turkey.hide(); NS.bag.visible = false; if (NS.bag.parent) NS.bag.parent.remove(NS.bag); NS.poop.visible = false;
-  if (PUPU) { PUPU.pawUp = null; PUPU.kick = 0; PUPU.smile = 0; PUPU.tongueOut = 0; PUPU.wild = false; PUPU.earSw = 0; } NS.lapOn = false; // 입은 다시 꾹 다물고 체통을 되찾는다
+  if (PUPU) { PUPU.pawUp = null; PUPU.kick = 0; PUPU.smile = 1; PUPU.tongueOut = 0; PUPU.wild = false; PUPU.earSw = 0; } NS.lapOn = false; // 다시 평소의 웃는상으로 · 체통을 되찾는다
   magOff(); // 까치도 날아가고 없다
 }
-function pupuEnter() { pinky.pawUp = null; pinky.kick = 0; pinky.smile = 0; pinky.tongueOut = 0; pinky.wild = false; pinky.earSw = 0; magOff(); NS.magAt = clock + 45 + Math.random() * 25; NS.lapOn = false; NS.drops.length = 0; for (const r of NS.rings) r.visible = false; for (const f of NS.puffs) f.visible = false; }
+function pupuEnter() { pinky.pawUp = null; pinky.kick = 0; pinky.smile = 1; pinky.tongueOut = 0; pinky.wild = false; pinky.earSw = 0; magOff(); NS.magAt = clock + 45 + Math.random() * 25; NS.lapOn = false; NS.drops.length = 0; for (const r of NS.rings) r.visible = false; for (const f of NS.puffs) f.visible = false; }
 // 자세 숫자(poseFor의 발 · 몸 기준 좌표)로 잡은 점을 월드로: d.root는 크기를 모르므로(몸은 그 밑의 sc가 키운다) 푸푸의 크기(1.25배)를 곱해서 옮긴다
 const poseW = (x, y, z) => { const s = pinky.scale; return rootW(x * s, y * s, z * s); };
 // 엄마 시점: 겨냥점(a)은 그대로 두고 k배 물러나 본다 (몸이 큰 푸푸가 화면 밖으로 잘리지 않게)
@@ -6009,7 +6034,7 @@ function pupuPost(d, dt, t) {
   contact.position.y = nsGround(d.x, d.z) + 0.009; contact.scale.x *= d.scale; contact.scale.y *= d.scale; // 그림자 원판도 땅(냇바닥)을 따라 · 큰 몸만큼 넓게
   const lap = toy.lap > 0 && toy.lapKind === 'water';
   if (lap) { d.smile = 0; d.tongueOut = 0.5 + 0.5 * Math.sin(t * 20 + 0.8); NS.lapOn = true; } // 물을 마실 때: 혀를 날름날름 (턱은 toy.lap이 움직인다)
-  else if (NS.lapOn) { NS.lapOn = false; d.tongueOut = 0; d.smile = 0; }
+  else if (NS.lapOn) { NS.lapOn = false; d.tongueOut = 0; d.smile = 1; } // 다 마시면 다시 웃는상
   magStep(dt, t); // 까치
   if (NS.magAt && clock > NS.magAt && mode === 'room' && !transitioning) { // 까치가 날아온다: 혼자 놀고 있을 때만 (명령 중이거나 엄마가 화면을 끌고 있으면 조금 있다가)
     if (idleNow() && awakeUp() && !drag && !touch.active) { NS.magAt = clock + 150 + Math.random() * 90; startSpecial('magpie', magpieScene); } else NS.magAt = clock + 15;
@@ -6093,7 +6118,7 @@ async function pupuHigh5(tok) {
     await wait(tok, 0.6);
     setPose(pinky, 'high5', 6); if (i === 1) mirrorFront(pinky.tgt); // 가슴을 펴고 앞발을 번쩍
     await wait(tok, 0.55);
-    await tween(tok, 0.12, (k) => { reach = k; });
+    handR.want.rate = 18; await tween(tok, 0.16, (k) => { reach = ease(k); }); // 손바닥이 들어 올린 앞발에 착 닿는다 (손이 늦게 따라와 허공을 치지 않게 이때만 빠르게)
     bubble('짝!', () => handR.pos.clone().add(V3(0, 0.09, 0)), '', 1.0, 0); snd('sfx', 'paw_clap', { pos: handR.pos.toArray(), force: 1, why: 'high five' }); heart();
     pinky.earPerk = 0.4; pinky.wagAmpT = 1.0; pinky.wagSpeedT = 20;
     await tween(tok, 0.25, (k) => { reach = 1 - 0.7 * k; });
@@ -6137,7 +6162,7 @@ async function pupuSplash(tok, solo = false) {
   // 코를 물에 퐁 — 고개를 털고
   if (!solo) { const N = noseTip(), h = V3(-0.95, 0, 0.31).normalize(); N.y = nsWaterY(N.z) + 0.05 * k; camTo(N.clone().addScaledVector(h, (tall ? 1.3 : 0.95) * k).add(V3(0, (tall ? 0.55 : 0.17) * k, 0)), N, 2.2); } // 엄마가 물가에 낮게 쪼그려 얼굴 가까이 (마시는 혀가 보이게) — 큰 머리가 잘리지 않게 몸 크기만큼 물러나되, 늘 풀을 비워 둔 길목 쪽(길 쪽 물가)에서 본다 (갈대 · 붓꽃이 얼굴을 가리지 않게) · 세로 화면은 조금 더 높이 서서 내려다본다 (발밑 길가 경계석이 화면 아래 1/3을 덮지 않게)
   setPose(pinky, 'eat', 4); pinky.tgt.gaze = 0; pinky.tgt.yawOff = 0.6; pinky.face = 'cam'; pinky.lookFn = null; pinky.wagAmpT = 0.6; pinky.wagSpeedT = 12; // 비스듬히 고개를 숙여 (물 마시는 입이 보이게)
-  pinky.tgt.headPitch += 0.13; pinky.tgt.bodyY -= 0.006; // 1.25배 큰 몸: 다리가 길어 고개를 조금 더 숙여야 코끝이 물 위 3cm쯤 (혀가 물에 닿는다)
+  pinky.tgt.headPitch -= 0.32; pinky.tgt.pitch += 0.15; pinky.tgt.bodyY -= 0.036; // 새 몸(긴 다리 · 작은 머리): 고개만 숙이면 코끝이 물 위 9cm — 앞을 숙이고 몸을 낮춰 주둥이를 비스듬히 대면 코끝은 물 위 1cm, 날름거리는 혀끝이 물에 닿는다
   await wait(tok, 0.8);
   { const nz = noseTip(); nsRing(nz.x, nz.z, 0.08, 0.9); bubble('퐁', noseTip, 'small', 0.9, 40); }
   await wait(tok, 0.4);
@@ -6211,16 +6236,18 @@ async function pupuPoop(tok) {
   bubble('똥츄 완료!', headTop, 'soft', 2.0, -70); // 엄마의 말 (푸푸 머리 옆)
   pinky.wagAmpT = 0.85; pinky.wagSpeedT = 16; pinky.tgt.headPitch = -0.1; await wait(tok, 1.1);
   handR.want = null; pinky.lookFn = null;
-  say('흠. 수고하셨습니다.', headTop, 'soft', 1.6); await wait(tok, 0.8); // 엄마에게 깍듯이
+  fadeBubbles(0.3); await wait(tok, 0.25); // 엄마의 말이 걷힌 뒤에 대답한다 (머리 위 같은 자리에 두 말풍선이 겹쳐 쌓이지 않게)
+  say('흠. 수고하셨습니다.', headTop, 'soft', 1.6, 40); await wait(tok, 0.8); // 엄마에게 깍듯이
   camHome(); await comeHere(tok, 0.8); sitFront(9); pupuTall(); happy(true); heart(); await wait(tok, 1.4); happy(false);
 }
 // ---------- 터키츄: 엄마가 "츄츄츄~" 부르면 엄근진 푸푸도 그 자리에서 척 앉아 차렷 — 귀는 앞으로, 눈은 동그랗게, 꼬리만 참지 못하고 파르르 (…! → 흠.)
 //            "터키츄?" 하면 체통이 무너진다: 끄응…! → 달려와 엎드려 뻗기(월!) · 빙글빙글 · 꼬리 붕붕 · 활짝 웃는 입 → 엄마 손에 황금빛 링이 나타나면
-//            앉아서 기다렸다가 살며시 받아 물고 → 엎드려 두 앞발 사이에 세워 붙잡고 오독오독 → 꿀꺽 · 다시 꼿꼿이 앉아 체통을 되찾는다 (흠흠. …잘 먹었습니다.) → 잠깐 씩 웃고 다시 엄근진
+//            앉아서 기다렸다가 살며시 받아 물고 → 엎드려 두 앞발 사이에 세워 붙잡고 오독오독 → 꿀꺽 · 다시 꼿꼿이 앉아 체통을 되찾는다 (흠흠. …잘 먹었습니다.) → 눈을 지그시 감으며 흐뭇
+//            입: 차렷(…! · 흠. · 끄응…!) 동안은 웃는 입을 꾹 다물고 참다가 → 체통이 무너지면 활짝 웃는 입 · 물고 씹는 동안은 다물고 → 꿀꺽 뒤로는 평소의 웃는상
 const PTREAT = ['흠흠. …잘 먹었습니다.', '흠. 훌륭한 터키츄였습니다.', '흠흠. 체통은 지켰습니다.'];
 async function pupuTreat(tok) {
   const T = NS.turkey, ph = phoneK(), UP = V3(0, 1, 0);
-  toy.tok = tok; tok.cleanups.push(() => { toyOff(); T.hide(); pinky.smile = 0; pinky.wild = false; pinky.tiltT = 0; pinky.paddle = 0; pinky.paddleFront = false; });
+  toy.tok = tok; tok.cleanups.push(() => { toyOff(); T.hide(); pinky.smile = 1; pinky.wild = false; pinky.tiltT = 0; pinky.paddle = 0; pinky.paddleFront = false; });
   { const [p, a] = kneelFor(HOME, 1.15 * ph, 0.56, 0.4); camTo(p, a); } // 꼿꼿이 앉은 큰 푸푸의 귀 끝까지 보이게 조금 물러나 높이
   T.reset(); T.g.visible = false; T.state = 'held'; toy.fill = 1;
   const pinch = () => handR.rig.inner.localToWorld(V3(0.012, -0.034, 0.072));
@@ -6246,6 +6273,7 @@ async function pupuTreat(tok) {
   // 츄츄츄~: 그 자리에서 척 앉아 차렷 (귀는 앞으로 · 눈은 동그랗게) — 꼬리만 참지 못하고 작고 빠르게 파르르
   if (nsInWater(pinky.x, pinky.z)) { setPose(pinky, 'stand', 12); pinky.face = 'cam'; } else sitFront(14); // 냇물 속이면 선 채로 차렷
   pupuTall(); pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.earPerk = 1; pinky.tiltT = 0; pinky.eyeOpen = 1.12; pinky.wild = true; pinky.wagAmpT = 0.16; pinky.wagSpeedT = 30;
+  pinky.smile = 0; // 웃던 입을 꾹 다물고 체통을 지킨다 (끄응…! 까지)
   say('…!', headTop, 'small', 0.9, 0);
   await wait(tok, 0.9); say('흠.', headTop, 'small', 1.0, 0); // 애써 체통을 지킨다
   await wait(tok, 0.6);
@@ -6275,7 +6303,7 @@ async function pupuTreat(tok) {
   pinky.tgt.reach = 0.03; pinky.tgt.neck += 0.1; await wait(tok, 0.3);
   pinky.jawOpen = 0.25; await wait(tok, 0.25);
   say('앙', headTop, 'small', 1); handR.want.curl = 0.3;
-  await drv.to(tok, 'jaw', 0.3); pinky.jawOpen = toy.rest = 0.1; pinky.smile = 0; // 물고 있는 동안은 웃던 입을 다물고 오물오물
+  await drv.to(tok, 'jaw', 0.3); pinky.jawOpen = toy.rest = 0.1; pinky.smile = 0; // 물고 씹는 동안은 웃던 입을 다물고 오물오물 (꿀꺽 뒤에 다시 웃는다)
   handR.want = null; pinky.lookFn = null; pinky.tgt.reach = 0; pinky.tgt.neck = poseFor('sit', pinky).neck;
   await wait(tok, 0.8);
   // 엎드려 두 앞발로 붙잡고
@@ -6301,28 +6329,29 @@ async function pupuTreat(tok) {
   // 마지막 한 입
   T.g.visible = false; T.state = 'none'; drv.stop(); pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.tgt.neck = 0; pinky.tgt.reach = 0; pinky.tiltT = 0;
   pinky.tgt.paws[0].copy(dp.paws[0]); pinky.tgt.paws[1].copy(dp.paws[1]);
-  toy.chewRate = 15; await wait(tok, 0.7); toy.chew = 0; say('꿀꺽', headTop, 'small', 1.0);
+  toy.chewRate = 15; await wait(tok, 0.7); toy.chew = 0; say('꿀꺽', headTop, 'small', 1.0); pinky.smile = 1; // 다 먹었다: 다시 웃는상 (쩝쩝 하는 동안은 혀가 턱을 쓴다)
   await wait(tok, 0.5);
   pinky.lick = 1; say('쩝쩝', headTop, '', 1.2, 80); await wait(tok, 0.95); pinky.lick = 0;
-  // 체통을 되찾는다: 꼿꼿이 앉아 흠흠 — 잠깐 씩 웃고는 다시 엄근진
+  // 체통을 되찾는다: 꼿꼿이 앉아 흠흠 — 웃는상 그대로 눈을 지그시 (흐뭇)
   pinky.wild = false; pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6; pinky.earPerk = 0.8;
   await sitAs(tok, 'front', 9); pupuTall();
   await wait(tok, 0.4);
   say(rot('pt', PTREAT), headTop, 'soft', 2.2);
-  await wait(tok, 1.4); pinky.smile = 1; pinky.eyeOpen = 0.7; pinky.wagAmpT = 0.5; heart();
-  await wait(tok, 1.2); pinky.smile = 0; pinky.eyeOpen = 1; pinky.earPerk = 0; pinky.wagAmpT = 0.3; await wait(tok, 0.5);
+  await wait(tok, 1.4); pinky.eyeOpen = 0.7; pinky.wagAmpT = 0.5; heart();
+  await wait(tok, 1.2); pinky.eyeOpen = 1; pinky.earPerk = 0; pinky.wagAmpT = 0.3; await wait(tok, 0.5);
   T.hide(); toyOff(); camHome();
 }
 // ---------- 푸푸의 몸가짐: 엄근진 · 용맹 — 가슴을 펴고 고개를 들고 귀를 앞으로 바짝 세운다 (서 있으면 꼬리도 높이). 지금 자세(서기 · 앉기) 그대로 몸만 곧게
+// 새 몸(곧고 긴 앞다리): 가슴을 너무 들어 올리면 앞발이 땅에서 뜬다 (앉아 3cm · 서서 1cm) — 몸은 조금만 세우고 꼿꼿함은 목과 고개로
 function pupuTall(d = pinky) {
   const T = d.tgt, s = poseFor(T.name, d);
-  if (T.name === 'stand') Object.assign(T, { bodyY: s.bodyY + 0.01, pitch: s.pitch - 0.05, headPitch: s.headPitch - 0.15, tail: s.tail + 0.12 });
-  else if (T.name === 'sit') Object.assign(T, { bodyY: s.bodyY + 0.008, pitch: s.pitch - 0.07, neck: s.neck - 0.08, headPitch: s.headPitch - 0.12 });
+  if (T.name === 'stand') Object.assign(T, { bodyY: s.bodyY + 0.004, pitch: s.pitch - 0.05, headPitch: s.headPitch - 0.15, tail: s.tail + 0.12 });
+  else if (T.name === 'sit') Object.assign(T, { bodyY: s.bodyY - 0.004, pitch: s.pitch - 0.03, neck: s.neck - 0.1, headPitch: s.headPitch - 0.14 });
   d.earPerk = Math.max(d.earPerk, 0.8);
 }
-// 월: 입을 크게 벌리고 가슴을 내밀며 낮게 짖는다 (소리는 말풍선 '월'이 낸다 — 한 마디에 0.3초쯤)
+// 월: 입을 크게 벌리고 가슴을 내밀며 낮게 짖는다 (소리는 말풍선 '월'이 낸다 — 한 마디에 0.3초쯤) · 웃는 입(0.42)보다 크게 벌렸다가 꾹 닫혀 짖는 게 보인다
 function pupuBark(tok, n = 1) {
-  (async () => { for (let i = 0; i < n; i++) { const bz = pinky.tgt.bodyZ; pinky.jawOpen = 0.48; pinky.tgt.bodyZ = bz + 0.014; await wait(tok, 0.15); pinky.jawOpen = 0; pinky.tgt.bodyZ = bz; await wait(tok, 0.15); } })().catch(() => {});
+  (async () => { for (let i = 0; i < n; i++) { const bz = pinky.tgt.bodyZ; pinky.jawOpen = 0.56; pinky.tgt.bodyZ = bz + 0.014; await wait(tok, 0.15); pinky.jawOpen = 0; pinky.tgt.bodyZ = bz; await wait(tok, 0.15); } })().catch(() => {});
 }
 const momSays = () => roomCam.localToWorld(phoneK() > 1 ? V3(0.03, -0.05, -0.5) : V3(0.12, -0.06, -0.5)); // 엄마의 말 (화면 오른쪽 아래, 엄마 쪽에서)
 // ---------- 앉아 · 엎드려: 옙! — 못 들은 척도 딴청도 없이 곧바로. 앉을 때는 늘 엄마와 마주 보고 꼿꼿이
@@ -6340,7 +6369,7 @@ async function pupuDown(tok) {
   await wait(tok, 2.0); pinky.earPerk = 0.5;
   await wait(tok, 3.0); pinky.earPerk = 0;
 }
-// ---------- 엄마가 오면: 알아보고 월! → 성큼성큼 와서 꼿꼿이 섰다가 → 척 앉아 충성! → 엄마, 오셨습니까. (꼬리는 천천히 · 입은 다문 채)
+// ---------- 엄마가 오면: 알아보고 월! → 성큼성큼 와서 꼿꼿이 섰다가 → 척 앉아 충성! → 엄마, 오셨습니까. (꼬리는 천천히 · 얼굴은 늘 웃는상 — 말투만 깍듯하다)
 async function pupuGreet(tok, why) {
   setPose(pinky, 'stand', 7); pinky.sniff = 0; pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.face = 'cam'; pupuTall();
   pinky.earPerk = 1; pinky.wagAmpT = 0.4; pinky.wagSpeedT = 6; pinky.turnCap = 2.2; tok.cleanups.push(() => { pinky.turnCap = 0; snd('cancelPhrase', 'mom'); });
@@ -6363,13 +6392,14 @@ async function pupuGreet(tok, why) {
 }
 // ---------- 경계 근무 (혼자 있을 때): 엄마 앞 길가로 나가 길 옆(숲 · 벤치 쪽, 냇물 쪽)을 보고 꼿꼿이 앉아, 천천히 고개를 좌우로 돌리며 살핀다 — 귀가 고개보다 먼저 돈다
 // 몸은 엄마 눈길과 거의 직각(옆모습)으로 앉아, 훑는 동안 한쪽 끝에서는 엄마 쪽으로 늠름한 얼굴이 보이고 다른 끝에서는 산책길 저쪽을 본다 → 다 살피면 엄마 쪽으로 돌아앉아 보고한다 (이상 무.)
+// 입: 근무를 서는 동안(밖을 노려보고 훑고 엄마에게 보고할 때까지)은 웃는 입을 꾹 다문다 → 이상 무. 하고 나면 다시 웃는상
 const GUARD = [{ x: -0.15, z: 0.35, fx: -3.0, fz: 0.6 }, { x: 0.35, z: 0.2, fx: 2.9, fz: 0.2 }, { x: -0.55, z: 0.6, fx: -3.2, fz: 1.0 }];
 async function pupuGuard(tok) {
   const g = rot('guard', GUARD); mark('guard');
-  tok.cleanups.push(() => { pinky.earSw = 0; });
+  tok.cleanups.push(() => { pinky.earSw = 0; pinky.smile = 1; });
   setPose(pinky, 'stand', 5); pinky.walkSpeed = 0.45; pinky.earPerk = 0.5; pinky.wagAmpT = 0.2; pinky.wagSpeedT = 5;
   if (Math.hypot(pinky.x - g.x, pinky.z - g.z) > 0.12) await walkTo(tok, g.x, g.z);
-  pinky.face = { x: g.fx, z: g.fz }; await wait(tok, 0.8);
+  pinky.face = { x: g.fx, z: g.fz }; pinky.smile = 0; await wait(tok, 0.8); // 근무 시작: 웃음기를 거두고 입을 꾹
   setPose(pinky, 'sit', 8); pupuTall(); pinky.wagAmpT = 0.04; pinky.wagSpeedT = 3; pinky.tgt.gaze = 1;
   const y0 = Math.atan2(g.fx - pinky.x, g.fz - pinky.z), yc = Math.atan2(roomCam.position.x - pinky.x, roomCam.position.z - pinky.z), sg = angDiff(y0, yc) > 0 ? 1 : -1; let a = 0; // sg: 엄마 쪽으로 고개를 돌리는 방향
   pinky.lookFn = () => V3(pinky.x + Math.sin(y0 + a) * 4, 0.45, pinky.z + Math.cos(y0 + a) * 4);
@@ -6383,11 +6413,12 @@ async function pupuGuard(tok) {
   }
   pinky.lookFn = null; pinky.earPerk = 0.8; setPose(pinky, 'stand', 6); pinky.face = 'cam'; await wait(tok, 0.9); // 엄마 쪽으로 돌아서서
   sitFront(10); pupuTall(); await wait(tok, 0.7);
-  say('이상 무.', headTop, 'soft', 1.4); await wait(tok, 1.4); // 소리: 낮게 흡 (만족스러운 콧김)
+  say('이상 무.', headTop, 'soft', 1.4); await wait(tok, 0.6); pinky.smile = 1; await wait(tok, 0.8); // 소리: 낮게 흡 (만족스러운 콧김) · 보고를 마치면 다시 웃는상
   pinky.earSw = 0; pinky.earPerk = 0; setPose(pinky, 'stand', 4); await wait(tok, 0.6);
 }
 // ---------- 까치: 가끔(들어온 지 1분쯤 뒤에 처음, 그다음은 몇 분에 한 번) 냇물 건너 나무에서 날아와 산책길에 내려앉는다 — 종종 뛰고 · 콕콕 쪼고 · 까악 까악
-// 푸푸: 얼어붙은 듯 노려보다 → 살금살금 다가가 → 그르르… → 월월! → 까치가 깍! 하고 날아가면 끝까지 지켜보고 → 엄마 곁에 와 꼿꼿이 앉아 이상 무! (엄마가 칭찬하면 그제야 씩 웃는다)
+// 푸푸: 얼어붙은 듯 노려보다 → 살금살금 다가가 → 그르르… → 월월! → 까치가 깍! 하고 날아가면 끝까지 지켜보고 → 엄마 곁에 와 꼿꼿이 앉아 이상 무! (엄마가 칭찬하면 눈을 지그시)
+// 입: 까치를 알아챈 순간부터 노려보고 · 다가가고 · 으르렁 · 월월 하고 · 까치가 날아가 사라질 때까지는 웃는 입을 꾹 다문다 → 그 뒤로는 다시 웃는상
 const MAG_LAND = [[-0.25, -1.6], [-1.0, -1.15], [0.05, -2.4], [-0.95, 0.35], [0.35, -0.65], [-0.45, 1.5]], MAG_FROM = V3(3.6, 2.6, -1.9), MAG_TO = V3(-3.4, 2.0, -0.4); // 내려앉는 길 위 (푸푸에게서 두 걸음쯤 떨어진 곳) · 날아오는 냇물 건너 나무 · 날아가 숨는 길 왼쪽 나무 (벤치 너머)
 const magHead = () => NS.mag.head.localToWorld(V3(0, 0.07, 0));
 function magOff() { const m = NS && NS.mag; if (!m) return; Object.assign(m, { on: false, fly: null, hop: null, peck: null, callT: -9, watch: null, fold: 1 }); m.g.visible = false; }
@@ -6443,14 +6474,14 @@ function magCam(A, B) { // 푸푸(A)와 까치(B)가 한 화면에: 둘을 잇�
 }
 async function magpieScene(tok) {
   const m = NS.mag, d = pinky; mark('magpie');
-  tok.cleanups.push(() => { magOff(); pinky.earSw = 0; if (camTurn) { camTurn = false; camHome(); } });
+  tok.cleanups.push(() => { magOff(); pinky.earSw = 0; pinky.smile = 1; if (camTurn) { camTurn = false; camHome(); } });
   const far = (q) => { const l = Math.hypot(q.x - d.x, q.z - d.z); return l < 1.4 ? 9 + 1 / l : Math.abs(l - 2.0); }, L = MAG_LAND.map(([x, z]) => ({ x, z })).sort((a, b) => far(a) - far(b))[0]; // 푸푸에게서 두 걸음쯤 (너무 가깝지 않게)
   const dx = L.x - d.x, dz = L.z - d.z, D = Math.hypot(dx, dz) || 1, sg = 0.65 + 0.4 * d.scale, S = { x: L.x - (dx / D) * sg, z: L.z - (dz / D) * sg }; collide(S); // 살금살금 다가가 멈출 곳 (까치 한 걸음 앞) — sg: 코끝(몸 크기 × 0.4 앞)에서 까치까지 늘 0.65 (1.25배 큰 푸푸는 그만큼 더 떨어져 선다)
   magFly(MAG_FROM, V3(L.x, nsGround(L.x, L.z), L.z), 2.0, 0.9, true);
   const bird = () => m.body.localToWorld(V3(0, 0.03, 0.06)), track = { get x() { return m.p.x; }, get z() { return m.p.z; } };
   await wait(tok, 0.6);
   // 알아챈다: 우뚝 멈춰 귀를 세우고 꼬리를 높이 — 눈을 떼지 않는다
-  setPose(d, 'stand', 8); d.sniff = 0; d.face = track; d.lookFn = bird; d.tgt.gaze = 1; pupuTall(); d.earPerk = 1; d.wagAmpT = 0; d.wagSpeedT = 2;
+  setPose(d, 'stand', 8); d.sniff = 0; d.face = track; d.lookFn = bird; d.tgt.gaze = 1; pupuTall(); d.earPerk = 1; d.wagAmpT = 0; d.wagSpeedT = 2; d.smile = 0; // 웃음기가 싹 가신다
   say('…!', headTop, 'small', 1.1);
   if (!drag && !touch.active) { camTurn = true; const [p, a] = magCam(d, L); camTo(p, a, 1.1); } // 엄마 눈길도 그쪽으로 (화면을 끌고 있으면 그대로)
   await until(tok, () => !m.fly);
@@ -6473,7 +6504,7 @@ async function magpieScene(tok) {
   // 끝까지 지켜본다 (한 걸음 따라 나서다가 멈춘다)
   d.face = track; d.lookFn = bird; d.tgt.gaze = 1;
   { const q = { x: d.x + (dx / D) * 0.25, z: d.z + (dz / D) * 0.25 }; collide(q); d.walkSpeed = 0.6; walkTo(tok, q.x, q.z).catch(() => {}); }
-  await until(tok, () => !m.on);
+  await until(tok, () => !m.on); d.smile = 1; // 까치가 사라졌다: 다시 웃는상
   d.walkTarget = null; d.walkSpeed = 0.5; await wait(tok, 0.4); d.lookFn = null; say('흠.', headTop, 'small', 1.1); await wait(tok, 0.9);
   // 엄마 곁으로 돌아와 보고한다
   if (camTurn) { camTurn = false; camHome(); }
@@ -6481,8 +6512,8 @@ async function magpieScene(tok) {
   sitFront(11); pupuTall(); await wait(tok, 0.6);
   say('이상 무!', headTop, '', 1.5); heart(); await wait(tok, 1.4);
   bubble('잘했어, 푸푸!', momSays, 'soft', 1.9, 0); await wait(tok, 0.7); // 엄마의 칭찬
-  d.smile = 1; d.eyeOpen = 0.7; d.wagAmpT = 0.6; d.wagSpeedT = 8; heart(); await wait(tok, 1.8); // 그제야 씩 웃는다
-  d.smile = 0; d.eyeOpen = 1; d.earPerk = 0; d.wagAmpT = 0.3; d.wagSpeedT = 6; await wait(tok, 0.6);
+  d.eyeOpen = 0.7; d.wagAmpT = 0.6; d.wagSpeedT = 8; heart(); await wait(tok, 1.8); // 칭찬에 눈을 지그시 · 꼬리 살랑
+  d.eyeOpen = 1; d.earPerk = 0; d.wagAmpT = 0.3; d.wagSpeedT = 6; await wait(tok, 0.6);
 }
 
 // ================================================================
