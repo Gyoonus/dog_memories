@@ -4,7 +4,7 @@ import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from './vendor/jsm/postprocessing/ShaderPass.js';
-import { sound } from './sound.js?v=25';
+import { sound } from './sound.js?v=26';
 
 const $ = (s) => document.querySelector(s);
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -93,7 +93,7 @@ const COLORS = {
   jaerong: { base: 0xf6efe5, tan: 0xc8803f, headTan: 0xcd8a4b, ear: 0xc27639, saddle: 0xbf7539, grizzle: 0xebcfa6, muzzle: 0xddd6cd, nose: 0x120e0c, collar: 'band', band: 0x58623f, tag: 'round', tagColor: 0x6b2220 },
   // 알팡: 젊고 윤기 나는 삼색 비글 공주님 (햇빛 사진의 색). 머리는 밝은 금빛 황갈 · 귀는 뿌리가 황갈이고 아래 절반 · 끝은 연기 낀 회갈색 · 넓은 흰 이마 줄과 새하얀 주둥이(코 옆 옅은 분홍 주근깨) ·
   // 몸은 대부분 흰색에 검은 얼룩 둘(기갑 · 엉덩이)과 어깨 · 가슴 옆 황갈 · 검은 꼬리에 긴 흰 끝 · 호박빛 갈색 눈 · 윗가장자리가 분홍빛인 검은 코 · 모노그램 캔버스 목걸이(분홍 가죽 테 · 노란 박음질 · 분홍 리본 · 금빛 자물쇠)
-  alpang: { base: 0xf8f5f0, tan: 0xb5753b, headTan: 0xc78d50, ear: 0xb67b43, earSmoke: 0x75665a, saddle: 0x111012, grizzle: 0x2a2629, nose: 0x161112, noseTop: 0x9c6a64, iris: 0x7c4418, freckle: 0xd9a39c, collar: 'monogram', canvas: 0x5a3922, leather: 0xf2cdbe, gold: 0xdcb45c },
+  alpang: { base: 0xf8f5f0, tan: 0xb5753b, headTan: 0xc78d50, ear: 0xb67b43, earSmoke: 0x75665a, saddle: 0x111012, grizzle: 0x2a2629, nose: 0x161112, noseTop: 0x9c6a64, iris: 0x4a2c1a, freckle: 0xd9a39c, collar: 'monogram', canvas: 0x5a3922, leather: 0xf2cdbe, gold: 0xdcb45c },
   generic: { base: 0xe9e1d6, tan: 0xc99a6c, saddle: 0x4a3c34, nose: 0x1c1513 },
   friend: { base: 0xd8a462, tan: 0xc98c4a, saddle: 0xc98c4a, nose: 0x1a1210, collar: 0xc23b2e }, // 놀이터 울타리 밖을 지나가는 동네 친구 (누렁이 진돗개 · 빨간 목줄)
 };
@@ -2054,16 +2054,16 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
       const hm = new THREE.MeshBasicMaterial({ color: 0xfbf7f0 }), h1 = new THREE.Mesh(SPH, hm), h2 = new THREE.Mesh(SPH, hm); // 반짝임: 위 바깥쪽에 또렷한 하나 · 아래 안쪽에 작은 하나 (위 눈꺼풀이 내려오면 가려진다)
       h1.position.set(-sx * 0.0042, 0.0032, 0.0106); h1.scale.setScalar(0.0017); h2.position.set(sx * 0.0036, -0.004, 0.0104); h2.scale.setScalar(0.0007); ea.add(h1, h2);
     } else if (AP && !silhouette) {
-      // 알팡 눈: 맑은 호박빛 갈색 홍채(동공 둘레는 밝은 호박색, 가장자리는 진한 테) · 조금 큰 동공 · 또렷한 반짝임 둘 — 다정하고 영리한 공주님 눈.
+      // 알팡 눈: 사진처럼 진한 초콜릿 갈색 홍채(동공 둘레만 살짝 밝은 갈색, 가장자리는 거의 검은 테 — 호박색 · 주황빛은 방 조명에서 빨간 눈으로 보여 무섭다) · 큰 동공 · 또렷한 반짝임 둘 — 순하고 다정한 공주님 눈.
       // 위 눈꺼풀은 홍채 위 가장자리에 살짝만 걸치고(졸린 눈이 아니다) 아래 눈꺼풀이 받쳐 둥근 아몬드꼴. 깜빡임 · 잠 · 치대는 반쯤 감은 눈은 눈꺼풀이 내려와 덮는다 (updateDog의 d.apLids)
       const ea = new THREE.Group(); ea.scale.set(...AP_EYE.s); eg.add(ea);
       if (!d.apIrisG) {
-        const g = new THREE.SphereGeometry(1, 32, 20), pos = g.attributes.position, col = new Float32Array(pos.count * 3), cIn = new THREE.Color(C.iris ?? 0x7c4418).multiplyScalar(1.15), cMid = new THREE.Color(C.iris ?? 0x7c4418).multiplyScalar(0.55), cOut = new THREE.Color(0x1c0d06);
+        const g = new THREE.SphereGeometry(1, 32, 20), pos = g.attributes.position, col = new Float32Array(pos.count * 3), cIn = new THREE.Color(C.iris ?? 0x4a2c1a), cMid = new THREE.Color(C.iris ?? 0x4a2c1a).multiplyScalar(0.55), cOut = new THREE.Color(0x120a06);
         for (let i = 0; i < pos.count; i++) { const a = Math.acos(clamp(pos.getZ(i), -1, 1)); _pc.copy(cIn).lerp(cMid, ss(0.42, 0.72, a)).lerp(cOut, ss(0.74, 1.0, a)); col.set([_pc.r, _pc.g, _pc.b], i * 3); }
         g.setAttribute('color', new THREE.BufferAttribute(col, 3)); d.apIrisG = g;
       }
       const iris = new THREE.Mesh(d.apIrisG, new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.26, clearcoat: 0.65, clearcoatRoughness: 0.16 })); iris.scale.set(0.0148, 0.0148, 0.0118); iris.castShadow = false; ea.add(iris); d.meshes.push(iris);
-      put(ea, sph(16, 10), [0, -0.0004, 0.0101], null, [0.0058, 0.0058, 0.0022], null, M(0x050303, { roughness: 0.3 }));
+      put(ea, sph(16, 10), [0, -0.0004, 0.0101], null, [0.0068, 0.0068, 0.0024], null, M(0x050303, { roughness: 0.3 }));
       if (!d.apLidG) { // 눈꺼풀: 눈알보다 조금 큰 반구 — 털빛(황갈)에서 가장자리로 가며 진한 눈꺼풀 테
         const g = new THREE.SphereGeometry(1, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), pos = g.attributes.position, col = new Float32Array(pos.count * 3), cF = cAPatch.clone().multiplyScalar(0.92);
         for (let i = 0; i < pos.count; i++) { _pc.copy(cF).lerp(cARim, ss(0.7, 0.92, Math.acos(clamp(pos.getY(i), -1, 1)) / (Math.PI / 2))); col.set([_pc.r, _pc.g, _pc.b], i * 3); }
