@@ -789,7 +789,7 @@ function wangBurst(n = 1, o = {}) {
   if (!o.noJingle) later(0.05, () => play('tag_jingle', { pos: o.pos, gain: g - 3, why: 'wang' }), tag); // 목줄 이름표가 한 번 짤랑
   return n;
 }
-// 재롱이: 엄마를 맞을 때 — 인식표 짤랑 → 흥(반가운 티를 안 내려고) → 그래도 왕! 한 번 (들어설 때는 작게) · 다른 걸 하다 알아보기만 할 때는 흥
+// 재롱이: 은미 언니를 맞을 때 — 인식표 짤랑 → 반가운 왕! 한 번 (은미 언니다! · 들어설 때는 작게) — 새침한 흥은 그다음 말(…규시기도 왔네.)이 낸다 · 다른 걸 하다 알아보기만 할 때는 흥
 function jrPhrase(name, o) {
   if (name === 'greet') { if (st) st.greetT = T; play('tag_jingle', { force: 1, gain: 1, why: 'greet' }); later(0.32, () => wangBurst(1, { force: 1, gain: o.gain ?? -8, noJingle: 1, why: 'greet' })); return; }
   const m = o.mode, tag = 'mom'; cancelPhrase(tag);
@@ -797,8 +797,7 @@ function jrPhrase(name, o) {
   if (m === 'quick') return void play('jr_hmph', { force: 1, gain: -6, why: 'mom (quick)' }); // 알아보기만: 흥
   const first = m === 'entry', lead = first || m === 'again', g = first ? -8 : lead ? -5 : -3;
   if (lead) play('tag_jingle', { force: 1, gain: first ? 1 : -1, why: 'mom' }); else later(0.05, () => play('tag_jingle', { force: 1, gain: -1, why: 'mom' }), tag);
-  later(0.45, () => play('jr_hmph', { force: 1, gain: g - 2, why: 'mom' }), tag);
-  later(1.15 + Math.random() * 0.1, () => wangBurst(1, { force: 1, gain: g, noJingle: 1, tag, why: 'mom' }), tag);
+  later(0.38 + Math.random() * 0.06, () => wangBurst(1, { force: 1, gain: g, noJingle: 1, tag, why: 'mom' }), tag); // 은미 언니다! — 반가워서 짧게 왕!
 }
 function phrase(name, o = {}) {
   if (!live()) return;
@@ -938,20 +937,23 @@ function pupuSay(s, text = s) {
 }
 // 푸푸: 위의 어떤 규칙에도 (핑키 규칙에도) 걸리지 않은 말 — 두 글자 넘는 말이면 작게 음~ 한 번 (4초에 한 번), 소리 말(짧은 의성어)은 그대로 조용히
 function pupuChat(s, text) { if (!/[가-힣].*[가-힣]/.test(s) || T - (st.chatT ?? -99) < PUPU_CHAT_GAP) return; st.chatT = T; voice('content', { gain: -6, why: text + ' (chat)' }); }
-// 재롱이만의 말풍선 → 소리 (도도한 츤데레 노견: 왕! 은 짧고 쉬게 · 흥 은 콧바람 · 아우우~ 는 까치를 쫓을 때만 · 엄마를 부르거나 좋으면 작게 음~ · 조를 때는 작게 낑. 못 알아들은 말은 핑키와 같은 규칙으로 — 그때 나는 목소리도 재롱이 목소리)
+// 재롱이만의 말풍선 → 소리 (도도한 츤데레 노견: 왕! 은 짧고 쉬게 · 흥 은 콧바람 · 아우우~ 는 까치를 쫓을 때만 · 은미 언니를 부르거나 좋으면 작게 음~ · 조를 때는 작게 낑. 못 알아들은 말은 핑키와 같은 규칙으로 — 그때 나는 목소리도 재롱이 목소리)
 function jaerongSay(s, text = s) {
   const n = (s.match(/왕/g) || []).length;
   if (n) { if (!wangBurst(n, { force: n > 1, why: text })) play('jr_hmph', { gain: -6, why: text + ' (holds back)' }); return true; } // 왕! · 왕왕! — 20초에 세 묶음까지만 (까치를 쫓는 왕왕! 은 언제든), 넘치면 흥으로 참는다
   if (has(s, '아우')) return voice('aroo', { force: 1, why: text }), true; // 아우우~ (비글의 긴 소리)
   if (has(s, '삑')) { const k = (s.match(/삑/g) || []).length; play('squeak', { force: 1, ...(k > 1 ? { variant: 1 } : {}), why: text }); if (k > 1) later(0.2, () => play('squeak', { force: 1, gain: -2, why: text })); return true; } // 삑삑이공
   if (/^(쪼르륵|촤르륵|덥석|끼익|와다다다|톡)+$/.test(s)) return true; // 소리는 main.js가 그 순간에 직접 낸다
+  if (has(s, '은미언니다')) return true; // 은미 언니다! — 소리는 phrase('mom')가 낸다 (인식표 짤랑 → 반가운 왕!)
+  if (has(s, '규시기')) { play('jr_hmph', { gain: -5, why: text }); later(0.55, () => voice('content', { force: 1, gain: -8, why: text + ' (sneaky wag)' })); return true; } // …규시기도 왔네. — 별거 아닌 척 흥 → 그래도 작게 음~
   if (has(s, '흠흠')) return play('jr_hmph', { gain: -3, rate: 0.95, why: text }), true; // …흠흠 (애써 시치미)
   if (has(s, '내거야')) return play('jr_hmph', { gain: -4, rate: 0.92, why: text + ' (protective)' }), true; // 슈슈는… 내 거야 — 낮게 흥 (지키지만 사납지 않다)
   if (has(s, '흥')) { play('jr_hmph', { gain: -2, why: text }); if (has(s, '나쁘지않', '맛있', '좋')) later(0.5, () => voice('content', { force: 1, gain: -6, why: text })); return true; } // 흥 — 콧바람 (좋으면 뒤에 작게 음~)
   if (has(s, '하겐다즈')) { play('gasp_alert', { why: text }); later(0.22, () => voice('whine', { vlo: 0, vhi: 2, gain: -4, rate: 1.1, why: text })); return true; } // 하겐다즈?! — 헉 → 낑 (못 참는다)
   if (has(s, '하나만더', '한입만더', '또줄거지', '끝이야', '또던져도', '한번더', '한번만더')) return voice('whine', { vlo: 0, vhi: 2, gain: -6, rate: 1.02, why: text }), true; // 조를 때: 작게 낑?
-  if (has(s, '엄마', '봤어', '또오자', '고마워')) return voice('content', { gain: -4, why: text }), true; // 엄마를 부를 때는 작게 음~ (은미바라기)
-  if (has(s, '나쁘지않', '맛있', '좋', '예쁘', '봐주는', '해줄게', '줄게', '엎드릴게', '안녕', '복슬', '양이다', '간식?', '돗자리', '슈슈')) return voice('content', { gain: -3, why: text }), true;
+  if (has(s, '봤지', '기본이지', '역시', '실력')) return voice('content', { gain: -2, rate: 1.04, why: text + ' (proud)' }), true; // 봤지? 한 번에 잡았어 · 이 정도는 기본이지 — 뿌듯한 음~ (흥이 붙으면 위에서 흥)
+  if (has(s, '언니', '봤어', '또오자', '고마워')) return voice('content', { gain: -4, why: text }), true; // 언니를 부를 때는 작게 음~ (은미바라기)
+  if (has(s, '나쁘지않', '맛있', '좋', '예쁘', '봐주는', '해줄게', '줄게', '엎드릴게', '안녕', '복슬', '양이다', '간식', '돗자리', '슈슈', '공평', '깔끔')) return voice('content', { gain: -3, why: text }), true;
   return false;
 }
 function jrChat(s, text) { if (!/[가-힣].*[가-힣]/.test(s) || T - (st.chatT ?? -99) < 5) return; st.chatT = T; voice('content', { gain: -8, why: text + ' (chat)' }); }
