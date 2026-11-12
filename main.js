@@ -89,8 +89,8 @@ const COLORS = {
   dami: { base: 0xf6f2ec, tan: 0x9a5c2a, headTan: 0xa96833, ear: 0x94532a, saddle: 0x0b0b0c, grizzle: 0x2a2a2e, nose: 0x0b0a0a, collar: 'harness', harness: 0xb6bac0 },
   // 푸푸: 크림빛 흰 진돗개(가슴·다리는 더 희다). 귀 뒤·귀 테두리는 옅은 살구빛, 주둥이·볼은 아주 옅은 살구 기운, 귀 안은 분홍, 꼬리는 따뜻한 크림, 분홍빛 갈색 코, 진한 청회색 띠 목줄에 은빛 고리 · 발자국 무늬 청록 별 이름표
   pupu: { base: 0xfce2c6, snow: 0xfff4e8, tan: 0xeea974, headTan: 0xf8d2ac, saddle: 0xeed6bd, earIn: 0xe8a3a3, tailTan: 0xf6d6b0, nose: 0x7a5250, collar: 'band', band: 0x50686d, tag: 'star', tagColor: 0x22afd2 },
-  // 재롱: 붉은 황갈과 흰색의 나이 든 비글 (임시 색 — 재롱 모델 작업이 사진에 맞춰 고친다)
-  jaerong: { base: 0xf4ede2, tan: 0xc0763c, headTan: 0xc47d40, ear: 0xb86f38, saddle: 0xb36a34, grizzle: 0x8c6448, nose: 0x14100e, collar: 'ribbon' },
+  // 재롱: 붉은 황갈과 흰색의 나이 든 비글 (검은 털이 없다). 귀·정수리·눈 둘레는 따뜻한 생강빛 황갈, 등 안장도 황갈(조금 진하게 · 노견이라 옅은 크림 털이 섞인다), 이마 흰 줄 · 흰 주둥이(조금 바랜 회백색) · 흰 목·가슴·배·다리·꼬리 끝 · 큰 검은 코 · 올리브빛 띠 목줄에 자줏빛 둥근 이름표
+  jaerong: { base: 0xf6efe5, tan: 0xc8803f, headTan: 0xcd8a4b, ear: 0xc27639, saddle: 0xbf7539, grizzle: 0xebcfa6, muzzle: 0xddd6cd, nose: 0x120e0c, collar: 'band', band: 0x58623f, tag: 'round', tagColor: 0x6b2220 },
   generic: { base: 0xe9e1d6, tan: 0xc99a6c, saddle: 0x4a3c34, nose: 0x1c1513 },
   friend: { base: 0xd8a462, tan: 0xc98c4a, saddle: 0xc98c4a, nose: 0x1a1210, collar: 0xc23b2e }, // 놀이터 울타리 밖을 지나가는 동네 친구 (누렁이 진돗개 · 빨간 목줄)
 };
@@ -274,6 +274,7 @@ function poseFor(name, d) {
   if (d.J && (name === 'stand' || name === 'eat')) o.bodyY += 0.035;
   const dm = d.dami && DAMI_POSE[name];
   if (dm) { for (const k in dm) if (k !== 'px' && k !== 'tailCurlF') o[k] = dm[k]; if (dm.px) o.paws.forEach((v) => { v.x *= dm.px; }); }
+  const jm = d.jaerong && JAERONG_POSE[name]; if (jm) for (const k in jm) o[k] = jm[k]; // 재롱: 꼬리를 위로 · 서면 고개를 조금 더 든다
   const pm = d.pupu && PUPU_POSE[name]; // 푸푸: 다리가 길어 몸 높이(dy)·발 위치(pz)를 고치고 꼬리는 등 위로
   if (pm) { for (const k in pm) if (k !== 'dy' && k !== 'pz' && k !== 'px') o[k] = pm[k]; if (pm.dy) o.bodyY += pm.dy; if (pm.pz) o.paws.forEach((v, i) => { v.z += pm.pz[i]; }); if (pm.px) o.paws.forEach((v, i) => { if (i < 2) v.x *= pm.px; }); } // px: 앞발 폭 배율
   if (d.pupu) o.paws.forEach((v, i) => { if (i > 1) v.z += PUPU_HZ; }); // 푸푸: 뒷다리 뿌리가 앞으로 온 만큼 뒷발도
@@ -741,6 +742,191 @@ const PUPU_POSES = {
   high5: { bodyY: 0.244, bodyZ: -0.03, pitch: -0.58, roll: 0, yawOff: -0.6, gaze: 1, headPitch: 0, headTilt: -0.1, tail: 0.25, level: 0, free: 0, splay: 0.3, neck: 0.5, lumbar: 0.6,
     lean: [2.7, 0.05, 1.45, 1.45], paws: [P(0.08, 0.4, 0.33), P(-0.07, 0.03, 0.14), P(0.09, 0.03, 0.02), P(-0.09, 0.03, 0.02)] },
 };
+// ---------- 재롱(붉은 황갈과 흰색의 나이 든 비글): buildDog({ kind: 'beagle', variant: 'jaerong' }). 핑키와 같은 비글 틀(관절 · 다리 · 귀 · 꼬리 메시)에서 시작해
+// 머리(조금 긴 주둥이 · 떼어 낸 아래턱 · 처진 윗눈꺼풀의 아몬드 눈 = 도도한 눈매) · 조금 더 다부진 몸 · 붉은 황갈과 흰 무늬 · 프로펠러 모자 · 자줏빛 둥근 이름표 · 달릴 때 펄럭이는 귀만 따로 만든다
+// 방 쪽에 내주는 것(머리 좌표 = d.head 기준 · 머리 배율 전 값): d.headPts { top: 모자 돔 꼭대기 · say: 프로펠러 위 말풍선 자리 · nose: 코끝 · mouth: 입 앞(핑키 값과 같은 자리) · pat: 모자 뒤 뒤통수(쓰다듬는 자리) }
+//   d.hat(모자 묶음) · d.hatTop(간식을 얹는 자리, Vector3 — 모자 앞 비탈, 날개가 도는 원 바깥) · d.hatN(그 자리의 위쪽 방향, 머리 좌표 단위 벡터)
+//   d.prop(프로펠러 — 땅 위 빠르기로 저절로 돈다 · 가끔 산들바람) · d.propSpin(0..1: 더 세게) · d.propHold(true면 멈춘다) · d.earFlap(0..1.5: 귀 펄럭임을 더 크게) · d.tag(자줏빛 이름표)
+const JR_MZ = [0.062, 0.02, 0.88]; // 주둥이 늘이기: 시작 z(눈 바로 앞) · 부드럽게 넘어가는 구간 · 배율(1보다 작으면 길어진다 — 핑키보다 주둥이가 1/0.88배 길다)
+const jrZ = (z) => { const u = z - JR_MZ[0], w = JR_MZ[1]; return z + (JR_MZ[2] - 1) * (u <= 0 ? 0 : u < w ? (u * u) / (2 * w) : u - w / 2); }; // 재롱 머리 좌표 → 핑키 머리 좌표
+const jrZInv = (zp) => { let z = zp; for (let i = 0; i < 8; i++) z -= (jrZ(z) - zp) / (1 + (JR_MZ[2] - 1) * clamp((z - JR_MZ[0]) / JR_MZ[1], 0, 1)); return z; };
+const jrHB0 = (x, y, z) => {
+  let d = headBase0(x, y, jrZ(z));
+  for (const sx of [1, -1]) d = smin(d, sdE(x, y, z, sx * 0.035, 0.08, 0.05, 0.019, 0.0072, 0.013), 0.008); // 눈두덩: 눈 위로 살짝 내려앉은 눈썹 살 (윗눈꺼풀이 처져 도도한 눈매)
+  return d;
+};
+// 입: 같은 머리뼈를 입선에서 잘라 아래턱을 따로 만든다 (왕! 짖기 · 할짝 · 씹기에 입이 벌어진다). 입선은 코 밑 인중에서 조금 내려가 윗입술(flews) 아래를 지나 입꼬리로 — 웃는 ω가 아니라 다문 덤덤한 입
+const JRJ = [0, -0.014, 0.06]; // 아래턱 경첩(머리 좌표) = jaw 그룹 자리
+const jrCutY = (x, z) => { const u = jrZ(z); return -0.0228 + 0.0036 * Math.exp(-((x / 0.0062) ** 2)) * ss(0.105, 0.125, u) + 0.003 * ss(0.086, 0.056, u); };
+const jrJawR = (x, y, z) => { const cy = jrCutY(x, z); return smax(y - cy, 0.065 + (cy - y) * 0.75 - jrZ(z), 0.002); }; // 아래턱 자리(음수 = 안): 입선 아래 · 뒤쪽 경계는 아래로 갈수록 앞으로 물러난다
+const jrSeam = (z) => lerp(0.0006, 0.0014, ss(0.072, 0.092, jrZ(z)));
+const jrHeadSDF = (x, y, z) => {
+  const d = smax(jrHB0(x, y, z), -jrJawR(x, y, z), jrSeam(z));
+  return smax(d, -sdCap(x, y, jrZ(z), PHIL_TOP[0], PHIL_TOP[1], PHIL_TOP[2], 0, -0.0185, 0.131, 0.0012), 0.004); // 인중
+};
+const jrJawSDF = (x, y, z) => { const X = x, Y = y + JRJ[1], Z = z + JRJ[2]; return smax(jrHB0(X, Y, Z) + 0.0004 * ss(0.072, 0.092, jrZ(Z)), jrJawR(X, Y, Z), jrSeam(Z)); };
+// 몸통: 핑키 몸을 옆으로 조금 넓혀(1.06) 다부진 노견 — 가슴이 깊고 다리는 짧다
+const jrBodySDF = (x, y, z) => beagleBodySDF(x / 1.06, y, z);
+// 자세: 꼬리를 위로 든다(흰 꼬리 끝) · 서 있을 때 고개를 조금 더 든다(도도하게)
+const JAERONG_POSE = { stand: { tail: -0.8, headPitch: 0.02 }, eat: { tail: -0.95 }, sit: { tail: -0.3 }, down: { tail: -1.45 }, held: { tail: -1.0 }, side: { tail: -1.3 }, belly: { tail: -1.2, neck: 0.8, headPitch: 0.4, headTilt: -1.35 } };
+// 프로펠러 모자: 정수리(z)에 얹어 앞으로 기울이고(tilt), 둥근 돔(반지름 R, 높이 비율 sy)의 아래쪽은 머리 속으로 묻는다(sink) — 챙은 이마 위로
+const JR_HAT = { z: -0.012, tilt: 0.3, R: 0.05, sy: 0.72, sink: 0.012, th: 1.95, brim: [0.9, 1.55, -0.2, 0.012], post: 0.014, blade: 0.037 }; // brim: [안쪽 반지름 배율, 앞으로 나온 길이 배율, 아래로 숙인 각, 높이]
+const JR_COLLAR_HALF = 0.0072; // 목줄 띠 반폭
+// 귀 펄럭임: 귀 뿌리는 용수철(k, c)로 각을 따라가고, 귓볼 아래쪽은 더 무른 용수철(kb, cb)로 굽어 늦게 따라와 넘친다(채찍처럼).
+// 힘: 중력(머리 기울기) · 머리(귀 뿌리)의 가속도(관성 — 고개를 흔들면 휙 돈다, 공중에 뜨면 붕 뜬다) · 바람(앞으로 달리는 빠르기) · 걸음 박자(빨리 달리면 걸음마다 들렸다 털썩)
+const JR_EAR = { k: 105, c: 6.5, kb: 48, cb: 3.6, piv: -0.03, L: 0.19, N: 38, osc: 20 }; // piv: 굽힘이 시작되는 높이(접힌 곳 밑) · L/N: 굽힘 표 길이·칸 · osc: 귀가 따라 펄럭이는 걸음 박자의 상한(rad/s ≈ 3.2Hz)
+const _jq = new THREE.Quaternion(), _jv = V3(), _jw = V3(), _jr = V3(), _jm3 = new Float32Array(9);
+function jrEars(d, dt, t, hwP, hwR) {
+  if (dt < 1e-4) return; // 멈춘 프레임: 속도·가속도를 잴 수 없으니 그대로 둔다
+  const c = d.cur, G = 9.8, idt = 1 / Math.max(dt, 1e-3), fresh = !d.jrP || dt > 0.25;
+  d.hp.updateMatrixWorld(true); d.head.getWorldQuaternion(_jq).invert();
+  // 땅 위 빠르기 (프로펠러 · 바람) — 순간이동(자리 옮김)은 무시
+  d.root.getWorldPosition(_jr);
+  if (fresh) d.jrP = _jr.clone();
+  let sp = Math.hypot(_jr.x - d.jrP.x, _jr.z - d.jrP.z) * idt; if (sp > 6) sp = 0; d.jrP.copy(_jr);
+  d.jrSpd = (d.jrSpd || 0) + (sp - (d.jrSpd || 0)) * (1 - Math.exp(-8 * dt));
+  // 걸음 박자: 다리 박자(d.phase)를 따라가되 귀가 펄럭일 수 있는 빠르기까지만 (빨리 달리면 두 걸음에 한 번꼴로 크게 털썩 · 걷거나 종종걸음일 때는 다리와 같은 박자)
+  const dph = fresh ? 0 : d.phase - (d.jrPh ?? d.phase); d.jrPh = d.phase;
+  d.jrPsi = (d.jrPsi || 0) + Math.min(Math.abs(dph), JR_EAR.osc * dt);
+  const roll = Math.abs(c.roll), lieK = 1 - ss(0.35, 1.0, roll); // 누워 있을 때는 펄럭이지 않는다
+  const fl = (1 + (d.earFlap || 0)) * lieK, R = ss(0.25, 1.2, d.jrSpd) * Math.min(1, d.gait * 1.5) * fl; // R: 달리기 펄럭임 세기 (빨리 달릴수록 · d.earFlap만큼 더)
+  const wave = (ph) => Math.pow(0.5 + 0.5 * Math.sin(ph), 1.5), W = wave(d.jrPsi), Wt = wave(d.jrPsi - 1.15); // 걸음마다 0 → 1 → 0 (들렸다 털썩) · 귓볼 끝은 뿌리보다 늦게(Wt)
+  for (const e of d.ears) {
+    // 귀 뿌리의 속도·가속도(월드) → 머리 좌표
+    e.g.getWorldPosition(_jv);
+    if (fresh || !e.p) { e.p = _jv.clone(); e.v = V3(); e.a = V3(); }
+    _jw.copy(_jv).sub(e.p).multiplyScalar(idt); e.p.copy(_jv);
+    if (_jw.length() > 6) _jw.copy(e.v); // 자리를 옮겼다(순간이동): 속도를 이어 쓴다
+    _jv.copy(_jw).sub(e.v).multiplyScalar(idt).clampLength(0, 60); e.v.copy(_jw);
+    e.a.lerp(_jv, 1 - Math.exp(-dt / 0.04));
+    const aL = _jv.copy(e.a).applyQuaternion(_jq), vL = _jw.applyQuaternion(_jq);
+    const s = e.side, wind = Math.min(Math.max(vL.z, 0), 3) ** 2 * 0.06 * lieK, float = Math.max(0, -aL.y / G - 0.12) * 0.6 * lieK;
+    const ix = clamp(aL.z / G, -1.8, 1.8) * 0.45 * lieK, iz = clamp(-aL.x / G, -1.8, 1.8) * 0.45 * lieK; // 관성: 앞으로 가속하면 귀가 뒤로, 옆으로 가속하면(고개를 흔들면) 반대쪽으로 휙
+    // 뿌리 용수철: 중력(머리 기울기) · 귀 세우기(earPerk) · 관성 · 바람 · 공중에 뜸
+    const tx = -hwP * 0.7 + d.gait * Math.sin(d.phase * 2) * 0.12 - d.earPerk * 0.3 + (ix + wind + float * 0.35) * fl, tz = s * (-0.06 + d.earPerk * 0.3) - hwR * 0.6 + (iz + s * (wind * 0.5 + float)) * fl;
+    const pvx = e.vx, pvz = e.vz;
+    e.vx += (tx - e.ax) * JR_EAR.k * dt; e.vx *= Math.exp(-JR_EAR.c * dt); e.ax += e.vx * dt;
+    e.vz += (tz - e.az) * JR_EAR.k * dt; e.vz *= Math.exp(-JR_EAR.c * dt); e.az += e.vz * dt;
+    const upE = Math.max(0, s * Math.sin(hwR)), dyn = clamp(Math.abs(iz + wind + float) * 2.5 + Math.abs(ix) * 1.5, 0, 1) * fl;
+    e.ax = clamp(e.ax, -0.25 - 0.3 * clamp(hwP - 0.5, 0, 1), 0.35 + 0.95 * Math.min(dyn, 1)); // 쉴 때는 핑키처럼 귓볼이 볼에 기대고, 흔들릴 때만 크게 들린다
+    e.az = s * clamp(s * e.az, -0.1 - 0.3 * upE, 0.1 + 1.25 * Math.min(dyn, 1)); // 바깥(s 쪽)으로 들리는 것만 크게 — 볼 쪽으로는 핑키처럼 조금만 (옆으로 누우면 위쪽 귀가 볼 위로 처질 만큼)
+    // 귓볼 아래쪽 용수철: 뿌리가 휙 돌면 끝은 늦게 따라오고(뿌리의 각가속도만큼 처진다) 관성의 남은 몫만큼 더 굽는다 — 고개를 흔들면 채찍처럼
+    e.bvx = (e.bvx || 0) + (((ix + wind * 0.5) * 0.6 - (e.bx || 0)) * JR_EAR.kb - (e.vx - pvx) * idt * 0.3) * dt; e.bvx *= Math.exp(-JR_EAR.cb * dt); e.bx = clamp((e.bx || 0) + e.bvx * dt, -0.35, 0.9);
+    e.bvz = (e.bvz || 0) + (((iz + s * float) * 0.6 - (e.bz || 0)) * JR_EAR.kb - (e.vz - pvz) * idt * 0.3) * dt; e.bvz *= Math.exp(-JR_EAR.cb * dt); e.bz = s * clamp(s * ((e.bz || 0) + e.bvz * dt), -0.15, 0.9);
+    // 달리기: 걸음마다 귀가 바깥·뒤로 들렸다(W) 털썩 내려앉고, 귓볼 끝은 한 박자 늦게(Wt) 따라 휘었다 넘친다 — 빠를수록 크게 (R)
+    const sat = (v, m) => m * Math.tanh(v / m);
+    e.g.rotation.set(sat(e.ax + R * (0.18 + 0.42 * W), 1.25), 0, s * sat(s * e.az + R * (0.1 + 0.74 * W), 1.4));
+    e.rbx = e.bx + R * (0.08 + 0.3 * Wt); e.rbz = e.bz + s * R * (0.02 + 0.42 * Wt - 0.12 * W);
+    jrBendEar(e);
+  }
+  // 프로펠러: 달리면 빙글빙글(땅 위 빠르기) + d.propSpin + 가끔 산들바람에 천천히
+  if (d.prop) {
+    const want = d.propHold ? 0 : Math.min(d.jrSpd, 2.5) * 20 + (d.propSpin || 0) * 34 + 1.4 * Math.max(0, Math.sin(t * 0.29 + d.seed)) ** 3; // propHold: 멈춘다 (머리 위 간식을 얹을 때)
+    d.propW = (d.propW || 0) + (want - (d.propW || 0)) * (1 - Math.exp(-(want > (d.propW || 0) ? 3 : d.propHold ? 4 : 1.1) * dt));
+    d.prop.rotation.y += d.propW * dt;
+    if (d.propDisc) { const o = 0.3 * ss(9, 26, d.propW); d.propDisc.visible = o > 0.01; d.propDisc.material.opacity = o; }
+  }
+  // 모자가 땅에 묻히지 않게: 모자의 가장 낮은 점(챙 끝 · 돔 테 · 꼭대기 · 날개 끝)이 땅에 닿으려 하면 고개를 옆으로 조금 굴려 정수리를 옆으로 돌린다 (다음 프레임의 머리 기울기 jrHatFix)
+  if (d.hat && d.jrHatPts) {
+    d.hat.updateMatrixWorld(true); const gy = _jr.y - (d.external ? 0 : d.lift); let low = 9;
+    for (const q of d.jrHatPts) { _jv.copy(q).applyMatrix4(d.hat.matrixWorld); low = Math.min(low, _jv.y); }
+    _jv.set(1, 0, 0).applyQuaternion(d.head.getWorldQuaternion(_jq)); const deficit = gy + 0.028 * d.scale - low, f = d.jrHatFix || 0;
+    const want = deficit > 0 ? f - Math.sign(_jv.y || 1) * clamp(deficit * 30 / d.scale, 0, 0.6) : deficit < -0.025 * d.scale ? 0 : f;
+    d.jrHatFix = clamp(f + (want - f) * (1 - Math.exp(-14 * dt)), -1.3, 1.3);
+  }
+}
+// 귓볼 굽히기: 굽힘 축(piv) 아래를 귀 길이를 따라 점점 더 굽혀(굽은 가운데 선을 따라 정점을 옮긴다) 귓볼이 휘어 펄럭인다. 각이 바뀔 때만 다시 계산
+function jrBendEar(e) {
+  const m = e.mesh; if (!m) return;
+  const bx = e.rbx ?? e.bx ?? 0, bz = e.rbz ?? e.bz ?? 0;
+  if (e.lbx !== undefined && Math.abs(bx - e.lbx) + Math.abs(bz - e.lbz) < 0.004) return;
+  e.lbx = bx; e.lbz = bz;
+  const g = m.geometry, pa = g.attributes.position.array, na = g.attributes.normal.array, R0 = e.rest, N0 = e.nrest, { piv, L, N } = JR_EAR, h = L / N;
+  const tab = e.tab || (e.tab = new Float32Array((N + 1) * 12)); // 칸마다: 가운데 선 위치(3) + 회전 행렬(9)
+  let cx = 0, cy = piv, cz = 0;
+  for (let i = 0; i <= N; i++) {
+    const w = ss(0, 0.12, i * h), a = bx * w, b = bz * w, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+    // R = Rz(b) · Rx(a)
+    _jm3[0] = cb; _jm3[1] = -sb * ca; _jm3[2] = sb * sa; _jm3[3] = sb; _jm3[4] = cb * ca; _jm3[5] = -cb * sa; _jm3[6] = 0; _jm3[7] = sa; _jm3[8] = ca;
+    const o = i * 12; tab[o] = cx; tab[o + 1] = cy; tab[o + 2] = cz; tab.set(_jm3, o + 3);
+    cx += -_jm3[1] * h; cy += -_jm3[4] * h; cz += -_jm3[7] * h; // 다음 칸: 굽은 '아래' 방향(R·(0,-1,0))으로 한 칸
+  }
+  for (let j = 0; j < pa.length; j += 3) {
+    const x = R0[j], y = R0[j + 1], z = R0[j + 2];
+    if (y >= piv) { pa[j] = x; pa[j + 1] = y; pa[j + 2] = z; na[j] = N0[j]; na[j + 1] = N0[j + 1]; na[j + 2] = N0[j + 2]; continue; }
+    const u = Math.min((piv - y) / h, N - 1e-4), i0 = Math.floor(u), f = u - i0, o = i0 * 12, q = o + 12;
+    for (let k = 0; k < 9; k++) _jm3[k] = tab[o + 3 + k] + (tab[q + 3 + k] - tab[o + 3 + k]) * f;
+    const px = tab[o] + (tab[q] - tab[o]) * f, py = tab[o + 1] + (tab[q + 1] - tab[o + 1]) * f, pz = tab[o + 2] + (tab[q + 2] - tab[o + 2]) * f;
+    pa[j] = px + _jm3[0] * x + _jm3[2] * z; pa[j + 1] = py + _jm3[3] * x + _jm3[5] * z; pa[j + 2] = pz + _jm3[6] * x + _jm3[8] * z;
+    const nx = N0[j], ny = N0[j + 1], nz = N0[j + 2];
+    na[j] = _jm3[0] * nx + _jm3[1] * ny + _jm3[2] * nz; na[j + 1] = _jm3[3] * nx + _jm3[4] * ny + _jm3[5] * nz; na[j + 2] = _jm3[6] * nx + _jm3[7] * ny + _jm3[8] * nz;
+  }
+  g.attributes.position.needsUpdate = true; g.attributes.normal.needsUpdate = true; g.computeBoundingSphere();
+}
+// 프로펠러 모자를 머리(head 그룹)에 씌운다: 빨강·노랑·초록·파랑 조각을 이은 둥근 돔 · 이마 위로 나온 빨간 챙 · 노란 단추와 기둥 위의 노란 두 날개 프로펠러 · 턱 밑으로 도는 가는 흰 고무줄
+function jrHat(d, head, put) {
+  const H = JR_HAT, R = H.R;
+  let y = 0.2; while (y > 0 && jrHeadSDF(0, y, H.z) > 0) y -= 0.0005; // 정수리
+  const e = 0.0007, n = V3(jrHeadSDF(e, y, H.z) - jrHeadSDF(-e, y, H.z), jrHeadSDF(0, y + e, H.z) - jrHeadSDF(0, y - e, H.z), jrHeadSDF(0, y, H.z + e) - jrHeadSDF(0, y, H.z - e)).normalize();
+  const hat = new THREE.Group(); hat.position.set(0, y, H.z).addScaledVector(n, -H.sink);
+  hat.quaternion.setFromUnitVectors(V3(0, 1, 0), n).multiply(new THREE.Quaternion().setFromAxisAngle(V3(1, 0, 0), H.tilt)); head.add(hat); d.hat = hat;
+  const cols = ['#e2342b', '#f3c51b', '#2fae55', '#2c78d4'];
+  const gore = canvasTex(256, 32, (x, w, h) => { for (let i = 0; i < 8; i++) { x.fillStyle = cols[(i + 1) % 4]; x.fillRect((i * w) / 8, 0, w / 8 + 1, h); x.fillStyle = 'rgba(40,20,10,0.35)'; x.fillRect((i * w) / 8, 0, 2, h); } });
+  const cloth = new THREE.MeshStandardMaterial({ map: gore, roughness: 0.62 });
+  const dome = put(hat, new THREE.SphereGeometry(1, 40, 16, Math.PI / 8, Math.PI * 2, 0, H.th), null, null, null, null, cloth); dome.scale.set(R, R * H.sy, R);
+  // 챙: 돔 앞쪽 아랫단에서 이마 위로 나온 반달 (빨강, 얇은 판)
+  const red = new THREE.MeshStandardMaterial({ color: 0xd8302a, roughness: 0.55 }), yel = new THREE.MeshStandardMaterial({ color: 0xf4c81c, roughness: 0.42 });
+  const sh = new THREE.Shape(), [ri, ro, bt, by] = H.brim;
+  for (let i = 0; i <= 24; i++) { const a = Math.PI * (0.17 + 0.66 * (i / 24)); const x = Math.cos(a) * R * 1.02, z = Math.sin(a) * R * ro * (0.55 + 0.45 * Math.sin(a)); if (i) sh.lineTo(x, z); else sh.moveTo(x, z); }
+  for (let i = 24; i >= 0; i--) { const a = Math.PI * (0.17 + 0.66 * (i / 24)); sh.lineTo(Math.cos(a) * R * ri, Math.sin(a) * R * ri); }
+  const bg = new THREE.ExtrudeGeometry(sh, { depth: 0.0018, bevelEnabled: true, bevelThickness: 0.0008, bevelSize: 0.0008, bevelSegments: 2, curveSegments: 4 }); bg.rotateX(Math.PI / 2); // 판(x, z) · 두께는 아래로
+  const brim = put(hat, bg, [0, by, 0], [bt, 0, 0], null, null, red); brim.castShadow = true;
+  // 꼭대기: 노란 단추 · 짧은 기둥 · 두 날개 프로펠러(날개는 살짝 비틀린 납작한 잎) · 빨리 돌면 흐릿한 원판
+  const top = R * H.sy;
+  put(hat, new THREE.SphereGeometry(1, 16, 10), [0, top - 0.001, 0], null, [0.0062, 0.0042, 0.0062], null, yel);
+  put(hat, new THREE.CylinderGeometry(0.0016, 0.0019, H.post, 10), [0, top + H.post / 2, 0], null, null, null, yel);
+  const prop = new THREE.Group(); prop.position.set(0, top + H.post, 0); hat.add(prop); d.prop = prop; d.propW = 0;
+  put(prop, new THREE.SphereGeometry(1, 12, 8), [0, 0, 0], null, [0.0034, 0.0026, 0.0034], null, yel);
+  for (const s of [1, -1]) put(prop, new THREE.SphereGeometry(1, 16, 8), [s * H.blade * 0.52, 0.0004, 0], [s * 0.38, 0, 0], [H.blade * 0.5, 0.0011, 0.0068], null, yel);
+  d.propDisc = new THREE.Mesh(new THREE.CircleGeometry(H.blade * 1.02, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xf6d34a, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })); d.propDisc.visible = false; prop.add(d.propDisc);
+  // 고무줄: 모자 옆 가장자리에서 귀 뿌리 앞 볼을 지나 목(턱 뒤 · 아래턱 경첩보다 뒤) 밑으로 도는 고리 — 머리 표면에서 살짝 띄운다 (모자 속 부분은 돔이 가린다)
+  const C0 = V3(0, 0.045, 0.004), ang = -0.22, u = V3(1, 0, 0), v = V3(0, Math.cos(ang), Math.sin(ang)), pts = [], dir = V3();
+  for (let i = 0; i < 48; i++) {
+    const a = (i / 48) * Math.PI * 2; dir.copy(u).multiplyScalar(Math.cos(a)).addScaledVector(v, Math.sin(a));
+    let r = 0.02; while (r < 0.2 && jrHeadSDF(C0.x + dir.x * r, C0.y + dir.y * r, C0.z + dir.z * r) < 0.0013) r += 0.0004;
+    pts.push(C0.clone().addScaledVector(dir, r));
+  }
+  const el = put(head, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 96, 0.0011, 5, true), null, null, null, null, new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 0.7 })); el.castShadow = false;
+  // 간식 자리: 모자 앞쪽 비탈(돔 위 · 프로펠러 날개 아래 · 챙 위) — 정면 카메라에서 '머리 위'로 또렷이 보이는 곳
+  const ta = 0.9, tp = V3(0, R * H.sy * Math.cos(ta), R * Math.sin(ta)), tn = V3(0, Math.cos(ta) / H.sy, Math.sin(ta)).normalize().lerp(V3(0, 1, 0), 0.35).normalize(); // 날개가 도는 원 바깥 · 위쪽 방향은 비탈과 모자 축의 사이 (얹은 간식이 미끄러져 보이지 않게)
+  d.jrHatPts = [V3(0, R * H.sy, 0), ...[0, 1, 2, 3].map((i) => V3(Math.sin(i * Math.PI / 2) * R, 0, Math.cos(i * Math.PI / 2) * R)), V3(0, by, R * ro), V3(H.blade, top + H.post, 0), V3(-H.blade, top + H.post, 0), V3(0, top + H.post, H.blade), V3(0, top + H.post, -H.blade)]; // 땅 닿음 점검 점 (모자 좌표)
+  hat.updateMatrix();
+  d.hatTop = tp.addScaledVector(tn, 0.0015).applyMatrix4(hat.matrix); d.hatN = tn.applyQuaternion(hat.quaternion).normalize();
+  const tw = V3(0, top + H.post + 0.004, 0).applyMatrix4(hat.matrix);
+  let py = 0.2; while (py > 0 && jrHeadSDF(0, py, -0.062) > 0) py -= 0.0005; // 모자 뒤 뒤통수 (쓰다듬는 자리)
+  d.headPts = { pat: [0, +(py + 0.003).toFixed(4), -0.062], top: [0, +(V3(0, top + 0.003, 0).applyMatrix4(hat.matrix).y).toFixed(4), -0.01], say: [0, +(tw.y + 0.03).toFixed(4), +tw.z.toFixed(4)], nose: [0, 0.006, +(jrZInv(0.1325) + 0.016).toFixed(4)], mouth: [0, -0.024, +(jrZInv(0.115)).toFixed(4)] };
+}
+// 자줏빛 둥근 이름표: 흰 글씨 '재롱'(글꼴 없이 획으로 그린다 — 어느 기기에서도 같다) · 아래 가장자리에 작은 JAERONG · 은빛 고리로 목줄 앞에 매달린다
+function jrTag(md, put, color) {
+  const tex = canvasTex(256, 256, (x, w) => {
+    const bg = '#' + new THREE.Color(color).getHexString(), dk = '#' + new THREE.Color(color).multiplyScalar(0.62).getHexString();
+    x.fillStyle = dk; x.fillRect(0, 0, w, w); x.fillStyle = bg; x.beginPath(); x.arc(128, 128, 112, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = '#f6efe6'; x.fillStyle = '#f6efe6'; x.lineWidth = 11; x.lineCap = 'round'; x.lineJoin = 'round';
+    const L = (...p) => { x.beginPath(); x.moveTo(p[0], p[1]); for (let i = 2; i < p.length; i += 2) x.lineTo(p[i], p[i + 1]); x.stroke(); };
+    L(44, 86, 92, 86); L(70, 86, 46, 156); L(66, 112, 96, 156); // ㅈ
+    L(108, 70, 108, 170); L(108, 118, 124, 118); L(126, 64, 126, 176); // ㅐ
+    L(146, 66, 208, 66, 208, 84, 148, 84, 148, 102, 210, 102); // ㄹ
+    L(178, 110, 178, 124); L(142, 126, 214, 126); // ㅗ
+    x.beginPath(); x.arc(178, 158, 19, 0, Math.PI * 2); x.stroke(); // ㅇ
+    x.font = 'bold 20px sans-serif'; x.textAlign = 'center'; x.fillText('JAERONG', 128, 214);
+  });
+  const R = 0.0195, side = new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.15 }), face = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38, metalness: 0.1 });
+  const g = new THREE.CylinderGeometry(R, R, 0.0032, 40).rotateX(Math.PI / 2).rotateZ(Math.PI / 2); // 윗면(글씨)이 앞(+z)을 보게 · 글씨가 바로 서게
+  const loop = new THREE.MeshStandardMaterial({ color: 0xc9d0d2, roughness: 0.28, metalness: 0.85 });
+  put(md, new THREE.TorusGeometry(0.0048, 0.001, 8, 18), [0, -0.004, 0.002], [0, Math.PI / 2, 0], null, null, loop);
+  const m = new THREE.Mesh(g, [side, face, side]); m.position.set(0, -0.0072 - R * 0.95, 0.0012); m.castShadow = true; md.add(m);
+  return m;
+}
 
 const sdfCache = {};
 function sdfGeo(key, sdf, b0, b1, h, smooth = 0) { if (!sdfCache[key]) sdfCache[key] = surfaceNet(sdf, b0, b1, h); const g = sdfCache[key].clone(); g.userData = { smooth }; return g; }
@@ -819,7 +1005,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
   const d = { kind, J, scale, seed, meshes: [], ears: [], eyes: [], legs: [] };
   if (DM) Object.assign(d, { dami: true, variant, hipX: 0.056 });
   const JR = !J && !PU && !DM && variant === 'jaerong'; // JR: 재롱 (비글 변형 — 핑키 틀에서 시작)
-  if (JR) Object.assign(d, { jaerong: true, variant });
+  if (JR) Object.assign(d, { jaerong: true, variant, hipX: 0.064, earFlap: 0, propSpin: 0, napLids: [] }); // earFlap: 귀 펄럭임 더하기(0..1.5) · propSpin: 프로펠러 더 돌리기(0..1) · napLids: 잘 때는 제 눈꺼풀이 덮는다 (fitCurl이 큰 눈용 눈꺼풀을 만들지 않게)
   if (PU) Object.assign(d, { pupu: true, variant, hipX: 0.05, smile: 1, smileK: 1, wild: false, earSw: 0, headPts: { top: [0, 0.096, -0.01], say: [0, 0.142, -0.01], nose: [0, 0.024, 0.1035], mouth: [0, 0.002, 0.092] } }); // 푸푸: 뒷다리 뿌리는 골반 폭에 맞게 · headPts: 머리 좌표의 정수리·말풍선 자리(쫑긋 선 귀 끝 0.134 바로 위 — 말풍선이 귀를 덮지 않게)·코끝·입 앞 (킁킁·간식 자리 — 핑키·담이는 큰 머리의 예전 값 그대로) · smile: 웃는상 — 평소 얼굴은 입을 벌리고 활짝 웃는 입 (가만히 산을 바라볼 때 · 놀람 · 까치 · 터키츄 앞에서 의젓한 척할 때만 잠깐 0) · wild: 터키츄 앞에서 신나면 꼬리를 마음껏 · earSw: 귀를 좌우로 돌려 소리를 살핀다
   const CC = PU ? PUPU_COLLAR_C : COLLAR_C, CA = PU ? PUPU_COLLAR_AX : COLLAR_AX; // 목줄 고리 중심(y, z)·고리 면 법선 — 푸푸는 굵은 목 위쪽(턱 밑)에
   const silMat = silhouette ? new THREE.MeshStandardMaterial({ color: 0x2b201b, roughness: 0.9, emissive: 0x170f0b }) : null;
@@ -846,6 +1032,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
   const cEyeShade = cE.clone().multiplyScalar(0.85); // 눈 둘레의 따뜻한 그늘(진한 베이지)
   const cSnow = new THREE.Color(C.snow ?? 0xfaf7f1), cPink = new THREE.Color(C.earIn ?? 0xe6a29c), cTailT = new THREE.Color(C.tailTan ?? C.tan), cPRim = new THREE.Color(0x3a2a24), cPGum = new THREE.Color(0x3d1d1e), cPMouth = new THREE.Color(0x2c1517); // 푸푸: 가슴·발의 새하얀 털 · 귀 안 분홍 · 꼬리 긴 털의 황갈 크림 · 눈테 · 검붉은 잇몸 · 어두운 입 안
   const cLeg = cW.clone().multiplyScalar(0.97).lerp(cT, 0.08); // 다리·발의 크림: 가슴 크림과 같은 따뜻한 톤
+  const cJMuz = new THREE.Color(C.muzzle ?? C.base), cJBrow = cW.clone().lerp(cH, 0.28), cJRim = new THREE.Color(0x3a2418); // 재롱: 조금 바래 회백색인 흰 주둥이 · 눈 위의 옅은 크림 눈썹 · 눈 둘레 진한 테
   const tone = (c, p, amt = 0.05) => c.multiplyScalar(1 + (hash3(p) - 0.5) * amt * 0.5 + wob(p, 45) * amt * 0.5);
   const _pv = new THREE.Vector3(), _pc = new THREE.Color(), _pz = new THREE.Vector3(), _pg = new THREE.Vector3(), _sad = new THREE.Color(), _pb = new THREE.Vector3();
   const sph = (w = 32, h = 24) => new THREE.SphereGeometry(1, w, h);
@@ -910,7 +1097,19 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     tone(c.copy(cW).lerp(cH, warm * (1 - white)).lerp(cSnow, white), p, 0.035);
     c.multiplyScalar(1 + 0.025 * wob(_pg.set(p.x * 9, p.y * 9, p.z * 5), 30)); // 털 뭉치마다 아주 옅은 밝기 얼룩 (찰흙처럼 밋밋하지 않게)
   };
-  const bodyPaint = J ? (p, c) => tone(c.copy(cW).lerp(cT, ss(0.0, 0.12, p.y) * 0.45), p, 0.05) : DM ? damiBodyPaint : PU ? pupuBodyPaint : (p, c, leg = 0) => {
+  // 재롱: 흰 바탕에 등 안장(기갑 뒤부터 꼬리 뿌리까지 · 옆구리 위쪽)과 엉덩이·허벅지 바깥만 황갈. 목은 흰 목도리처럼 한 바퀴 희고(뒤에서 보아도), 가슴·배·다리는 희다.
+  // 황갈에는 노견의 옅은 크림 털이 낱낱이 섞인다 (검은 털은 없다)
+  const jrBodyPaint = (p, c, leg = 0) => {
+    const ax = Math.abs(p.x), n = wob(_pg.set(p.x * 3, p.y * 3, p.z * 0.6), 30) * 0.016 + wob(p, 38) * 0.005 + (hash3(_pg.set(p.x * 60, p.y * 60, p.z * 60)) - 0.5) * 0.002;
+    const lineY = 0.0 - 0.03 * ss(-0.06, -0.2, p.z) + 0.025 * ss(0.04, 0.12, p.z); // 안장 아래 경계: 옆구리 위쪽(몸 높이의 절반 위) — 엉덩이 쪽으로 내려오고 기갑에서 등 위로 올라간다
+    let red = ss(lineY - 0.01, lineY + 0.018, p.y + n) * ss(0.09, 0.05, p.z + n * 0.8 + (p.y - 0.1) * 0.25) * ss(-0.31, -0.255, p.z + n); // 등 안장: 어깨뼈 뒤부터 (기갑·목은 흰 목도리)
+    const rump = leg ? ss(-0.03, 0.04, p.y) * ss(0.0, 0.03, p.x * Math.sign(p.x || 1)) : ss(-0.09, -0.16, p.z + n) * ss(-0.085, -0.035, p.y + n) * ss(0.02, 0.06, ax); // 엉덩이·허벅지 바깥
+    const shoulder = leg ? 0 : ss(0.13, 0.17, p.z + n) * ss(0.045, 0.075, ax) * ss(-0.05, 0.02, p.y + n) * ss(0.09, 0.04, p.y) * 0.55; // 어깨에 옅은 황갈 얼룩
+    red = Math.max(red, rump * 0.95, shoulder);
+    _sad.copy(cB).lerp(cT, ss(0.04, -0.03, p.y) * 0.6).lerp(cG, clamp(0.06 + (hash3(_pg.set(p.x * 85, p.y * 85, p.z * 85)) - 0.5) * 0.22, 0, 0.2)); // 등은 조금 진한 황갈 · 아래로 가며 밝아지고 · 옅은 크림 털이 섞인다
+    tone(c.copy(cW).lerp(_sad, red), p, 0.035);
+  };
+  const bodyPaint = J ? (p, c) => tone(c.copy(cW).lerp(cT, ss(0.0, 0.12, p.y) * 0.45), p, 0.05) : DM ? damiBodyPaint : PU ? pupuBodyPaint : JR ? jrBodyPaint : (p, c, leg = 0) => {
     const ax = Math.abs(p.x);
     const n = wob(_pg.set(p.x * 3, p.y * 3, p.z * 0.6), 30) * 0.02 + wob(p, 38) * 0.006 + (hash3(_pg.set(p.x * 60, p.y * 60, p.z * 60)) - 0.5) * 0.001; // 몸 축을 따라 길게 늘어진 결 + 낱낱의 털 (가슴·배 경계용, 섬 얼룩이 생기지 않게 털 노이즈는 약하게)
     const ns = wob(_pg.set(p.x * 4, p.y * 4, p.z * 1.5), 30) * 0.012 + wob(p, 70) * 0.005 + (hash3(_pg.set(p.x * 120, p.y * 120, p.z * 120)) - 0.5) * 0.004; // 안장 경계용: 방향 없는 부드러운 얼룩 + 낱낱의 털 (세로 줄무늬 없음)
@@ -944,7 +1143,30 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     const jr = pupuJawR(p.x, p.y, p.z), hb = pupuHB0(p.x, p.y, p.z), cy = pupuCutY(p.x, p.z);
     if (p.z > 0.025 && Math.abs(jr) < 0.005) { c.lerp(cPMouth, ss(-0.0008, -0.0022, hb) * ss(-0.003, -0.0008, jr) * ss(cy - 0.007, cy - 0.003, p.y)); c.lerp(cLipD, ss(-0.0012, 0.0, hb) * Math.exp(-(((jr - 0.0003) / 0.0013) ** 2)) * ss(cy - 0.0045, cy - 0.0015, p.y) * 0.75); } // 입천장 · 검은 입술 가장자리
   };
-  const headPaint = J ? (p, c) => tone(c.copy(cW).lerp(cT, ss(0.1, 0.16, p.y) * 0.4), p, 0.05) : PU ? pupuHeadPaint : (p, c) => {
+  // 재롱 얼굴: 정수리·눈 둘레·관자놀이·바깥 볼은 생강빛 황갈(귀로 이어진다), 정수리에서 가늘게 내려온 흰 이마 줄이 눈 사이에서 넓어져 흰 주둥이로,
+  // 아래 볼·턱·목은 희다. 노견이라 주둥이가 조금 회백색으로 바랬고 입가에 작은 주근깨, 눈 위는 옅은 크림 눈썹. 입선 가장자리는 검은 입술, 잘린 입 안은 어둡다
+  const jrHeadPaint = (p, c) => {
+    const n = wob(p, 25) * 0.01 + wob(p, 60) * 0.004, ax = Math.abs(p.x), u = jrZ(p.z); // u: 핑키 머리 좌표의 z (무늬 경계는 늘이기 전 기준)
+    const bw = 0.004 + 0.005 * ss(0.11, 0.075, p.y) + 0.016 * ss(0.065, 0.035, p.y); // 이마 줄 반폭: 정수리 0.004 → 눈 사이 0.01(눈 사이 간격의 1/3쯤) → 눈 밑에서 주둥이로 넓어진다
+    const blaze = ss(bw + 0.005, bw - 0.002, ax + n * 0.4) * ss(-0.035, -0.005, p.z);
+    const muzzle = ss(0.07, 0.088, u + n * 0.5 + (p.y - 0.035) * 0.55 - ss(0.022, 0.048, ax) * 0.018); // 흰 주둥이: 단(stop) 앞부터 · 볼 쪽은 눈 밑에서 입꼬리 뒤로 비스듬히
+    const lowY = lerp(-0.027, -0.006, ss(0.07, 0.1, u)), under = Math.max(ss(0.01, -0.01, p.y - lowY + n), ss(0.045, 0.015, p.y + n) * ss(-0.015, -0.055, p.z + n)); // 아래 볼·턱 밑·목 · 뒤에서 보면 귀 밑 목덜미부터 흰 목도리
+    const white = clamp(Math.max(blaze, muzzle, under), 0, 1);
+    tone(c.copy(cH).lerp(cE, 0.4 * ss(0.03, 0.06, ax) * ss(0.075, 0.025, p.y)), p, 0.035); // 황갈: 바깥 볼·관자놀이는 조금 진하다
+    c.lerp(cG, (hash3(_pg.set(p.x * 90, p.y * 90, p.z * 90)) > 0.72 ? 0.22 : 0) * (1 - white)); // 노견: 황갈에 옅은 크림 털이 낱낱이
+    c.lerp(cJBrow, 0.55 * Math.exp(-(((ax - 0.033) / 0.014) ** 2 + ((p.y - 0.082) / 0.008) ** 2 + ((p.z - 0.046) / 0.016) ** 2)) * (1 - white)); // 눈 위 옅은 크림 눈썹
+    const fade = 0.5 + 0.5 * ss(0.002, 0.03, p.y) * ss(0.075, 0.1, u); // 주둥이는 콧등 쪽이 더 바랬다
+    c.lerp(cJMuz.clone().lerp(cW, (1 - fade) * 0.6), white).lerp(cW, under * 0.7);
+    c.lerp(cGrey, 0.18 * muzzle * ss(0.4, 0.75, hash3(_pg.set(p.x * 70, p.y * 70, p.z * 70))) * ss(0.075, 0.1, u)); // 콧등 · 주둥이에 희끗한 회색 털
+    const ed = Math.hypot(ax - 0.038, p.y - 0.061, (p.z - 0.058) * 0.8), ring = ss(0.024, 0.017, ed), halo = ss(0.04, 0.022, ed);
+    c.lerp(cEyeShade, halo * 0.35 * (1 - white * 0.5)).lerp(cJRim, ring * 0.55); // 눈 둘레 그늘 · 눈 테
+    const fq = _pg.set(Math.floor(ax / 0.0056), Math.floor(p.y / 0.0056), Math.floor(p.z / 0.0056)), fh = hash3(fq), fx = (fq.x + 0.25 + 0.5 * hash3(_pz.set(fq.x + 3, fq.y, fq.z))) * 0.0056, fy = (fq.y + 0.25 + 0.5 * fh) * 0.0056;
+    c.lerp(cFreck, muzzle * ss(0.014, 0.024, ax) * ss(-0.004, -0.018, p.y) * ss(0.095, 0.115, u) * (fh > 0.5 ? 1 : 0) * ss(0.0019, 0.0009, Math.hypot(ax - fx, p.y - fy)) * 0.8); // 입가 주근깨
+    const jr = jrJawR(p.x, p.y, p.z), hb = jrHB0(p.x, p.y, p.z), cy = jrCutY(p.x, p.z);
+    if (p.z > 0.05 && Math.abs(jr) < 0.006) { c.lerp(cMouthIn, ss(-0.0012, -0.003, hb) * ss(-0.004, -0.001, jr)); c.lerp(cLipD, ss(-0.0015, 0.0, hb) * Math.exp(-(((jr - 0.0004) / 0.0014) ** 2)) * ss(cy - 0.006, cy - 0.002, p.y) * 0.45); }
+    for (const sx of [1, -1]) { if (p.x * sx < 0.02) continue; c.multiplyScalar(1 - 0.13 * ss(0.012, 0.0, earS[sx](p.x - sx * 0.055, p.y - 0.1, p.z + 0.006))); } // 귀가 볼에 드리우는 그늘
+  };
+  const headPaint = J ? (p, c) => tone(c.copy(cW).lerp(cT, ss(0.1, 0.16, p.y) * 0.4), p, 0.05) : PU ? pupuHeadPaint : JR ? jrHeadPaint : (p, c) => {
     const n = wob(p, 25) * 0.012 + wob(p, 60) * 0.004, ax = Math.abs(p.x);
     const muzzle = DM ? ss(0.062, 0.086, p.z + n * 0.6 - ss(0.016, 0.04, ax) * 0.03 + 0.022 * ss(0.006, -0.016, p.y)) * ss(0.056, 0.038, p.y + n * 0.4) // 담이: 흰 주둥이는 눈 밑(단)에서 끝나고 이마·볼은 황갈 — 가는 흰 줄만 이마로 올라간다
       : ss(0.058, 0.098, p.z + n * 0.6 + (p.y - 0.02) * 0.35 - ss(0.022, 0.05, ax) * 0.022); // 흰 주둥이: 콧등은 단(stop) 앞부터 희고, 볼 쪽 경계는 눈 밑에서 입꼬리로 비스듬히 내려간다(볼은 베이지 — 황갈이 눈 밑 콧등 뿌리까지 온다)
@@ -991,7 +1213,14 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     tone(c.copy(cW).lerp(cT, clamp(tan, 0, 1)).lerp(cPink, pink).lerp(cW, fluff), p, 0.04);
     c.multiplyScalar(1 - 0.12 * pink * ss(0.5, 0.0, q)); // 오목한 귀 안 깊은 곳은 조금 어둡다
   };
-  const earPaint = (sx) => (J ? whitePaint : (p, c) => {
+  // 재롱 귀: 밝은 생강빛 황갈 — 접힌 뿌리는 머리빛, 가장자리·끝은 조금 진하고 볼에 닿는 안쪽 면은 그늘진다 (회색 서리 없이)
+  const jrEarPaint = (sx) => (p, c) => {
+    const { t, q, chan, n } = earFrame(sx, p.x, p.y, p.z), inner = ss(0.001, -0.004, n), streak = 0.5 + 0.5 * wob(_pg.set(p.x * 40, p.y * 3, p.z * 40), 40);
+    tone(c.copy(cE).lerp(cH, 0.45 * ss(0.14, 0.0, t)).lerp(cT, streak * 0.25), p, 0.04);
+    c.lerp(cG, (hash3(_pg.set(p.x * 95, p.y * 95, p.z * 95)) > 0.8 ? 0.16 : 0) * ss(0.4, 0.0, t));
+    c.multiplyScalar(1 - 0.1 * ss(0.55, 1.0, Math.abs(q)) * (1 - inner) - 0.17 * inner - 0.1 * chan * (1 - inner) - 0.07 * ss(0.55, 1.0, t) - 0.08 * Math.exp(-(((t - 0.2) / 0.045) ** 2)));
+  };
+  const earPaint = (sx) => (J ? whitePaint : JR ? jrEarPaint(sx) : (p, c) => {
     const { t, w, q, chan, n } = (DM ? damiEarFrame : earFrame)(sx, p.x, p.y, p.z);
     const inner = ss(0.001, -0.004, n);
     const streak = 0.5 + 0.5 * wob(_pg.set(p.x * 40, p.y * 3, p.z * 40), 40); // 아래로 흐르는 가는 털결
@@ -1009,7 +1238,10 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     tone(c.copy(cW).lerp(cSnow, 0.25).lerp(cTailT, 0.12 + 0.4 * outer), p, 0.045); // 꼬리는 몸보다 조금 밝은 크림, 말린 원 바깥 긴 털에 따뜻한 기운
     c.multiplyScalar(1 - 0.035 * (0.5 + 0.5 * Math.sin(r * 560 + p.x * 400)) * (0.3 + 0.7 * outer)); // 말린 결을 따라 흐르는 털 다발 줄무늬 (옅게 — 지저분해 보이지 않게)
   };
-  const tailPaint = J ? whitePaint : PU ? pupuTailPaint : DM ? (p, c) => { // 담이: 뿌리 쪽 등면(앞)은 검고 아랫면은 황갈, 끝 1/3은 흰 붓 — 경계는 털 다발처럼 들쭉날쭉
+  const tailPaint = J ? whitePaint : PU ? pupuTailPaint : JR ? (p, c) => { // 재롱 꼬리: 황갈(아랫면은 밝다) · 끝 1/4은 흰 붓
+    const under = ss(-0.002, -0.014, p.z - tailAxisZ(p.y)), tip = ss(0.175, 0.215, p.y + wob(_pg.set(p.x * 8, p.y, p.z * 8), 30) * 0.018 + (hash3(_pg.set(p.x * 120, p.y * 120, p.z * 120)) - 0.5) * 0.008);
+    tone(c.copy(cT).lerp(cG, 0.12).lerp(cW, under * 0.35 * ss(0.03, 0.1, p.y)).lerp(cW, tip), p, 0.05);
+  } : DM ? (p, c) => { // 담이: 뿌리 쪽 등면(앞)은 검고 아랫면은 황갈, 끝 1/3은 흰 붓 — 경계는 털 다발처럼 들쭉날쭉
     const u = p.y / 0.3, fl = wob(_pg.set(p.x * 9, p.y * 2, p.z * 9), 40) * 0.035 + (hash3(_pg.set(p.x * 140, p.y * 140, p.z * 140)) - 0.5) * 0.02;
     const th = Math.abs(Math.atan2(p.x, p.z - damiTailAxis(p.y))) + (hash3(_pg.set(p.x * 260, p.y * 60, p.z * 260)) - 0.5) * 0.3 + wob(_pg.set(p.x * 20, p.y * 6, p.z * 20), 40) * 0.4; // 0 = 등 쪽(앞) … π = 배 쪽
     const dark = ss(2.25, 1.55, th) * ss(0.02, 0.0, u - 0.56 - fl), white = ss(0.58, 0.68, u + fl); // 등면·옆면은 검고, 배 쪽은 황갈 띠(뒤에서 보면 검은 테 사이로 황갈이 보인다)
@@ -1019,11 +1251,14 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     tone(c.copy(cT).lerp(cTailDark, dark).lerp(cW, ss(DM ? 0.15 : 0.185, DM ? 0.2 : 0.245, p.y + wob(_pg.set(p.x * 8, p.y, p.z * 8), 30) * 0.02)), p, 0.05); // 흰 붓은 끝 1/4만
   };
   // 다리 마디: 몸 기준 높이(쉬는 자세)로 황갈→흰색. 색 경계가 관절과 겹치지 않게 부드러운 띠로
-  const legPaint = (y0, w0, w1, sx) => (J ? whitePaint : (p, c) => { // 황갈이 흰 다리로 털결 따라 번지고, 다리 바깥쪽에는 황갈 털이 조금 더 길게 내려온다
+  const legPaint = (y0, w0, w1, sx) => (J ? whitePaint : JR ? (p, c) => { // 재롱: 팔꿈치·무릎 아래는 흰 다리 (위쪽 끝만 황갈이 살짝 번진다)
+    const y = y0 + p.y + wob(_pg.set(p.x * 3, p.y * 3, p.z), 30) * 0.02;
+    tone(c.copy(cW).multiplyScalar(0.985).lerp(cT, 0.5 * ss(w0 + 0.03, w0 + 0.07, y) * ss(-0.005, 0.015, p.x * sx)), p, 0.04);
+  } : (p, c) => { // 황갈이 흰 다리로 털결 따라 번지고, 다리 바깥쪽에는 황갈 털이 조금 더 길게 내려온다
     const y = y0 + p.y + wob(_pg.set(p.x * 3, p.y * 3, p.z), 30) * 0.02 + (hash3(_pg.set(p.x * 90, p.y * 90, p.z * 90)) - 0.5) * 0.01;
     tone(c.copy(cT).lerp(cLeg, ss(w0, w1, y)).lerp(cTick, 0.25 * ss(0.0, 0.02, p.x * sx) * ss(w0, w0 - 0.08, y)), p, 0.04);
   });
-  const pawPaint = J ? whitePaint : PU ? (p, c) => tone(c.copy(cW).lerp(cSnow, 0.7), p, 0.04) : (p, c) => tone(c.copy(cLeg), p, 0.04);
+  const pawPaint = J ? whitePaint : PU ? (p, c) => tone(c.copy(cW).lerp(cSnow, 0.7), p, 0.04) : JR ? (p, c) => tone(c.copy(cW).multiplyScalar(0.98), p, 0.04) : (p, c) => tone(c.copy(cLeg), p, 0.04);
   const cNail = new THREE.Color(0xcdbfb0);
   const pupuFootPaint = (kx, kz) => (p, c) => { // 푸푸 발: 하얀 발 · 발가락 사이 골은 그늘지고, 발가락 끝에 작은 발톱 (kx·kz: 발 메시를 늘인 배율)
     tone(c.copy(cW).lerp(cSnow, 0.7), p, 0.04);
@@ -1077,11 +1312,11 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     q.material = new THREE.MeshBasicMaterial({ visible: false }); q.castShadow = q.receiveShadow = false; q.userData.fur = fur; m.userData.fur = null; return q;
   };
   // 몸통 (몸통 · 가슴 · 엉덩이 · 목을 매끈하게 이은 한 덩어리)
-  d.torso = put(body, PU ? sdfGeo('pub29', pupuBodySDF, [-0.12, -0.14, -0.28], [0.12, 0.28, 0.3], 0.0042, 2) : sdfGeo(J ? 'jb' : DM ? 'bbd' : 'bb', DM ? damiBodySDF : bodySDF(J), J ? [-0.17, -0.17, -0.3] : [-0.15, -0.17, -0.27], J ? [0.17, 0.2, 0.33] : [0.15, 0.25, 0.3], 0.006, 2), null, null, null, bodyPaint);
+  d.torso = put(body, PU ? sdfGeo('pub29', pupuBodySDF, [-0.12, -0.14, -0.28], [0.12, 0.28, 0.3], 0.0042, 2) : sdfGeo(J ? 'jb' : DM ? 'bbd' : JR ? 'bbj' : 'bb', DM ? damiBodySDF : JR ? jrBodySDF : bodySDF(J), J ? [-0.17, -0.17, -0.3] : [-0.15, -0.17, -0.27], J ? [0.17, 0.2, 0.33] : [0.15, 0.25, 0.3], 0.006, 2), null, null, null, bodyPaint);
   if (J) d.torso.userData.fur = [2, 0.002, 1600];
   if (PU && !silhouette) d.torsoFur = furProxy(d.torso, 'pub29f', pupuBodySDF, [-0.12, -0.14, -0.28], [0.12, 0.28, 0.3], 0.0042 * PUPU_FURN.bodyF, null, bodyPaint, [PUPU_FURN.body, 0.0055, 1300, PUPU_FUR]); // 푸푸: 복슬한 겉털 — 실루엣 가장자리가 보송하고 정면에서도 털결이 비친다 (몸통과 함께 목 · 허리가 굽는다)
   if (!silhouette && C.collar) {
-    const sdfB = DM ? damiBodySDF : PU ? pupuBodySDF : bodySDF(J), ring = J ? collarRing(sdfB, V3(0, 0.068, 0.148), V3(0, 0.72, 0.69).normalize(), 0.011) : collarRing(sdfB, V3(0, CC[0], CC[1]), V3(0, CA[0], CA[1]).normalize(), DM ? 0.016 : PU ? 0.0062 : 0.011); // 목 밑동(턱에서 손 한 뼘 아래), 가는 띠가 가슴 위로 V자로 늘어진다
+    const sdfB = DM ? damiBodySDF : PU ? pupuBodySDF : JR ? jrBodySDF : bodySDF(J), ring = J ? collarRing(sdfB, V3(0, 0.068, 0.148), V3(0, 0.72, 0.69).normalize(), 0.011) : collarRing(sdfB, V3(0, CC[0], CC[1]), V3(0, CA[0], CA[1]).normalize(), DM ? 0.016 : PU ? 0.0062 : JR ? JR_COLLAR_HALF : 0.011); // 목 밑동(턱에서 손 한 뼘 아래), 가는 띠가 가슴 위로 V자로 늘어진다
     if (C.collar === 'band') { // 푸푸: 진한 청회색 납작한 띠 목줄 — 리본(안쪽 면)에 두께를 준 겉면·테두리를 붙인다 (목이 굽으면 굽은 목에 다시 두르고 두께도 따라간다)
       const bm = new THREE.MeshStandardMaterial({ color: C.band ?? 0x34525a, roughness: 0.88, side: THREE.DoubleSide }); // 무광 천 띠
       const rg = ring.geo, nV = rg.attributes.position.count / 2, TH = 0.002, bg = new THREE.BufferGeometry(), bp = new Float32Array(nV * 18), bn = new Float32Array(nV * 18), bi = [];
@@ -1140,6 +1375,10 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
       put(md, new THREE.TorusGeometry(0.0045, 0.0014, 6, 12), [0, -0.012, 0.003], null, null, null, bronzeHi);
       put(md, new THREE.CylinderGeometry(0.025, 0.025, 0.004, 32), [0, -0.045, 0.004], [Math.PI / 2, 0, 0], null, null, bronze);
       put(md, new THREE.TorusGeometry(0.022, 0.0016, 6, 32), [0, -0.045, 0.0065], null, null, null, bronzeHi);
+    }
+    if (C.tag === 'round') { // 재롱: 올리브빛 띠 목줄 앞에 매달린 자줏빛 둥근 이름표 (가슴에 눕는 기울기는 메달과 같이 updateDog에서)
+      const md = new THREE.Group(); md.position.copy(ring.front); body.add(md); d.medal = md; d.medalSDF = sdfB;
+      d.tag = jrTag(md, put, C.tagColor ?? 0x6b2220); d.meshes.push(d.tag);
     }
     if (C.tag === 'star') {
       // 푸푸: 목줄 앞에 은빛 고리로 매달린 도톰한 청록 별 이름표 — 둥근 끝의 별 앞면에 발자국 무늬가 오목하게 찍혀 있다. 가슴에 눕는 기울기는 메달과 같이 updateDog에서 잡는다
@@ -1207,7 +1446,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
   }
   const head = new THREE.Group(); head.scale.setScalar(J ? 1.3 : PU ? PUPU_HS : 1.42); if (DM) head.scale.set(1.46, 1.45, 1.42); hp.add(head); d.head = head; // 담이: 얄상한 몸에 머리는 핑키만큼 크고 둥글게(주둥이는 damiHB0에서 짧게) · 비글: 머리를 크게(귀여움) — 귀 포함 머리 폭이 가슴보다 확실히 넓게
   const skull = PU ? put(head, sdfGeo('puh29', pupuHeadSDF, [-0.075, -0.045, -0.075], [0.075, 0.1, 0.135], 0.0017, 1), null, null, null, headPaint)
-    : put(head, sdfGeo(J ? 'jh' : DM ? 'bhd' : 'bh', DM ? damiHeadSDF : headSDF(J), J ? [-0.135, -0.08, -0.13] : DM ? [-0.085, -0.055, -0.095] : [-0.075, -0.055, -0.095], J ? [0.135, 0.175, 0.25] : DM ? [0.085, 0.135, 0.16] : [0.075, 0.135, 0.165], J ? 0.004 : 0.0025, 1), null, null, null, headPaint);
+    : put(head, sdfGeo(J ? 'jh' : DM ? 'bhd' : JR ? 'bhj' : 'bh', DM ? damiHeadSDF : JR ? jrHeadSDF : headSDF(J), J ? [-0.135, -0.08, -0.13] : DM ? [-0.085, -0.055, -0.095] : [-0.075, -0.055, -0.095], J ? [0.135, 0.175, 0.25] : DM ? [0.085, 0.135, 0.16] : JR ? [0.075, 0.135, 0.178] : [0.075, 0.135, 0.165], J ? 0.004 : 0.0025, 1), null, null, null, headPaint);
   if (J) skull.userData.fur = [2, 0.0015, 1600];
   if (PU && !silhouette) { // 푸푸 머리 겉털: 바깥 살갗에만 — 눈테·입술 가장자리·잘린 입천장은 빼서 검은 털이 속눈썹처럼 삐죽 서거나 입 안이 털로 얼룩지지 않게 (성긴 대역 메시에)
     const fp = put(skull, sdfGeo('puh29f', pupuHeadSDF, [-0.075, -0.045, -0.075], [0.075, 0.1, 0.135], 0.0017 * PUPU_FURN.headF, 1), null, null, null, headPaint); skull.remove(fp); d.meshes.pop(); furry.pop(); // 칠한 대역 메시만 쓰고 장면에서는 뺀다
@@ -1224,12 +1463,12 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     if (!silhouette) for (const sx of [1, -1]) put(head, sph(12, 8), [sx * 0.0072, 0.026, 0.16], [0, 0, sx * 0.4], [0.0048, 0.0032, 0.003], null, M(0x050303, { roughness: 0.6 }));
   } else {
     // 코: 주둥이 끝 앞에 얹힌 큼직한 둥근 검은 코 (콧구멍·콧방울 골·인중은 거리장에서 파냄) · 콧구멍 속 어둠. 입선은 머리 거리장에 골로 파고 색을 입힌다
-    const nz = DM ? damiZInv(0.1325) - 0.1325 : PU ? PUPU_MZ - 0.1335 : 0, ns = DM ? 1.1 : PU ? 0.74 : 1.16, ny = PU ? 0.024 : 0.004; // 담이: 짧아진 주둥이 끝에 조금 작은 코 · 푸푸: 가늘어진 주둥이 끝의 분홍빛 갈색 코
+    const nz = DM ? damiZInv(0.1325) - 0.1325 : PU ? PUPU_MZ - 0.1335 : JR ? jrZInv(0.1325) - 0.1325 : 0, ns = DM ? 1.1 : PU ? 0.74 : JR ? 1.26 : 1.16, ny = PU ? 0.024 : JR ? 0.005 : 0.004; // 재롱: 길어진 주둥이 끝에 큼직한 검은 코 // 담이: 짧아진 주둥이 끝에 조금 작은 코 · 푸푸: 가늘어진 주둥이 끝의 분홍빛 갈색 코
     put(head, sdfGeo('bn', noseSDF, [-0.022, -0.02, -0.017], [0.022, 0.02, 0.017], 0.0006), [0, ny, 0.1325 + nz], [-0.3, 0, 0], ns, null, noseM); // 주둥이 끝 앞으로 살짝 나온 큼직한 코, 윗면이 뒤로 기운다
     const nk = ns / 1.16; // 콧구멍은 코와 함께
-    if (!silhouette) for (const sx of [1, -1]) put(head, sph(12, 8), DM || PU ? [sx * 0.0086 * nk, ny + 0.0016 * nk, 0.1325 + nz + 0.0133 * nk] : [sx * 0.0086, 0.0056, 0.1458], [-0.3, 0, -sx * 0.5], DM || PU ? [0.0038 * nk, 0.0028 * nk, 0.0026 * nk] : [0.0038, 0.0028, 0.0026], null, M(PU ? 0x2a1412 : 0x050303, { roughness: 0.8 }));
+    if (!silhouette) for (const sx of [1, -1]) put(head, sph(12, 8), DM || PU || JR ? [sx * 0.0086 * nk, ny + 0.0016 * nk, 0.1325 + nz + 0.0133 * nk] : [sx * 0.0086, 0.0056, 0.1458], [-0.3, 0, -sx * 0.5], DM || PU || JR ? [0.0038 * nk, 0.0028 * nk, 0.0026 * nk] : [0.0038, 0.0028, 0.0026], null, M(PU ? 0x2a1412 : 0x050303, { roughness: 0.8 }));
   }
-  if (!J && !silhouette && !DM && !PU) {
+  if (!J && !silhouette && !DM && !PU && !JR) {
     // 입선: 머리 표면(입 골 바닥)에 붙인 가는 어두운 갈색 관 — 정점 색으로는 낼 수 없는 또렷한 선. 인중에서 'ㅅ'으로 갈라져 입꼬리로 가며 가늘어진다
     const lipM = new THREE.MeshStandardMaterial({ color: 0x2a201b, roughness: 0.9 });
     const tube = (pts, r0, taper) => {
@@ -1261,6 +1500,23 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     for (let i = 0; i <= 4; i++) { const y = lerp(-0.0085, half[0].y, i / 4); ph.push(V3(0, y, LIP_AX + surfR(damiHeadSDF, y, 0, 0.01) - R * 0.3)); }
     tube(ph, R * 0.75, () => 1); // 인중
   }
+  if (JR && !silhouette) {
+    // 재롱 입선: 잘라 낸 아래턱 입선의 머리 쪽 가장자리를 따라 붙인 가는 검은 관 — 인중에서 'ㅅ'으로 갈라져 윗입술 밑을 지나 입꼬리로 가며 가늘어진다 (다문 덤덤한 입)
+    const lipM = new THREE.MeshStandardMaterial({ color: 0x2a1e19, roughness: 0.85 }), R = 0.00125, half = [], ph = [];
+    const tube = (pts, r0, taper) => {
+      const curve = new THREE.CatmullRomCurve3(pts), seg = pts.length * 6, g = new THREE.TubeGeometry(curve, seg, r0, 7, false), pos = g.attributes.position, c0 = V3(), v = V3();
+      for (let i = 0; i <= seg; i++) { curve.getPointAt(i / seg, c0); const k = taper(i / seg); for (let j = 0; j <= 7; j++) { const q = i * 8 + j; v.fromBufferAttribute(pos, q).sub(c0).multiplyScalar(k).add(c0); pos.setXYZ(q, v.x, v.y, v.z); } }
+      const m = put(head, g, null, null, null, null, lipM); m.castShadow = false; return m;
+    };
+    for (let i = 0; i <= 16; i++) {
+      const ang = (i / 16) * 0.78; let y = jrCutY(0, 0.14), r = 0;
+      for (let it = 0; it < 5; it++) { r = surfR(jrHB0, y, ang, 0.01); y = jrCutY(Math.sin(ang) * r, LIP_AX + Math.cos(ang) * r); }
+      half.push(V3(Math.sin(ang) * (r - R * 0.5), y + 0.0004, LIP_AX + Math.cos(ang) * (r - R * 0.5)));
+    }
+    for (const sx of [1, -1]) tube(half.map((p) => V3(p.x * sx, p.y, p.z)), R, (s) => lerp(1, 0.2, ss(0.25, 0.9, s)));
+    for (let i = 0; i <= 4; i++) { const y = lerp(-0.0085, half[0].y, i / 4); ph.push(V3(0, y, LIP_AX + surfR(jrHeadSDF, y, 0, 0.01) - R * 0.3)); }
+    tube(ph, R * 0.75, () => 1); // 인중
+  }
   const jaw = new THREE.Group(); jaw.position.set(0, J ? -0.02 : -0.014, 0.06); if (PU) jaw.position.set(PJ[0], PJ[1], PJ[2]); head.add(jaw); d.jaw = jaw;
   if (J) put(jaw, sph(), [0, -0.014, 0.05], null, [0.027, 0.013, 0.04], whitePaint);
   else if (PU) { // 푸푸: 머리에서 떼어 낸 아래턱 — 늘 웃는 입이라 벌어진 입 안의 분홍 잇몸·혀가 보인다
@@ -1283,15 +1539,21 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
       tone(c.copy(cMuz).lerp(cH, ss(0.04, 0.055, ax) * ss(0.058, 0.045, Z)), p, 0.035); // 아래턱·턱끝은 흰색(입꼬리 뒤만 황갈)
       c.lerp(cGum, ss(-0.001, -0.0028, hb) * ss(-0.004, -0.001, jr)).lerp(cLipD, ss(-0.0016, 0.0, hb) * Math.exp(-(((jr + 0.0004) / 0.0017) ** 2)) * ss(cy - 0.006, cy - 0.002, Y) * 0.25);
     });
+  } else if (JR) { // 재롱: 머리에서 떼어 낸 아래턱 (흰 턱 · 입을 벌리면 분홍 잇몸)
+    put(jaw, sdfGeo('bjj', jrJawSDF, [-0.05, -0.04, -0.016], [0.05, 0.016, 0.104], 0.0022, 1), null, null, null, (p, c) => {
+      const X = p.x, Y = p.y + JRJ[1], Z = p.z + JRJ[2], hb = jrHB0(X, Y, Z), jr = jrJawR(X, Y, Z), cy = jrCutY(X, Z);
+      jrHeadPaint(_pb.set(X, Y, Z), c);
+      c.lerp(cGum, ss(-0.001, -0.0028, hb) * ss(-0.004, -0.001, jr)).lerp(cLipD, ss(-0.0016, 0.0, hb) * Math.exp(-(((jr + 0.0004) / 0.0017) ** 2)) * ss(cy - 0.006, cy - 0.002, Y) * 0.4);
+    });
   } else put(jaw, sph(), [0, -0.013, 0.028], null, [0.013, 0.008, 0.024], whitePaint); // 아래턱: 윗입술 안쪽에 들어가 턱 끝만 살짝 보인다 (입을 다물고 있어 입 속은 칠하지 않는다)
   const tongueRoot = new THREE.Group(); tongueRoot.position.set(0, J ? -0.01 : 0.006, J ? 0.01 : 0.02); jaw.add(tongueRoot);
   d.tongue = put(tongueRoot, sph(16, 10), [0, 0.006, 0.035], null, [0.02, 0.007, 0.03], null, M(0xe9808e, { roughness: 0.45 }));
   d.tongue.visible = false; // 혀는 보이지 않는다 (핑키는 혀를 내밀지 않는다)
-  if (DM && !silhouette) { // 담이: 입 안 바닥에 깔린 혀 + 아랫입술 너머로 길게 늘어지는 혀(헥헥할 때)
+  if ((DM || JR) && !silhouette) { // 담이 · 재롱: 입 안 바닥에 깔린 혀 + 아랫입술 너머로 길게 늘어지는 혀(헥헥할 때)
     const tm = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.4, clearcoat: 0.35, clearcoatRoughness: 0.35 });
     const tPaint = (p, c) => { c.setHex(0xf59aa6).multiplyScalar(1 - 0.18 * Math.exp(-((p.x / 0.0035) ** 2)) - 0.1 * ss(0.002, -0.004, p.y + p.z * 0.1)); }; // 가운데 골은 진하게
     const tb = put(tongueRoot, sph(16, 10), [0, -0.0125, -0.003], [0.27, 0, 0], [0.0155, 0.004, 0.03], null, tm); tb.geometry = tb.geometry.clone(); tb.scale.set(1, 1, 1); tb.geometry.scale(0.0155, 0.004, 0.03);
-    const hang = new THREE.Group(); hang.position.set(0, -0.0105, 0.035); tongueRoot.add(hang); // 짧아진 주둥이의 아랫입술 자리
+    const hang = new THREE.Group(); hang.position.set(0, -0.0105, JR ? 0.047 : 0.035); tongueRoot.add(hang); // 짧아진 주둥이의 아랫입술 자리 (재롱: 길어진 주둥이의 아랫입술)
     const tg = put(hang, sdfGeo('btd', damiTongueSDF, [-0.022, -0.064, -0.03], [0.022, 0.008, 0.02], 0.0014), null, null, null, null, tm);
     for (const m of [tb, tg]) { m.castShadow = false; const pos = m.geometry.attributes.position, col = new Float32Array(pos.count * 3); for (let i = 0; i < pos.count; i++) { _pv.fromBufferAttribute(pos, i); tPaint(_pv, _pc); col.set([_pc.r, _pc.g, _pc.b], i * 3); } m.geometry.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
     d.tongue = hang; hang.visible = false;
@@ -1341,6 +1603,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
     if (J) { eg.position.set(sx * 0.04, 0.066, 0.097); eg.rotation.set(0, sx * 0.24, 0); }
     else { eg.position.set(sx * 0.038, 0.061, 0.049); eg.rotation.set(-0.12, sx * 0.03, 0); } // 크고 앞을 보는 동그란 눈, 지름 0.033(두개골 폭의 23%), 눈 사이 간격은 두개골 폭의 ~0.6, 살 속에 묻혀 앞면만 살짝 나온다
     if (PU) { eg.position.set(sx * PUPU_EYE[0], PUPU_EYE[1], PUPU_EYE[2]); eg.rotation.set(PUPU_EYE_R[0], sx * PUPU_EYE_R[1], sx * PUPU_EYE_R[2]); } // 푸푸: 머리 앞쪽에서 살짝 옆을 보며, 바깥 눈꼬리가 올라간 비스듬한 아몬드 눈
+    if (JR) { eg.position.set(sx * 0.0385, 0.0612, 0.0495); eg.rotation.set(-0.08, sx * 0.1, 0); } // 재롱: 살짝 바깥을 보는 아몬드 눈
     if (PU && !silhouette) {
       // 푸푸 눈: 얼굴 면에 묻힌 납작한 타원 눈알 — 얼굴 면이 자르는 선이 아몬드 눈매(진한 눈테는 머리 무늬). 진한 갈색 홍채(가장자리가 더 진하다) · 동그란 검은 동공 · 작은 반짝임
       // 깜빡임·졸린 눈은 눈알을 납작하게 누르지 않고 위아래 눈꺼풀(털빛, 가장자리는 검다)이 돌아 내려와 덮는다 (updateDog의 d.pLids)
@@ -1381,6 +1644,21 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
       }
       const rim = new THREE.Mesh(d.pRimG, d.pRimM); rim.scale.x = sx; rim.castShadow = false; head.add(rim); // 왼눈은 거울에 비친 고리
       d.napLids = []; // 잘 때도 이 눈꺼풀이 덮는다 (fitCurl이 큰 눈용 눈꺼풀을 따로 만들지 않게)
+    } else if (JR && !silhouette) {
+      // 재롱 눈: 아몬드꼴의 진한 갈색 눈(동공 · 작은 반짝임). 위 눈꺼풀이 눈 위쪽을 처지게 덮고(바깥 눈꼬리 쪽이 더 내려온다) 아래 눈꺼풀이 살짝 받친다 = 졸린 듯 도도한 눈매
+      // 깜빡임·졸린 눈·잠은 눈알을 누르지 않고 눈꺼풀이 내려와 덮는다 (updateDog의 d.jrLids)
+      const ea = new THREE.Group(); ea.scale.set(1, 0.86, 1); eg.add(ea);
+      put(ea, sph(24, 16), [0, 0, 0], null, [0.0148, 0.0148, 0.0118], null, new THREE.MeshPhysicalMaterial({ color: 0x3b2213, roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.2 }));
+      put(ea, sph(16, 10), [0, -0.0008, 0.0099], null, [0.0064, 0.0064, 0.0024], null, M(0x070404, { roughness: 0.3 }));
+      if (!d.jrLidG) { // 눈꺼풀: 눈알보다 조금 큰 반구 — 털빛(황갈)에서 가장자리로 가며 진한 눈꺼풀 테
+        const g = new THREE.SphereGeometry(1, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), pos = g.attributes.position, col = new Float32Array(pos.count * 3), cF = cH.clone().multiplyScalar(0.93);
+        for (let i = 0; i < pos.count; i++) { _pc.copy(cF).lerp(cJRim, ss(0.72, 0.93, Math.acos(clamp(pos.getY(i), -1, 1)) / (Math.PI / 2))); col.set([_pc.r, _pc.g, _pc.b], i * 3); }
+        g.setAttribute('color', new THREE.BufferAttribute(col, 3)); d.jrLidG = g;
+      }
+      const lm = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.88 }), up = new THREE.Mesh(d.jrLidG, lm), lo = new THREE.Mesh(d.jrLidG, lm);
+      up.scale.setScalar(0.0157); lo.scale.set(0.0155, -0.0155, 0.0155); up.castShadow = lo.castShadow = false; ea.add(up, lo); d.meshes.push(up, lo);
+      (d.jrLids ??= []).push([up, lo, sx]);
+      const h1 = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: 0xece5da })); h1.position.set(-sx * 0.0045, 0.0012, 0.0114); h1.scale.setScalar(0.0014); ea.add(h1);
     } else if (!silhouette) {
       // 아주 진한 갈색의 촉촉한 눈(앞면이 살짝 납작) · 동공(가장자리에 가는 갈색 홍채 테) · 작은 반사 하나. 위아래 눈꺼풀이 눈알을 살짝 덮는다 — 눈테는 머리 무늬로 칠한다
       put(eg, sph(24, 16), [0, 0, 0], null, J ? [0.0148, 0.0144, 0.0115] : [0.015, 0.015, 0.012], null, DM ? new THREE.MeshPhysicalMaterial({ color: 0x3b2314, roughness: 0.4, clearcoat: 0.35, clearcoatRoughness: 0.3 }) : new THREE.MeshPhysicalMaterial({ color: J ? 0x2e1a10 : 0x23150f, roughness: J ? 0.2 : 0.5, clearcoat: J ? 0.6 : 0.14, clearcoatRoughness: J ? 0.1 : 0.5 }));
@@ -1413,10 +1691,13 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
       }
       if (DM) { ep.position.set(sx * 0.054, 0.103, -0.008); put(ep, sdfGeo('bed' + sx, damiEarSDF(sx), sx > 0 ? [-0.03, -0.16, -0.085] : [-0.125, -0.16, -0.085], sx > 0 ? [0.125, 0.03, 0.1] : [0.03, 0.03, 0.1], 0.0024, 1), null, null, null, earPaint(sx)); d.ears.push({ g: ep, side: sx, ax: 0, vx: 0, az: 0, vz: 0 }); continue; } // 담이: 세모 귀 (조금 높이)
       ep.position.set(sx * 0.055, 0.1, -0.006); // 귀 뿌리를 정수리 모서리(눈썹 높이 위)로 올리고 조금 앞으로 — 귀가 얼굴 양옆을 감싸며 내려온다. 귀는 눈과 정수리 사이 높이에서 두개골 '위에' 접혀 시작해(옆에 붙은 혹이 아니다) 볼 위로 늘어진다 — 귀 위로 둥근 정수리가 보인다
-      put(ep, sdfGeo('be' + sx, earSDF(sx), sx > 0 ? [-0.03, -0.18, -0.085] : [-0.125, -0.18, -0.085], sx > 0 ? [0.125, 0.03, 0.1] : [0.03, 0.03, 0.1], 0.0026, 1), null, null, null, earPaint(sx));
+      const em = put(ep, sdfGeo('be' + sx, earSDF(sx), sx > 0 ? [-0.03, -0.18, -0.085] : [-0.125, -0.18, -0.085], sx > 0 ? [0.125, 0.03, 0.1] : [0.03, 0.03, 0.1], 0.0026, 1), null, null, null, earPaint(sx));
+      if (JR) { d.ears.push({ g: ep, side: sx, ax: 0, vx: 0, az: 0, vz: 0, mesh: em, rest: em.geometry.attributes.position.array.slice(), nrest: em.geometry.attributes.normal.array.slice() }); continue; } // 재롱: 핑키와 같은 긴 귀 — 귓볼 아래쪽이 굽어 펄럭인다 (jrEars · jrBendEar)
     }
     d.ears.push({ g: ep, side: sx, ax: 0, vx: 0, az: 0, vz: 0 });
   }
+
+  if (JR) jrHat(d, head, put); // 재롱: 프로펠러 모자 · 고무줄 · 간식 자리 · 머리 위 자리(headPts)
 
   // 꼬리
   const tp = new THREE.Group(); tp.position.set(0, J ? 0.07 : 0.053, J ? -0.196 : -0.25); if (PU) tp.position.set(0, 0.09, -0.178); body.add(tp); d.tail = tp;
@@ -1445,7 +1726,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
       put(foot, sph(), [0, -0.004, 0.016], null, [0.04, 0.026, 0.05], whitePaint);
     } else {
       // 굵고 거의 가늘어지지 않는 원통 마디 + 관절마다 공 하나 (공 반지름 = 원통 끝 반지름이라 링 솔기가 없다)
-      hip.position.set(sx * (front ? (DM ? 0.044 : PU ? 0.05 : 0.048) : DM || PU ? d.hipX : 0.062), front ? (PU ? -0.032 : -0.022) : 0.015, z); // 앞: 어깨 관절(견단)은 가슴 앞쪽 위(몸 높이의 2/3) — 위팔이 뒤·아래로 내려가 팔꿈치가 가슴 바닥 높이에서 갈비에 붙고, 아래팔은 수직으로 선다. // 고관절은 골반 가운데 높이(좌골보다 위)에 두어 앉을 때 엉덩이는 바닥에, 고관절은 바닥 위에 있고 무릎이 앞 위로 나온다
+      hip.position.set(sx * (front ? (DM ? 0.044 : PU ? 0.05 : JR ? 0.05 : 0.048) : DM || PU || JR ? d.hipX : 0.062), front ? (PU ? -0.032 : -0.022) : 0.015, z); // 앞: 어깨 관절(견단)은 가슴 앞쪽 위(몸 높이의 2/3) — 위팔이 뒤·아래로 내려가 팔꿈치가 가슴 바닥 높이에서 갈비에 붙고, 아래팔은 수직으로 선다. // 고관절은 골반 가운데 높이(좌골보다 위)에 두어 앉을 때 엉덩이는 바닥에, 고관절은 바닥 위에 있고 무릎이 앞 위로 나온다
       if (PU) { // 푸푸: 길고 곧은 앞다리(위팔은 어깨 근육 속, 아래팔은 손목으로 고르게 가늘어지는 기둥) · 넓은 허벅지와 각진 무릎·높은 비절의 뒷다리 · 동그랗게 모인 발
         const r1 = front ? 0.02 : 0.04, r2 = front ? 0.04 : 0.034, r3 = front ? 0.027 : 0.0235, r4 = front ? 0.025 : 0.0235, m3 = 0.005, at = hip.position.clone(), bodySpace = (p, c) => bodyPaint(_pb.copy(p).add(at), c, 1); // 위팔·허벅지는 몸통 무늬를 이어받는다 · 앞다리는 팔꿈치 아래(굵은 아래팔 근육)에서 손목으로 가늘어진다
         const legP = (L, a, b) => (p, c) => tone(c.copy(cW).lerp(cSnow, lerp(a, b, clamp(-p.y / L, 0, 1))), p, 0.04); // 아래팔·정강이 → 발허리 → 발로 흰 기운이 끊김 없이 이어진다 (마디 경계에 색 띠가 생기지 않게)
@@ -1470,7 +1751,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
         const seg = (key, L, ra, rb) => sdfGeo(key, legSegSDF(L, ra, rb), [-sw(ra, rb), -L - rb - m3, -sw(ra, rb)], [sw(ra, rb), sw(ra, rb), sw(ra, rb)], 0.003);
         const fk = front ? 'f' : 'h', vk = DM ? 'd' : ''; // 담이 다리는 따로 캐시
         if (front) put(hip, seg('bl1f' + vk, L1, r1, r2), null, null, null, bodySpace);
-        else thighM = put(hip, sdfGeo('bl1h' + vk, (x, y, z) => smin(sdRoundCone(x, y, z, L1, r1, r2), DM ? sdE(x, y, z, 0, -L1 * 0.25, 0.01, 0.05, 0.066, 0.05) : sdE(x, y, z, 0, -L1 * 0.25, 0.012, 0.06, 0.07, 0.054), 0.03), [-0.075, -L1 - r2 - 0.003, -0.078], [0.075, r1 + 0.003, 0.095], 0.003), null, null, null, (p, c) => { bodySpace(p, c); c.lerp(cT, 0.3 * ss(-0.02, -0.09, p.y)); }); // 허벅지 아래쪽은 안장빛을 덜어 황갈로: 앉거나 엎드려 허벅지가 옆구리에 겹쳐도 어두운 원반으로 떠 보이지 않는다
+        else thighM = put(hip, sdfGeo('bl1h' + vk, (x, y, z) => smin(sdRoundCone(x, y, z, L1, r1, r2), DM ? sdE(x, y, z, 0, -L1 * 0.25, 0.01, 0.05, 0.066, 0.05) : sdE(x, y, z, 0, -L1 * 0.25, 0.012, 0.06, 0.07, 0.054), 0.03), [-0.075, -L1 - r2 - 0.003, -0.078], [0.075, r1 + 0.003, 0.095], 0.003), null, null, null, (p, c) => { bodySpace(p, c); if (!JR) c.lerp(cT, 0.3 * ss(-0.02, -0.09, p.y)); }); // 허벅지 아래쪽은 안장빛을 덜어 황갈로: 앉거나 엎드려 허벅지가 옆구리에 겹쳐도 어두운 원반으로 떠 보이지 않는다
         // 허벅지: 다리와 한 덩어리로 움직이는 둥근 '바지' (서면 둥근 허벅지, 앉으면 접힌 무릎·정강이를 덮는 둥근 엉덩이 살)
         const lower = front ? legPaint(-0.166, -0.13, -0.21, sx) : legPaint(hip.position.y - L1, -0.19, -0.26, sx); // 앞다리는 팔꿈치까지 황갈, 아래팔 중간부터 흰색; 뒷다리는 정강이까지 황갈, 비절(hock)부터 흰 양말 (앉아도 정강이가 흰 통나무로 보이지 않는다)
         if (front) put(knee, sdfGeo('bl2f' + vk, (x, y, z) => smin(sdRoundCone(x, y, z, L2, r2, r3), Math.hypot(x, y - 0.006, z + 0.03) - 0.02, 0.014), [-r2 - m3, -L2 - r3 - m3, -0.058], [r2 + m3, r2 + m3, r2 + m3], 0.003), null, null, null, lower); // 팔꿈치 머리(olecranon): 아래팔 위 끝 뒤로 살짝 나온 뼈 — 다리가 책상 다리처럼 밋밋한 통이 되지 않게
@@ -1622,10 +1903,10 @@ function updateDog(d, dt, t, camPos) {
   if (d.medal) {
     // 메달은 아래로 늘어지되, 판 중심이 가슴 속에 파묻히면(앉기처럼 몸이 뒤로 기울 때) 가슴에 눕도록 앞으로 기울인다
     const md = d.medal; let rx = -c.pitch * 0.95 + Math.sin(d.phase * 2) * 0.12 * d.gait + Math.sin(t * 1.3) * 0.03;
-    const dr = d.J ? 0.03 : d.pupu ? 0.045 : 0.07, dz = d.J ? 0.006 : 0.004, nIt = d.J ? 12 : 30, step = d.J ? 0.09 : 0.06; // 판 아래 가장자리·판 중심이 몸에 파묻히면 가슴에 눕도록 앞으로 눕힌다 (앉기처럼 몸이 많이 기울어도 메달이 가슴 속으로 사라지지 않게)
+    const dr = d.J ? 0.03 : d.pupu ? 0.045 : d.jaerong ? 0.03 : 0.07, dz = d.J ? 0.006 : 0.004, nIt = d.J ? 12 : 30, step = d.J ? 0.09 : 0.06; // 판 아래 가장자리·판 중심이 몸에 파묻히면 가슴에 눕도록 앞으로 눕힌다 (앉기처럼 몸이 많이 기울어도 메달이 가슴 속으로 사라지지 않게)
     if (d.medalSDF) for (let i = 0; i < nIt; i++) {
       const y = md.position.y - dr * Math.cos(rx) - dz * Math.sin(rx), z = md.position.z - dr * Math.sin(rx) + dz * Math.cos(rx);
-      const dm = d.J ? 0 : d.pupu ? 0.026 : 0.045, ym = md.position.y - dm * Math.cos(rx) - dz * Math.sin(rx), zm = md.position.z - dm * Math.sin(rx) + dz * Math.cos(rx);
+      const dm = d.J ? 0 : d.pupu ? 0.026 : d.jaerong ? 0.022 : 0.045, ym = md.position.y - dm * Math.cos(rx) - dz * Math.sin(rx), zm = md.position.z - dm * Math.sin(rx) + dz * Math.cos(rx);
       if (d.medalSDF(md.position.x, y, z) > 0.007 && (d.J || d.medalSDF(md.position.x, ym, zm) > 0.006)) break;
       rx -= step;
     }
@@ -1651,7 +1932,7 @@ function updateDog(d, dt, t, camPos) {
   d.hx += (hx - d.hx) * hk; d.hy += (hy - d.hy) * hk; d.hz += (hz - d.hz) * hk;
   const sniffBob = d.sniff ? Math.sin(t * 15) * 0.035 * d.sniff : 0;
   const chewBob = d.chew ? Math.sin(t * 15) * 0.03 : 0;
-  d.hp.rotation.set(d.hx + sniffBob + chewBob, d.hy, d.hz);
+  d.hp.rotation.set(d.hx + sniffBob + chewBob, d.hy, d.jrHatFix ? d.hz + d.jrHatFix : d.hz); // jrHatFix: 재롱 모자가 땅에 묻히지 않게 고개를 굴린다
 
   // 다리 IK (관절 3개)
   d.body.updateMatrix(); _m.copy(d.body.matrix).invert();
@@ -1691,7 +1972,8 @@ function updateDog(d, dt, t, camPos) {
 
   // 귀 (중력 따라 덜렁)
   const hwP = c.pitch + d.hp.rotation.x, hwR = c.roll + d.hp.rotation.z;
-  for (const e of d.ears) {
+  if (d.jaerong) jrEars(d, dt, t, hwP, hwR); // 재롱: 펄럭이는 귀(관성 · 바람 · 걸음 박자 · d.earFlap)와 프로펠러
+  else for (const e of d.ears) {
     if (d.J) { e.g.rotation.x = -d.earPerk * 0.2; continue; }
     if (d.pupu) { // 푸푸: 쫑긋 선 귀 — 늘어지지 않고 걸음에 살짝 떨린다. earPerk(+)면 앞으로 세워 모으고, (-)면 뒤·옆으로 젖힌다
       e.cu = (e.cu || 0) + ((d.tgt.name === 'curl' ? 1 : 0) - (e.cu || 0)) * (1 - Math.exp(-3 * dt)); // 몸을 말고 잘 때도 귀를 뒤로 눕힌다
@@ -1736,10 +2018,16 @@ function updateDog(d, dt, t, camPos) {
     for (const [u, l] of d.pLids) { u.rotation.x = k < 0 ? lerp(-1.05, -1.25, -k / 0.15) : lerp(-1.05, 0.4, k); l.rotation.x = k < 0 ? 1.25 : lerp(1.25, 0.38, ss(0.45, 1, k)); } // 아래 눈꺼풀은 늘 볼살(눈꺼풀 선) 밑에 숨어 있다가 거의 감을 때만 올라온다 — 졸린 눈은 위 눈꺼풀만 내려온다
   }
 
+  if (d.jrLids) { // 재롱: 눈알은 그대로 두고 눈꺼풀이 덮는다 (eyeY 1 = 평소의 처진 도도한 눈 · 0.1 = 감은 눈 · 1.1 넘으면 휘둥그레)
+    const k = clamp((1 - d.eyeY) / 0.88, -0.3, 1);
+    for (const e of d.eyes) e.scale.y = e.scale.x;
+    for (const [u, l, sx] of d.jrLids) { u.rotation.set(k < 0 ? lerp(-0.42, -0.9, -k / 0.3) : lerp(-0.42, 1.32, k), 0, -sx * 0.17 * (1 - Math.max(0, k))); l.rotation.x = lerp(0.98, 0.12, ss(0.45, 1, k)); }
+  }
+
   // 입 · 혀
   let jt = d.jawOpen;
   if (d.chew) jt = 0.06 + 0.2 * (0.5 + 0.5 * Math.sin(t * 15));
-  if (d.pant) jt = Math.max(jt, d.dami ? 0.3 + 0.06 * Math.sin(t * 18) : d.pupu ? PUPU_SMILE + 0.07 + 0.05 * Math.sin(t * 14) : 0.16 + 0.04 * Math.sin(t * 14));
+  if (d.pant) jt = Math.max(jt, d.dami ? 0.3 + 0.06 * Math.sin(t * 18) : d.pupu ? PUPU_SMILE + 0.07 + 0.05 * Math.sin(t * 14) : d.jaerong ? 0.22 + 0.04 * Math.sin(t * 13) : 0.16 + 0.04 * Math.sin(t * 14));
   if (d.pupu) { // 푸푸: 웃는상 — 평소에는 입을 벌리고 활짝 웃는다 (d.smile = 1). 졸거나 잘 때(eyeOpen < 0.3)는 다문다
     d.alertT = Math.max(0, (d.alertT || 0) - dt); // 놀람('!' · '…!' 말풍선): 그 순간만 입을 꾹 다물었다가 다시 웃는다
     d.jawHold = d.chew || d.sniff > 0 || d.jawOpen > 0.02 ? 0.3 : Math.max(0, (d.jawHold || 0) - dt); // 다른 것이 턱을 움직이는 동안(월 짖기 · 킁킁 · 물기 · 씹기 · 물 마시기)과 그 뒤 0.3초는 웃는 입이 비켜선다 — 짖을 때 입이 닫혔다 열리는 게 보이게 (핥을 때(쩝쩝)는 웃는 입 그대로 혀만 내밀어 날름)
@@ -1749,7 +2037,7 @@ function updateDog(d, dt, t, camPos) {
   d.jaw.rotation.x += (jt - d.jaw.rotation.x) * (1 - Math.exp(-28 * dt));
   const to = Math.max(d.tongueOut, d.lick, d.pant ? 0.7 : 0); // 푸푸: 웃을 때 혀는 입 안 아래턱 바닥에 누워 있고(tongueRest), 헥헥·핥기·물 마시기에만 아랫입술 너머로 내민다
   if (d.tongueRest) { const o = clamp(d.jaw.rotation.x / PUPU_SMILE, 0, 1.2), R = PUPU_TONGUE_REST; d.tongueRest.position.set(0, R[0] + R[2] * o, R[1] + R[3] * o); } // 푸푸: 입을 벌릴수록 혀가 앞니 쪽으로 올라와 분홍 혀가 입 안 가득 보인다 (혀끝은 아랫입술 선까지) · 다물면 입 속으로 물러난다
-  if ((d.dami || d.pupu) && d.tongue.isGroup) { // 담이: 길게 늘어진 혀 — 턱이 벌어져도 아래로 늘어지고(중력), 헥헥할 때 살랑 흔들린다
+  if ((d.dami || d.pupu || d.jaerong) && d.tongue.isGroup) { // 담이: 길게 늘어진 혀 — 턱이 벌어져도 아래로 늘어지고(중력), 헥헥할 때 살랑 흔들린다
     const tg = d.tongue, s = d.pupu ? ss(0.02, 0.2, to) : ss(0.02, 0.5, to) * (0.7 + 0.3 * to);
     tg.visible = s > 0.01; if (d.pupu) tg.scale.set(1, Math.max(s * (0.3 + 0.7 * to), 0.01), Math.max(s * (0.3 + 0.7 * to), 0.01)); else tg.scale.set(1, Math.max(s, 0.01), Math.max(s, 0.01)); // 푸푸: 헥헥·핥기·물 마시기에 내민 만큼 길게
     tg.rotation.set(-d.jaw.rotation.x * 0.75 + clamp(-(c.pitch + d.hp.rotation.x) * 0.5, -0.5, 0.5) + (d.pant ? Math.sin(t * 18 + 1) * 0.07 : 0), 0, d.pant ? Math.sin(t * 3.5) * 0.06 : 0);
@@ -6849,4 +7137,4 @@ if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCom
   brain, BRAIN, drops, dropTreat, wait, until, idleGap, idleLook, yawn, shakeOff, stretch, momCheck, hideTreat, nearestDrop, mound, updateMound, brainPoke, startSpecial, momGreet, payBall, findTreat, eatLeft, sneeze, roam, resetRoom, special: () => (active && active.special) || null, bubbles: () => bubbles.map((b) => b.el.textContent),
   DM, friendStart, friendOff, damiAttn, damiWoof, friendScene, sndUpdate: (dt, t) => updateSound(dt, t), get mode() { return mode; },
   get pupu() { return PUPU; }, get NS() { return NS; }, magpieScene, magOff, magGo: () => startSpecial('magpie', magpieScene), pupuTall, pupuGuard, pupuInvite, pupuButterfly, bflyOff, poseFor, ROOM_NAMSAN, nsGround, nsInWater, nsWaterY, NS_SX, NS_SW, NS_SPOT, contact, toyOff, buildDog, COLORS };
-if (location.hostname === 'localhost') Object.assign(window.__dbg, { makeJaerong }); // 재롱 모델 디버그
+if (location.hostname === 'localhost') Object.assign(window.__dbg, { makeJaerong, updateDog, napPost, THREE }); // 재롱 모델 디버그
