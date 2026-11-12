@@ -287,6 +287,7 @@ function poseFor(name, d) {
   return o;
 }
 function setPose(d, name, rate = 5) {
+  if (name === 'sit' && d.sitOK && !d.sitOK()) name = 'stand'; // 알팡이(공주님): 방석 위 · 사진 포즈가 아니면 맨바닥에 앉지 않고 반듯하게 선다 (함께 쓰는 놀이 — 쓰다듬기 · 공놀이 · 혼자 놀기 — 에서도)
   const p = poseFor(name, d);
   for (const k of POSE_KEYS) d.tgt[k] = p[k];
   d.tgt.name = name;
@@ -2444,7 +2445,7 @@ function updateDog(d, dt, t, camPos) {
     const k0 = clamp((1 - d.eyeY) / 0.88, -0.3, 1), k = k0 > 0 ? k0 ** 1.3 : k0;
     for (const e of d.eyes) e.scale.y = e.scale.x;
     const pl = 0.32 * Math.sin(Math.PI * clamp(k, 0, 1)); // 반쯤 감은 눈은 바깥 눈꼬리가 처진다 — 졸리거나 새침한 눈이 아니라 조르는 순한 눈 (치대기)
-    for (const [u, l, sx] of d.apLids) { u.rotation.set(k < 0 ? lerp(AP_EYE.up, -1.0, -k / 0.3) : lerp(AP_EYE.up, 1.32, k), 0, sx * (AP_EYE.tilt * (1 - Math.max(0, k)) - pl)); l.rotation.x = lerp(AP_EYE.lo, 0.12, ss(0.45, 1, k)); }
+    for (const [u, l, sx] of d.apLids) { u.rotation.set(k < 0 ? lerp(AP_EYE.up, -1.0, -k / 0.3) : lerp(AP_EYE.up, 1.32, k), 0, sx * (AP_EYE.tilt * (1 - Math.max(0, k)) - pl)); l.rotation.x = lerp(AP_EYE.lo, 0.12, ss(0.45, 1, k)); u.parent.scale.z = AP_EYE.s[2] * (1 - 0.4 * ss(0.4, 1, k)); } // 감을수록 눈알 · 눈꺼풀을 얼굴 쪽으로 납작하게 (감은 눈이 둥근 공처럼 불룩 튀어나오지 않게)
   }
 
   // 입 · 혀
@@ -8441,25 +8442,27 @@ async function jrMagpie(tok) {
 
 // ================================================================
 // 알팡이의 의왕 아울렛 — 한여름 맑은 날의 의왕 프리미엄 아울렛 잔디밭 (새파란 하늘 · 커다란 뭉게구름 · 짙푸른 숲 언덕)
-// 앞에는 나무 데크 테라스(벤치 · 꽃 화분 · 파라솔 탁자): 보는 사람(엄마)은 테라스에 서서 넓은 잔디밭 건너 삼각 지붕 유리 매장(CHANEL · PRADA)을 본다
+// 앞에는 나무 데크 테라스(벤치 · 꽃 화분 · 파라솔 탁자): 보는 사람(엄마)은 테라스 벤치에 앉은 눈높이로 넓은 잔디밭 건너 삼각 지붕 유리 매장(CHANEL · PRADA)을 본다
 // 하얀 버섯 그늘막과 그 밑 벤치 · 큰 바위와 꽃밭(흰 수국 · 연둣빛 덤불 · 억새) · 까만 T자 가로등 · 연한 돌 산책길
 // 처음 들어갈 때 한 번만 짓는다. 알팡이가 다니는 테라스 · 잔디밭은 평평하다(y = 0). 매장 · 바위 · 벤치 · 그늘막 기둥 · 가로등 · 화분 · 탁자는 돌아서 다닌다
 // 알팡 모델(알팡 모델 가지)이 주는 것: d.headPts(정수리 · 말풍선 · 코 · 입) · d.ribbon · d.ribbonTails · d.ribbonFlutter(리본 펄럭임 더하기 0..1.5) · d.tag(금빛 자물쇠 장식) · d.collarBow · d.smile(활짝 웃는 입 0..1) · d.chinUp(공주님 턱 들기 0..1)
 // — 아직 없으면 비글 몸의 기본 자리를 쓰고 숫자만 정해 둔다 (모든 곳에서 ?. · ?? 로 받는다)
 // ================================================================
+const AP_SHUT = 0.3; // 지그시 감은 눈 (뽀뽀 · 치대기의 흐응~): 위아래 눈꺼풀의 진한 테가 만나 속눈썹 선이 보인다 — 끝까지 감으면 둥근 눈꺼풀만 불룩하게 보인다
 const AP_SMILE0 = 0.2; // 알팡이의 평소 입: 입꼬리가 올라간 다문 웃음 (알팡 모델의 기본 d.smile — 0으로 두면 입을 꾹 다문 뾰로통한 얼굴이 된다)
 const AP_CALL = '엄마'; // 알팡이가 보는 사람을 부르는 말 — 여기 하나만 바꾸면 알팡이의 모든 말이 바뀐다 ('언니' · '이모' …: 모두 모음으로 끝나 뒤의 조사가 그대로 맞는다)
 const UI_DECK = { x0: -3.4, x1: 3.4, z0: -0.3, z1: 4.8 }; // 나무 데크 테라스 (앞 끝 z0에서 잔디밭으로 이어진다 · 엄마는 데크 위에 서 있다)
 const UI_NAV = { x0: -2.9, x1: 2.9, z0: -6.1, z1: 2.4 }; // 알팡이가 다니는 곳: 테라스와 잔디밭 (매장 앞 돌길 앞까지)
 const UI_SHOPS = [ // 삼각 지붕 유리 매장: 유리 정면 가운데(x, z) · 밑변 폭 · 높이 · 깊이 · 돌린 각 · 간판 (글자만 — 상표 그림은 없다)
-  { x: -3.7, z: -21.5, w: 7.6, h: 7.8, d: 9, ry: 0.12, sign: 'CHANEL' },
-  { x: 4.5, z: -23.2, w: 8.0, h: 8.2, d: 9, ry: -0.14, sign: 'PRADA' },
+  { x: -3.25, z: -21.5, w: 7.0, h: 7.8, d: 9, ry: 0.12, sign: 'CHANEL' }, // 두 간판 매장은 가운데 가까이 (세로 화면에서 엄마가 쪼그려 앉아 알팡이를 볼 때도 CHANEL · PRADA 두 글자가 다 들어오게)
+  { x: 4.0, z: -23.2, w: 7.4, h: 8.2, d: 9, ry: -0.14, sign: 'PRADA' },
   { x: -14.2, z: -24.2, w: 7.0, h: 7.2, d: 7, ry: 0.42, sign: null },
   { x: 15.4, z: -25.6, w: 6.6, h: 6.8, d: 6, ry: -0.46, sign: null },
 ];
 const UI_CANOPY = { x: -3.55, z: -3.7, R: 1.05, h: 2.3 }; // 하얀 버섯 그늘막: 기둥 자리 · 지붕 반지름 · 높이
 const UI_ROCKS = { x: 2.3, z: -3.35 }; // 큰 바위와 꽃밭
-const UI_STASH = { x: -1.66, z: -0.08 }; // 괴도 알팡의 비밀 보물 자리: 테라스 왼쪽 앞 꽃 화분 옆
+const UI_STASH = { x: -1.62, z: 0.5 }; // 괴도 알팡의 비밀 보물 자리: 테라스 왼쪽 꽃 화분 앞 (엄마 쪽 — 화분에 가려지지 않고 엄마 자리에서 보인다)
+const UI_STASH_SLOTS = [[0, 0], [0.15, 0.06], [-0.13, 0.1], [0.05, -0.14]]; // 보물 더미의 네 자리 (넷까지 · 새 보물은 빈자리에, 다 차면 가장 오래된 것의 자리에)
 const UI_PLANTER = { x: -2.45, z: 0.02 }, UI_TABLE = { x: 2.38, z: 0.2 };
 const UI_PATH = [[0.95, -0.25], [0.75, -1.6], [-0.15, -3.0], [-1.05, -4.7], [-1.0, -7.4], [-0.2, -9.6], [0.1, -11.6]]; // 테라스에서 잔디밭을 가로질러 매장 앞 돌길로 이어지는 산책길 (가운데 선)
 const UI_PATH_W = 0.85;
@@ -8469,7 +8472,7 @@ const uiSurf = (x, z) => (apOnCush(x, z) ? 'cushion' : z > UI_DECK.z0 ? 'wood' :
 function buildUiwang() {
   const G = uiG = new THREE.Group(); G.visible = false; roomScene.add(G);
   const R = rng(53), B = batcher(), OB = [], one = V3(1, 1, 1), _m4 = new THREE.Matrix4(), _q4 = new THREE.Quaternion(), _e4 = new THREE.Euler();
-  UI = { stash: [], lastLoot: -1, lootN: 0, pawAt: -99, flash: 0, held: null };
+  UI = { stash: [], lastLoot: -1, lootN: 0, pawAt: -99, flash: 0, held: null, poseSit: false };
   // ---------- 하늘: 한여름 새파란 하늘 (지평선 쪽은 옅은 하늘빛 · 해 쪽은 환하게) + 커다란 뭉게구름
   {
     const sky = new THREE.SphereGeometry(36, 32, 16), p = sky.attributes.position, col = [], c = new THREE.Color(), v = V3();
@@ -8622,7 +8625,7 @@ function buildUiwang() {
   // ---------- 까만 T자 가로등 (돌길 따라 · 잔디밭 끝에 하나)
   {
     const lamp = M(0x1f2123, { roughness: 0.45, metalness: 0.5 }), glow = new THREE.MeshBasicMaterial({ color: 0xfff6dc });
-    for (const [x, z] of [[1.85, -5.45], [-2.4, -11.0], [3.3, -10.9], [-8.0, -11.2], [9.0, -11.3]]) {
+    for (const [x, z] of [[2.35, -5.6], [-4.1, -11.0], [4.0, -11.1], [-8.6, -11.2], [9.4, -11.3]]) { // 엄마 자리에서 볼 때 기둥이 CHANEL · PRADA 간판 글자를 가로지르지 않는 곳 (데스크톱 · 폰)
       bar(B, lamp, [x, 0, z], [x, 3.2, z], 0.042, 10); B.put(lamp, box(1.05, 0.07, 0.1), [x, 3.22, z]);
       for (const sx of [-0.44, 0.44]) B.put(glow, box(0.15, 0.02, 0.08), [x + sx, 3.175, z]);
       if (Math.abs(x) < 3 && z > -6.2) OB.push({ x, z, r: 0.12, h: 3.5 });
@@ -8660,7 +8663,7 @@ function buildUiwang() {
       put(S, base, box(sh.w + 0.8, 0.14, d + 0.8), [0, 0.06, 0.22 - d / 2]);
       put(S, frame, box(sh.w + 0.06, 0.08, 0.06), [0, 0.13, 0.25]); // 아래 테두리
       if (!sh.sign) continue;
-      const tex = signTex(sh.sign), sw = 5.0, sm = new THREE.Mesh(new THREE.PlaneGeometry(sw, sw / 4), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+      const tex = signTex(sh.sign), sw = 4.6, sm = new THREE.Mesh(new THREE.PlaneGeometry(sw, sw / 4), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
       sm.position.set(0, hw + (h - hw) * 0.36, 0.26).applyMatrix4(S); sm.rotation.y = sh.ry; sm.renderOrder = 1; G.add(sm);
     }
   }
@@ -8701,12 +8704,12 @@ function buildUiwang() {
   // ---------- 알팡이 (이 방의 강아지)
   ALPANG = makeAlpang();
   ALPANG.ribbonFlutter ??= 0; ALPANG.smile ??= 0; ALPANG.chinUp ??= 0; // 알팡 모델이 아직 없으면(임시 비글 몸) 숫자만 정해 둔다
-  Object.assign(ALPANG, { route, routeSee: navSee, collide, speedK: 1.05, talk: alpangTalk }); ALPANG.root.visible = false; roomScene.add(ALPANG.root); fitCurl(ALPANG);
+  Object.assign(ALPANG, { route, routeSee: navSee, collide, speedK: 1.05, talk: alpangTalk, sitOK: () => apOnCush(ALPANG.x, ALPANG.z) || UI.poseSit }); ALPANG.root.visible = false; roomScene.add(ALPANG.root); fitCurl(ALPANG); // sitOK: 공주님은 방석 위에서만 앉는다 (혼자 사진 포즈를 잡을 때는 테라스에 사뿐히)
   // ---------- 다니는 길 · 냄새 맡는 곳 · 둘러보는 곳
   Object.assign(ROOM_UIWANG, {
     built: true, OBST: OB,
-    SPOTS: { cushion: SPOTS.cushion, gifts: { x: -1.45, z: 1.22, fx: -2.35, fz: 1.5 }, /* 왼쪽 벤치 밑 (엄마 눈에 보이는 자리에서 벤치 쪽으로 킁킁) */ table: { x: 1.75, z: -2.85, fx: 2.2, fz: -3.25 }, /* 꽃밭 수국 */ window: { x: -1.7, z: -5.8, fx: -3.7, fz: -21.5 } },
-    looks: [V3(-3.7, 3.4, -21.5), V3(4.5, 3.6, -23.2), V3(UI_CANOPY.x, 1.8, UI_CANOPY.z), V3(UI_ROCKS.x, 0.4, UI_ROCKS.z), V3(UI_PLANTER.x, 0.75, UI_PLANTER.z), V3(-8, 3.5, -3.6), V3(0.5, 6, -26)],
+    SPOTS: { cushion: SPOTS.cushion, gifts: { x: -1.45, z: 1.22, fx: -2.35, fz: 1.5 }, /* 왼쪽 벤치 밑 (엄마 눈에 보이는 자리에서 벤치 쪽으로 킁킁) */ table: { x: 1.75, z: -2.85, fx: 2.2, fz: -3.25 }, /* 꽃밭 수국 */ window: { x: -1.7, z: -5.8, fx: UI_SHOPS[0].x, fz: UI_SHOPS[0].z } },
+    looks: [V3(UI_SHOPS[0].x, 3.4, UI_SHOPS[0].z), V3(UI_SHOPS[1].x, 3.6, UI_SHOPS[1].z), V3(UI_CANOPY.x, 1.8, UI_CANOPY.z), V3(UI_ROCKS.x, 0.4, UI_ROCKS.z), V3(UI_PLANTER.x, 0.75, UI_PLANTER.z), V3(-8, 3.5, -3.6), V3(0.5, 6, -26)],
   });
 }
 const ROOM_UIWANG = {
@@ -8715,11 +8718,11 @@ const ROOM_UIWANG = {
   clamp(d) { d.x = clamp(d.x, UI_NAV.x0, UI_NAV.x1); d.z = clamp(d.z, UI_NAV.z0, UI_NAV.z1); },
   ball: [-3.05, 3.05, -6.3, 2.7], ballFric: 4.2, // 공은 잔디에서 금방 선다
   NAV: { x0: UI_NAV.x0, z0: UI_NAV.z0, h: 0.08, nx: 74, nz: 108, pad: 0.15 },
-  HOME: { x: 0.1, z: 0.85 }, AIM: V3(0.05, 0.74, -1.0), camPos: (v, a) => (a < 0.8 ? v.set(0, 1.45, 3.95) : v.set(0, 1.3, 3.6)), // 알팡이 너머로 잔디밭과 매장 간판이 정면에 (세로 화면은 조금 높이 · 멀리)
+  HOME: { x: 0.1, z: 0.85 }, AIM: V3(0.05, 0.37, -1.0), camPos: (v, a) => (a < 0.8 ? v.set(0, 1.3, 3.55) : v.set(0, 1.02, 3.3)), // 엄마는 테라스 벤치에 앉은 눈높이: 알팡이 너머로 잔디밭과 삼각 지붕 매장 간판이 정면에 (세로 화면은 조금 높이 · 멀리)
   BOWL: V3(99, 0.006, 99), EAT: { x: 99, z: 99 }, CUSH: { x: 99, z: 99 }, // 밥그릇 · 도넛 방석은 없다 (공주님 방석은 앉아 · 엎드려 할 때 엄마가 깔아 준다)
   THROW: [[-0.6, -1.5], [0.9, -1.2], [-1.2, -0.6], [0.4, -2.4], [1.3, -2.0], [-0.7, -2.9], [0.2, -0.6], [-1.6, -1.9]],
   HIDE: [[-0.45, 0.45], [0.75, 0.4], [-0.15, 1.2], [0.95, 1.15], [0.5, 0.05], [1.3, 0.75], [-0.85, 0.1], [0.25, 1.4]],
-  WIN: V3(-3.7, 3.0, -21.5), ROPE: { x: 99, z: 99, yaw: 0 },
+  WIN: V3(UI_SHOPS[0].x, 3.0, UI_SHOPS[0].z), ROPE: { x: 99, z: 99, yaw: 0 },
   entry: [[1.45, -2.35, 2.0, -3.0], [-1.25, -1.6, -1.6, -2.4], [0.4, -2.2, 0.2, -3.2]], // 꽃밭 앞 · 잔디밭에서 킁킁하다가 엄마를 알아본다
   wander: [-1.6, -2.6, 3.4, 4.6],
   off: { feed: true, cushion: true, high5: true, splash: true, poop: true, worm: true, zoom: true, dig: true, mat: true, run: true }, actW: { nap: 0, bowl: 0, left: 0, window: 0, rest: 0, attend: 0.8 }, noBowl: true, // 밥그릇 · 도넛 방석은 없다 (공주님은 맨바닥에 엎드려 쉬지 않는다) · 손은 공주님 버전으로
@@ -8757,27 +8760,27 @@ function signTex(word) {
 }
 // ---------- 알팡이의 소품 (의왕 아울렛을 처음 지을 때 같이 만든다 · 좌표는 uiG(= 월드) 기준)
 // 공주님 방석(장밋빛 벨벳 · 금빛 파이핑 · 네 귀퉁이 금빛 술) · 주황 선물 상자(짙은 갈색 리본 — 글자 없음) · 괴도 알팡의 보물 아홉 가지(상표 없음) · 크로와상 · 치즈케이크(하얀 접시 · 작은 포크) · 엄마 무릎(회색 담요) · 분홍 공 · 반짝이
-const AP_CUSH = { half: 0.3, lift: 0.06 }; // 방석 반 폭 · 위에 올라서면 몸이 올라가는 높이
-const apOnCush = (x, z) => { const C = UI && UI.cush; if (!C || !C.on || !C.down || C.k < 0.9) return false; const dx = x - C.x, dz = z - C.z, c = Math.cos(C.yaw), s = Math.sin(C.yaw); return Math.abs(dx * c - dz * s) < AP_CUSH.half - 0.02 && Math.abs(dx * s + dz * c) < AP_CUSH.half - 0.02; };
+const AP_CUSH = { hx: 0.4, hz: 0.3, lift: 0.06 }; // 방석 반 폭: 옆(x — 드러누운 몸이 다 올라가게 길쭉하게) · 앞뒤(z) / 위에 올라서면 몸이 올라가는 높이
+const apOnCush = (x, z) => { const C = UI && UI.cush; if (!C || !C.on || !C.down || C.k < 0.9) return false; const dx = x - C.x, dz = z - C.z, c = Math.cos(C.yaw), s = Math.sin(C.yaw); return Math.abs(dx * c - dz * s) < AP_CUSH.hx - 0.02 && Math.abs(dx * s + dz * c) < AP_CUSH.hz - 0.02; };
 function buildAlpangProps(G, OB) {
   const gold = new THREE.MeshStandardMaterial({ color: 0xd8b25a, metalness: 0.85, roughness: 0.3 });
   // ---------- 공주님 방석: 통통한 장밋빛 벨벳 네모 방석 · 둘레에 금빛 파이핑 · 네 귀퉁이에 금빛 술 (원점 = 방석 바닥 가운데)
   {
     const g = new THREE.Group(); g.visible = false; G.add(g);
-    const hw = AP_CUSH.half, geo = new THREE.BoxGeometry(hw * 2, 0.1, hw * 2, 16, 4, 16), p = geo.attributes.position;
+    const hx = AP_CUSH.hx, hz = AP_CUSH.hz, geo = new THREE.BoxGeometry(hx * 2, 0.1, hz * 2, 20, 4, 16), p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i), nx = x / hw, nz = z / hw, puff = (1 - nx ** 4) * (1 - nz ** 4), t = (y + 0.05) / 0.1; // 가운데가 볼록 · 가장자리는 얇게
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i), nx = x / hx, nz = z / hz, puff = (1 - nx ** 4) * (1 - nz ** 4), t = (y + 0.05) / 0.1; // 가운데가 볼록 · 가장자리는 얇게
       const top = 0.024 + 0.062 * puff - 0.012 * Math.exp(-((nx * nx + nz * nz) / 0.012)), bot = 0.003, yy = lerp(bot, top, t); // 가운데 단추 자리는 살짝 눌려 있다
       p.setXYZ(i, x * (1 - 0.05 * nz * nz), yy, z * (1 - 0.05 * nx * nx));
     }
     geo.computeVertexNormals();
     const vel = new THREE.MeshPhysicalMaterial({ color: 0xd2668a, roughness: 0.82, sheen: 1, sheenColor: new THREE.Color(0xffc6d6), sheenRoughness: 0.32 });
     add(g, geo, vel);
-    const pts = []; for (let i = 0; i < 48; i++) { const a = (i / 48) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a), k = 1 / Math.max(Math.abs(c), Math.abs(s)) ** 0.82; pts.push(V3(c * k * hw * 0.955, 0.022, s * k * hw * 0.955)); } // 둘레 솔기 (모서리는 둥글게)
+    const pts = []; for (let i = 0; i < 56; i++) { const a = (i / 56) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a), k = 1 / Math.max(Math.abs(c), Math.abs(s)) ** 0.82; pts.push(V3(c * k * hx * 0.965, 0.022, s * k * hz * 0.955)); } // 둘레 솔기 (모서리는 둥글게)
     add(g, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 96, 0.0085, 6, true), gold);
     add(g, SPH, gold, [0, 0.068, 0], null, [0.012, 0.006, 0.012]); // 가운데 금빛 단추
     const CB = batcher(), fringe = new THREE.MeshStandardMaterial({ color: 0xc99a3e, metalness: 0.35, roughness: 0.6 }), cone = new THREE.CylinderGeometry(0.004, 0.013, 0.046, 14, 1), bead = new THREE.SphereGeometry(0.011, 12, 8), _tq = new THREE.Quaternion(), _te = new THREE.Euler();
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const cx = sx * hw * 0.95, cz = sz * hw * 0.95, dir = V3(sx, -0.55, sz).normalize(); _te.setFromQuaternion(_tq.setFromUnitVectors(_yAx, dir.clone().negate())); CB.put(gold, bead, [cx + sx * 0.008, 0.03, cz + sz * 0.008]); CB.put(fringe, cone, [cx + sx * 0.008 + dir.x * 0.03, 0.03 + dir.y * 0.03, cz + sz * 0.008 + dir.z * 0.03], [_te.x, _te.y, _te.z]); } // 술: 귀퉁이의 금빛 구슬 + 그 밑으로 바닥에 늘어진 짧은 술 (끝이 퍼진다)
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const cx = sx * hx * 0.962, cz = sz * hz * 0.95, dir = V3(sx, -0.55, sz).normalize(); _te.setFromQuaternion(_tq.setFromUnitVectors(_yAx, dir.clone().negate())); CB.put(gold, bead, [cx + sx * 0.008, 0.03, cz + sz * 0.008]); CB.put(fringe, cone, [cx + sx * 0.008 + dir.x * 0.03, 0.03 + dir.y * 0.03, cz + sz * 0.008 + dir.z * 0.03], [_te.x, _te.y, _te.z]); } // 술: 귀퉁이의 금빛 구슬 + 그 밑으로 바닥에 늘어진 짧은 술 (끝이 퍼진다)
     CB.flush(g);
     g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     UI.cush = { g, on: false, down: false, away: false, k: 0, x: 0, z: 0, yaw: 0 };
@@ -8826,7 +8829,7 @@ function buildAlpangProps(G, OB) {
       const tex = canvasTex(64, 256, (x, w, h) => { x.fillStyle = '#e07a9a'; x.fillRect(0, 0, w, h); for (let i = 0; i < 9; i++) { x.fillStyle = i % 2 ? '#f6d27a' : '#8fc5e6'; x.beginPath(); x.arc(w / 2 + (i % 2 ? 12 : -12), 14 + i * 28, 8, 0, Math.PI * 2); x.fill(); } x.strokeStyle = '#f6d27a'; x.lineWidth = 4; x.strokeRect(3, 3, w - 6, h - 6); });
       const silk = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38, side: THREE.DoubleSide });
       for (const [sx, len, ph] of [[-0.016, 0.17, 0], [0.018, 0.14, 1.3]]) { const pg = new THREE.PlaneGeometry(0.045, len, 1, 10), pp = pg.attributes.position; for (let i = 0; i < pp.count; i++) { const y = pp.getY(i) - len / 2; pp.setXYZ(i, pp.getX(i) + sx, y, 0.012 * Math.sin(y * 40 + ph) + 0.02 * (y / len) * (y / len)); } pg.computeVertexNormals(); add(o, pg, silk, [0, -0.004, 0.006]); }
-    }, [0, 0, 0], [0.004, -Math.PI / 2 + 0.05, 0, 0]);
+    }, [0, 0, 0], [0.0145, -Math.PI / 2 + 0.05, 0, 0]); // 바닥에 놓일 때: 물결진 끝자락까지 바닥 위에
     // 4. 작은 파우치: 연보랏빛 가죽 · 금빛 잠금쇠
     item('pouch', (o) => { add(o, new THREE.CapsuleGeometry(0.026, 0.05, 6, 12), M(0xc4a0d4, { roughness: 0.5 }), [0, -0.03, 0], [0, 0, Math.PI / 2], [1, 1.1, 0.5]); add(o, box(0.032, 0.006, 0.004), gold, [0, -0.018, 0.013]); add(o, box(0.006, 0.012, 0.003), gold, [0, -0.026, 0.015]); }, [0, 0, 0], [0.013, -Math.PI / 2, 0, 0]);
     // 5. 선글라스: 금빛 테 · 짙은 알 (콧등 다리를 문다)
@@ -8834,7 +8837,7 @@ function buildAlpangProps(G, OB) {
       const lens = new THREE.MeshPhysicalMaterial({ color: 0x2a2228, roughness: 0.08, clearcoat: 1, metalness: 0.2 });
       for (const sx of [-1, 1]) { add(o, cyl(0.021, 0.021, 0.003, 24), lens, [sx * 0.026, -0.012, 0.004], [Math.PI / 2, 0, 0]); add(o, new THREE.TorusGeometry(0.021, 0.0022, 6, 28), gold, [sx * 0.026, -0.012, 0.004]); add(o, box(0.003, 0.003, 0.07), gold, [sx * 0.048, -0.004, -0.032]); }
       add(o, box(0.012, 0.003, 0.003), gold, [0, -0.002, 0.004]);
-    }, [-0.15, 0, 0], [0.004, -Math.PI / 2, 0, 0]);
+    }, [-0.15, 0, 0], [0.033, -0.38, 0, 0]); // 바닥에 놓일 때: 다리를 편 채 알 밑과 다리 끝으로 선다 (엎어 두면 다리가 바닥을 뚫는다)
     // 6. 하이힐 한 짝: 빨간 에나멜 구두 (뒤축 테두리를 물고 앞코가 아래로)
     item('heel', (o) => {
       const red = new THREE.MeshPhysicalMaterial({ color: 0xc8243e, roughness: 0.22, clearcoat: 0.9 }), sole = M(0x3a1d1f, { roughness: 0.6 });
@@ -8842,15 +8845,15 @@ function buildAlpangProps(G, OB) {
       add(s, box(0.042, 0.008, 0.12), sole, [0, -0.052, 0.04], [-0.32, 0, 0]); add(s, box(0.01, 0.055, 0.012), sole, [0, -0.045, -0.018], [0.08, 0, 0]); // 밑창 · 굽
       add(s, new THREE.SphereGeometry(1, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), red, [0, -0.032, 0.075], [-0.3, 0, 0], [0.024, 0.02, 0.05]); // 앞코
       add(s, new THREE.CylinderGeometry(0.024, 0.022, 0.03, 18, 1, true, Math.PI * 0.6, Math.PI * 0.8), red, [0, -0.02, 0.0], [0, Math.PI, 0]); // 뒤축 테
-    }, [0, 0, 0], [0.012, -1.0, 0, 0]);
+    }, [0, 0, 0], [0.0792, -0.7, 0, 0]); // 바닥에 놓일 때: 앞코와 굽 끝으로 선다 (전에는 바닥 밑에 묻혀 보이지 않았다)
     // 7. 립스틱: 금빛 통 · 빨간 심 (가로로 문다)
-    item('lipstick', (o) => { add(o, cyl(0.0085, 0.0085, 0.042, 18), gold, [0, -0.004, 0], [0, 0, Math.PI / 2]); add(o, cyl(0.0068, 0.0068, 0.016, 16), M(0xb8203a, { roughness: 0.4 }), [0.028, -0.004, 0], [0, 0, Math.PI / 2]); add(o, new THREE.ConeGeometry(0.0068, 0.008, 16), M(0xb8203a, { roughness: 0.4 }), [0.04, -0.004, 0], [0, 0, -Math.PI / 2 - 0.4]); }, [0, 0, 0], [0.009, 0, 0, 0]);
+    item('lipstick', (o) => { add(o, cyl(0.0085, 0.0085, 0.042, 18), gold, [0, -0.004, 0], [0, 0, Math.PI / 2]); add(o, cyl(0.0068, 0.0068, 0.016, 16), M(0xb8203a, { roughness: 0.4 }), [0.028, -0.004, 0], [0, 0, Math.PI / 2]); add(o, new THREE.ConeGeometry(0.0068, 0.008, 16), M(0xb8203a, { roughness: 0.4 }), [0.04, -0.004, 0], [0, 0, -Math.PI / 2 - 0.4]); }, [0, 0, 0], [0.0132, 0, 0, 0]);
     // 8. 진주 목걸이: 하얀 진주 알 스물여섯 개가 길쭉한 고리로 · 금빛 걸쇠 (고리 꼭대기를 문다)
     item('pearls', (o) => {
       const pm = new THREE.MeshPhysicalMaterial({ color: 0xfbf5ea, roughness: 0.18, clearcoat: 1, sheen: 0.6, sheenColor: new THREE.Color(0xffeef6) }), pg = new THREE.SphereGeometry(0.0062, 10, 8), PB = batcher();
       for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2; PB.put(pm, pg, [Math.sin(a) * 0.028, -0.05 + Math.cos(a) * 0.05, 0.004 * Math.sin(a * 2)]); }
       PB.flush(o); add(o, box(0.008, 0.006, 0.005), gold, [0, -0.096, 0]);
-    }, [-0.2, 0, 0], [0.006, -Math.PI / 2, 0, 0]);
+    }, [-0.2, 0, 0], [0.0106, -Math.PI / 2, 0, 0]);
     // 9. 작은 향수병: 팔각 분홍 유리병 · 금빛 뚜껑 (뚜껑 목을 문다)
     item('perfume', (o) => { add(o, cyl(0.009, 0.009, 0.014, 16), gold, [0, -0.002, 0]); add(o, cyl(0.006, 0.006, 0.008, 12), gold, [0, -0.012, 0]); add(o, cyl(0.022, 0.024, 0.048, 8), new THREE.MeshPhysicalMaterial({ color: 0xf2a7c0, roughness: 0.05, clearcoat: 1, transparent: true, opacity: 0.82 }), [0, -0.04, 0]); add(o, cyl(0.016, 0.018, 0.034, 8), M(0xf6c6d6, { roughness: 0.3 }), [0, -0.044, 0]); }, [0, 0, 0], [0.064, 0, 0, 0]);
     for (const it of L) G.add(it.g);
@@ -8893,8 +8896,13 @@ function buildAlpangProps(G, OB) {
   // UI.lap: 바닥에 책상다리로 앉은 엄마 — 가로로 놓인 앞쪽 정강이(알팡이가 턱을 괸다) + 양옆 무릎에서 엄마 쪽으로 이어지는 허벅지 (만져줘)
   // UI.knees: 무릎을 꿇고 앉은 엄마 — 나란히 앞으로 뻗은 두 허벅지와 둥근 무릎 (뽀뽀하기: 알팡이가 앞발을 올린다)
   {
-    const knit = canvasTex(64, 64, (x, w) => { x.fillStyle = '#a9aeb2'; x.fillRect(0, 0, w, w); for (let i = 0; i < 8; i++) { x.fillStyle = i % 2 ? 'rgba(0,0,0,.07)' : 'rgba(255,255,255,.08)'; x.fillRect(i * 8, 0, 8, w); } for (let j = 0; j < 16; j++) { x.fillStyle = 'rgba(0,0,0,.035)'; x.fillRect(0, j * 4, w, 1); } }, [6, 3]); // 굵은 골 니트
-    const fab = new THREE.MeshPhysicalMaterial({ color: 0xc4c8cb, map: knit, roughness: 0.95, sheen: 0.7, sheenColor: new THREE.Color(0xe6e9eb), sheenRoughness: 0.55 });
+    const knit = canvasTex(256, 128, (x, w, h) => { // 보드라운 회색 니트 (잔잔한 골 · 섞인 실 빛 · 부드러운 주름 몇 줄 — 줄무늬 고무판처럼 보이지 않게)
+      const r = rng(83); x.fillStyle = '#b3b7ba'; x.fillRect(0, 0, w, h);
+      for (let i = 0; i < w; i += 4) { x.fillStyle = 'rgba(0,0,0,.035)'; x.fillRect(i, 0, 1, h); x.fillStyle = 'rgba(255,255,255,.03)'; x.fillRect(i + 2, 0, 1, h); } // 가는 골
+      for (let i = 0; i < 2200; i++) { x.fillStyle = r() < 0.5 ? `rgba(255,255,255,${0.05 + r() * 0.07})` : `rgba(40,44,48,${0.04 + r() * 0.06})`; x.fillRect(r() * w, r() * h, 1 + r() * 2, 1); } // 섞인 실
+      for (let i = 0; i < 7; i++) { const cx = r() * w, cy = r() * h, rx = 30 + r() * 50, ry = 6 + r() * 8, a = (r() - 0.5) * 0.9; x.save(); x.translate(cx, cy); x.rotate(a); x.scale(1, ry / rx); for (const [dy, col] of [[-ry * 0.9, 'rgba(255,255,255,0.16)'], [0, 'rgba(30,34,38,0.22)']]) { const g = x.createRadialGradient(0, dy * rx / ry, 0, 0, dy * rx / ry, rx); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.beginPath(); x.arc(0, dy * rx / ry, rx, 0, Math.PI * 2); x.fill(); } x.restore(); } // 부드러운 주름 (밝은 등 · 그늘진 골)
+    }, [2, 1]);
+    const fab = new THREE.MeshPhysicalMaterial({ color: 0xc3c5c6, map: knit, roughness: 0.97, sheen: 0.8, sheenColor: new THREE.Color(0xeef0f2), sheenRoughness: 0.6 }); // 엄마 사진의 회색 담요처럼 (조금 따뜻한 회색)
     const limb = (g, a, b, r, sq = 1) => { const A = V3(...a), Bv = V3(...b), d2 = Bv.clone().sub(A), L = d2.length(), m = add(g, new THREE.CapsuleGeometry(r, L, 10, 20), fab, null, null, null, false); m.position.copy(A).add(Bv).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(_yAx, d2.normalize()); m.scale.set(1, 1, sq); return m; };
     const lap = new THREE.Group(); lap.visible = false; G.add(lap);
     limb(lap, [-0.3, -0.07, -0.05], [0.24, -0.07, 0.01], 0.07); // 앞쪽 정강이 (가로) — 위가 원점
@@ -8937,6 +8945,7 @@ function alpangTalk(s) { return AP_TALK[s] ?? (/[가-힣]…$/.test(s) ? s.slice
 const apHearts = (tok, n = 5) => { for (let i = 0; i < n; i++) wait(tok, i * 0.09).then(() => bubble('♥', headTop, 'heart', 1.5, (i - (n - 1) / 2) * 50 + (Math.random() - 0.5) * 14), () => {}); }; // 하트가 퐁퐁 (옆으로 퍼지게 — 글자를 가리지 않게)
 const apAway = (s = 1, up = 0.62) => () => V3(pinky.x, up, pinky.z).addScaledVector(camRight(), s * 1.6).addScaledVector(toCamDir(), 0.5); // 새침하게: 턱을 들고 엄마 옆 허공을 본다
 const apSide = () => (pinky.x > HOME.x ? -1 : 1);
+const apNear = () => { const n = nearSpot(); return { x: lerp(HOME.x, n.x, 0.55), z: lerp(HOME.z, n.z, 0.55) }; }; // 엄마 앞 (엄마 자리에서 볼 때 발끝까지 단추 줄 위에 보이는 곳)
 const apChin = (k) => { pinky.chinUp = k; }; // 공주님 턱 들기 (알팡 모델이 머리를 들어 준다)
 const apStand = (rate = 6) => { setPose(pinky, 'stand', rate); pinky.face = 'cam'; pinky.tgt.yawOff = 0; }; // 공주님은 맨바닥에 앉지 않는다: 엄마 앞에 반듯하게 선다 (앉는 건 방석 위에서만 · 혼자 포즈 잡을 때만)
 // 알팡이 자세: 엄마 무릎에 턱 괴기(만져줘) — 뽀뽀하기의 일어서기는 알팡 모델의 'up' 자세
@@ -8965,7 +8974,7 @@ function apRelease() {
 }
 function apEnter() { // 의왕 아울렛에 들어설 때 (엄마가 왔다): 방석 · 상자는 치워 두고 보물 더미는 비운다
   Object.assign(pinky, { ribbonFlutter: 0, smile: AP_SMILE0, chinUp: 0, bounce: 0, liftT: 0, pawUp: null });
-  apCushOff(); apBoxOff(); UI.held = null; apStashClear(); UI.pawAt = -99; UI.flash = 0;
+  apCushOff(); apBoxOff(); UI.held = null; apStashClear(); UI.pawAt = -99; UI.flash = 0; UI.poseSit = false;
 }
 // ---------- 의왕 아울렛에서 매 프레임 (알팡이를 움직인 뒤)
 function apHeldPlace(d) { // 입에 문 보물: 앞니 사이(문 자리)에 걸려 아래로 늘어진다 (알팡이와 같은 쪽을 본다)
@@ -9003,7 +9012,7 @@ async function apGreet(tok, why) {
   tok.cleanups.push(() => { d.turnCap = 0; d.eyeOpen = 1; d.bounce = 0; d.ribbonFlutter = 0; d.smile = AP_SMILE0; apChin(0); snd('cancelPhrase', 'mom'); });
   bubble('어머!', headTop, 'small', 1.1); snd('phrase', 'mom', { mode: why === 'entry' ? 'entry' : why === 'quiet' ? 'quick' : 'again' }); // 소리: 인식표 짤랑 → 반가운 앙!
   await wait(tok, 0.5); d.turnCap = 0;
-  const n = nearSpot();
+  const n = apNear();
   if (Math.hypot(d.x - n.x, d.z - n.z) > 0.15) { Object.assign(d, { walkSpeed: 1.0, bounce: 0.011, ribbonFlutter: 0.8 }); await walkTo(tok, n.x, n.z); Object.assign(d, { walkSpeed: 0.5, bounce: 0, ribbonFlutter: 0 }); }
   apStand(9); apChin(0.45); d.eyeOpen = 1; d.wagAmpT = 1.0; d.wagSpeedT = 20; await wait(tok, 0.45);
   say(AP_GREET[why] || AP_GREET.entry, headTop, 'soft', 2.6); apHearts(tok, 3);
@@ -9069,7 +9078,7 @@ async function apOnCushion(tok, kind) {
     // 3. 엄마 두 손이 장밋빛 방석을 깔아 준다
     Object.assign(C, { on: true, down: false, away: false, k: 1, x: P.x, z: P.z, yaw: Math.atan2(f.x, f.z) }); C.g.scale.setScalar(1);
     d.lookFn = () => C.g.position.clone().add(V3(0, 0.05, 0)); d.earPerk = 0.8; d.tiltT = 0; apChin(0.2);
-    await apCarry(tok, C.g, P, C.yaw, AP_CUSH.half, 0.04, 1.2);
+    await apCarry(tok, C.g, P, C.yaw, AP_CUSH.hx, 0.04, 1.2);
     C.down = true; snd('sfx', 'flop_soft', { pos: [P.x, 0.03, P.z], gain: -1, force: 1, why: 'princess cushion down' }); bubble('폭', () => V3(P.x, 0.2, P.z), 'small', 0.9, 0);
     await wait(tok, 0.3);
   }
@@ -9122,10 +9131,11 @@ async function apKiss(tok) {
   camTo(MF, e0.clone().add(V3(0, -0.02, 0)), 2.6); await wait(tok, 0.6);
   { const nz = noseTip(); cam.tAim.copy(nz.clone().lerp(d.head.getWorldPosition(V3()), 0.45)); } await wait(tok, 0.45); // 눈과 코 사이를 본다
   // 눈을 꼭 감고 코끝으로 쪽! (엄마 얼굴에 콕)
-  d.tgt.reach = 0.1; d.eyeOpen = 0.08; mark('ap:kiss:boop');
+  d.tgt.reach = 0.1; d.eyeOpen = AP_SHUT; mark('ap:kiss:boop');
   { const nz = noseTip(), dir = MF.clone().sub(nz).normalize(); cam.tPos.copy(nz.clone().addScaledVector(dir, AP_KISS.boop)); cam.rate = 5; }
-  say('쪽!', apStill(() => noseTip().add(V3(0, 0.06, 0))), 'soft', 1.3, 170);
-  for (let i = 0; i < 6; i++) wait(tok, 0.05 + i * 0.08).then(() => bubble('♥', apStill(() => noseTip().add(V3(0, 0.05, 0)), 0.07), 'heart', 1.4, (i - 2.5) * 66 + (Math.random() - 0.5) * 16), () => {}); // 코끝 둘레로 하트가 퐁퐁
+  const bx = ph > 1 ? 0.04 : 0.085; // 코끝 옆 (세로 화면은 좁아서 조금 안쪽)
+  say('쪽!', apStill(() => noseTip().addScaledVector(camRight(), bx).add(V3(0, -0.035, 0)), 0.03), '', 1.3, 0); // 볼 옆에 큼직하게 (소리 글자처럼 — 눈을 가리지 않게)
+  for (let i = 0; i < 6; i++) { const sd = i % 2 ? 1 : -1, j = i >> 1; wait(tok, 0.05 + i * 0.08).then(() => bubble('♥', apStill(() => noseTip().addScaledVector(camRight(), sd * (bx * 0.9 + 0.022 * j)).add(V3(0, 0.002 - 0.032 * j + (sd > 0 ? 0.03 : 0), 0)), 0.06), 'heart', 1.4, 0), () => {}); } // 코끝 양옆으로 하트가 퐁퐁 (눈 · 코를 가리지 않게)
   await wait(tok, 0.75); d.eyeOpen = 1; d.tgt.reach = 0.04; d.smile = 1;
   // 내려와서 새침하게 (엄마는 무릎을 펴고 조금 물러앉는다)
   { const [p, a] = kneelFor(Q, 1.05 * ph, 0.78 + 0.1 * (ph - 1), 0.3); camTo(p, a, 2.2); }
@@ -9139,7 +9149,7 @@ async function apKiss(tok) {
 // ---------- 만져줘 (치대기 — 엄마가 보낸 '치대는 사진'처럼): 엄마가 바닥에 앉으면 알팡이가 먼저 와서 엄마 무릎(회색 담요)에 턱을 괴고 머리를 꾹 — 고개를 갸웃 옆으로 올려다보며 애처롭게 '만져 줘~'
 // → 엄마 손이 머리 · 볼을 쓰다듬는다 → 손이 멈추면 턱을 더 꾹 누르고 코로 쿡 / 앞발로 톡 — '더 만져 줘잉~' (두 번) → 눈을 지그시 감고 꼬리를 천천히 — '흐응~ 좋아~'
 // 엄마 눈길은 바짝 가까이 내려다본다 (알팡이 얼굴이 화면 가득 · 무릎은 화면 아래)
-const AP_LEAN = { cam: [-0.09, 0.22, 0.45], camP: [-0.06, 0.36, 0.8], aimDy: -0.03, tilt: 0.2, eye: 0.72, sh: [0.26, 0.16, 0.06] }; // 머리에서 [옆, 위, 앞(엄마 쪽)] (camP: 세로 화면) · 갸웃 · 조르는 눈
+const AP_LEAN = { cam: [-0.09, 0.22, 0.45], camP: [-0.02, 0.34, 0.78], aimDy: -0.03, aimX: 0.035, aimXP: 0.075, tilt: 0.2, eye: 0.72, sh: [0.26, 0.16, 0.06] }; // 머리에서 [옆, 위, 앞(엄마 쪽)] (camP: 세로 화면) · 눈길을 손 쪽으로 (aimX · aimXP: 세로 화면) · 갸웃 · 조르는 눈
 async function apLean(tok) {
   const d = pinky, L = UI.lap; mark('ap:lean');
   tok.cleanups.push(() => { L.visible = false; d.pawUp = null; d.smile = AP_SMILE0; d.tgt.headTilt = 0; d.tiltT = 0; d.eyeOpen = 1; d.sigh = 0; if (d.tgt.name === 'apLean') setPose(d, 'stand', 5); });
@@ -9157,7 +9167,7 @@ async function apLean(tok) {
   until(tok, () => { if (!follow) return true; const c = chin(); L.position.x += (c.x - L.position.x) * 0.06; L.position.y += (c.y - 0.004 - L.position.y) * 0.06; L.position.z += (c.z - L.position.z) * 0.06; return false; }).catch(() => {});
   snd('sfx', 'pat', { gain: -2, force: 1, why: 'chin on lap' });
   const sxR = jrPetSide(), hp = d.head.getWorldPosition(V3()), rt = camRight(), fc = toCamDir(), co = ph > 1 ? AP_LEAN.camP : AP_LEAN.cam; // 엄마가 몸을 숙여 바짝 내려다본다
-  camTo(hp.clone().addScaledVector(rt, co[0] * sxR).add(V3(0, co[1], 0)).addScaledVector(fc, co[2]), hp.clone().add(V3(0, AP_LEAN.aimDy, 0)), 2.2);
+  camTo(hp.clone().addScaledVector(rt, co[0] * sxR).add(V3(0, co[1], 0)).addScaledVector(fc, co[2]), hp.clone().add(V3(0, AP_LEAN.aimDy, 0)).addScaledVector(rt, (ph > 1 ? AP_LEAN.aimXP : AP_LEAN.aimX) * sxR), 2.2); // 손이 오는 쪽을 조금 더 (쓰다듬는 손이 화면 안에)
   const up = () => roomCam.position; // 옆으로 갸웃하고 엄마 얼굴을 올려다본다
   const beside = () => apStill(() => d.head.getWorldPosition(V3()).addScaledVector(camRight(), -0.16 * sxR).add(V3(0, 0.1, 0)), 0.09); // 바짝 가까운 장면의 말풍선: 머리 옆 (손 반대쪽 · 얼굴과 리본을 가리지 않게)
   d.lookFn = up; d.tgt.gaze = 1; d.eyeOpen = AP_LEAN.eye; d.tiltT = -AP_LEAN.tilt * sxR; d.earPerk = -0.35; d.tgt.headTilt = -0.08 * sxR; d.smile = AP_SMILE0;
@@ -9185,7 +9195,7 @@ async function apLean(tok) {
   }
   // 오래 쓰다듬어 주면: 눈을 지그시 감고 꼬리를 천천히 — 흐응~ 좋아~
   await stroke(2); { s = 0.55; const h = () => pt().addScaledVector(upv(), 0.015); handR.want = { pos: h, up: upv, curl: 0.12, rate: 6, shoulder: SH }; } // 손은 머리에 얹은 채
-  d.eyeOpen = 0.06; d.wagAmpT = 0.8; d.wagSpeedT = 4.5; d.smile = 0.5; d.tiltT = -0.24 * sxR; d.tgt.gaze = 0.7; // 얼굴은 엄마 쪽 그대로 — 눈만 지그시
+  d.eyeOpen = AP_SHUT; d.wagAmpT = 0.8; d.wagSpeedT = 4.5; d.smile = 0.5; d.tiltT = -0.24 * sxR; d.tgt.gaze = 0.7; // 얼굴은 엄마 쪽 그대로 — 눈만 지그시
   await tween(tok, 1.6, (k) => { d.sigh = Math.sin(Math.PI * k) ** 2; }); d.sigh = 0;
   say('흐응~ 좋아~', beside(), 'soft', 2.4); for (let i = 0; i < 3; i++) wait(tok, i * 0.12).then(() => bubble('♥', beside(), 'heart', 1.5, 60 + i * 40), () => {}); mark('ap:lean:bliss');
   await wait(tok, 2.4);
@@ -9240,21 +9250,23 @@ async function apBox(tok) {
   setPose(d, 'stand', 5); d.tgt.headPitch = -0.22; await wait(tok, 0.4);
   say('뭔지 몰라도 이건 공주 거야~', headTop, 'soft', 1.9); await wait(tok, 1.2);
   // 6. 비밀 보물 자리로 쏜살같이 (깡총깡총 · 귀와 리본 끈이 펄럭펄럭) — 엄마 눈길이 따라간다
-  const ST = UI_STASH, slot = UI.stash.length % 5, so = [[0, 0], [0.13, 0.07], [-0.11, 0.09], [0.06, -0.12], [-0.08, -0.06]][slot], spot = { x: ST.x + so[0], z: ST.z + so[1] };
+  const ST = UI_STASH, used = new Set(UI.stash.slice(UI.stash.length >= 4 ? 1 : 0).map((o) => o.slot)); let slot = 0; while (used.has(slot)) slot++; // 빈자리 (넷이 다 찼으면 내려놓을 때 사라질 가장 오래된 것의 자리)
+  const so = UI_STASH_SLOTS[slot], spot = { x: ST.x + so[0], z: ST.z + so[1] };
   const A = { x: spot.x + 0.36, z: spot.z + 0.1 }; collide(A);
   Object.assign(d, { walkSpeed: 1.6, bounce: 0.012, ribbonFlutter: 1.3, wagAmpT: 0.9, wagSpeedT: 18, face: null, earPerk: -0.2 }); mark('ap:dash');
   { const fx = ph > 1 ? 0.75 : 0.45; jrLean(V3(lerp(d.x, A.x, fx) + 0.2, 1.05 + 0.25 * (ph - 1), Math.max(d.z, A.z) + 2.3 + 0.6 * (ph - 1)), V3(lerp(d.x, A.x, fx) - 0.15, 0.2, lerp(d.z, A.z, fx) - 0.2), 0.75, 0.85, 2.2); } // 엄마 눈길이 비밀 보물 자리 쪽으로 (세로 화면은 더)
   await walkTo(tok, A.x, A.z);
   Object.assign(d, { walkSpeed: 0.5, bounce: 0, ribbonFlutter: 0.3 });
   d.face = { x: spot.x, z: spot.z }; { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, Math.atan2(spot.x - d.x, spot.z - d.z))) < 0.15 || clock - t0 > 1.2); }
+  if (camTurn) camTo(V3(spot.x - 0.28 * ph, 0.6 + 0.12 * (ph - 1), spot.z + 1.0 * ph), V3(spot.x + 0.1, 0.08, spot.z - 0.02), 2.4); // 엄마 눈길이 보물 더미로 바짝 (왼쪽 앞에서 — 알팡이는 더미 오른쪽에 서서 가리지 않는다)
   setPose(d, 'eat', 6); d.tgt.headPitch += 0.2; d.tgt.pitch += 0.08; await wait(tok, 0.45); d.jawOpen = 0.24;
-  { const h = UI.held; UI.held = null; apRestAt(h.it, spot.x, spot.z, Math.random() * 6.28); UI.stash.push(h.it); apStashCap(); } // 보물 더미에 툭
+  { const h = UI.held; UI.held = null; h.it.slot = slot; apRestAt(h.it, spot.x, spot.z, Math.random() * 6.28); UI.stash.push(h.it); apStashCap(); } // 보물 더미에 툭
   snd('sfx', 'ap_rustle', { pos: [spot.x, 0.05, spot.z], gain: -2, force: 1, why: 'loot on the pile' }); bubble('톡', () => V3(spot.x, 0.18, spot.z), 'small', 0.8, 0); mark('ap:stash');
-  await wait(tok, 0.15); d.jawOpen = toy.rest = 0; d.ribbonFlutter = 0;
+  await wait(tok, 0.15); d.jawOpen = toy.rest = 0; d.ribbonFlutter = 0; await wait(tok, 0.6);
   // 7. 시치미 떼고 돌아온다 (엄마 손은 빈 상자를 치운다) — …공주는 아무것도 안 했어~
   setPose(d, 'stand', 5); jrUnlean();
   { const bp = () => B.g.localToWorld(V3(0, B.H + 0.035, 0)); handR.want = { pos: bp, up: () => V3(0, 1, 0), curl: 0.6, rate: 5 }; wait(tok, 1.0).then(() => { B.g.visible = false; B.loose.visible = false; B.on = false; handR.want = null; }, () => {}); }
-  const n = nearSpot(); d.walkSpeed = 0.55; d.wagAmpT = 0.3; d.wagSpeedT = 6; d.smile = AP_SMILE0; await walkTo(tok, n.x, n.z); d.walkSpeed = 0.5;
+  const n = apNear(); d.walkSpeed = 0.55; d.wagAmpT = 0.3; d.wagSpeedT = 6; d.smile = AP_SMILE0; await walkTo(tok, n.x, n.z); d.walkSpeed = 0.5;
   apStand(7); d.lookFn = apAway(apSide(), 0.7); apChin(0.4); d.eyeOpen = 0.85; d.earPerk = 0.1; d.tiltT = 0.1; await wait(tok, 0.5);
   say('…공주는 아무것도 안 했어~', headTop, 'soft', 2.4); await wait(tok, 2.0);
   d.lookFn = null; d.eyeOpen = 1; d.tiltT = 0.2; d.smile = 1; d.wagAmpT = 0.9; d.wagSpeedT = 17; bubble('…', headTop, 'small', 0.9, 40); await wait(tok, 1.2); // 슬쩍 엄마를 보고 꼬리는 붕붕
@@ -9335,10 +9347,10 @@ async function apCake(tok) {
 const AP_POSE_AT = [{ x: -0.9, z: 0.3 }, { x: 0.95, z: 0.5 }, { x: -0.15, z: -0.55 }];
 async function apPose(tok) {
   const d = pinky, w = rot('apPoseAt', AP_POSE_AT); mark('pose');
-  tok.cleanups.push(() => { jrUnlean(); apChin(0); d.smile = AP_SMILE0; UI.flash = 0; UI.hemi.intensity = UI.hemiI; });
+  tok.cleanups.push(() => { jrUnlean(); apChin(0); d.smile = AP_SMILE0; UI.flash = 0; UI.hemi.intensity = UI.hemiI; UI.poseSit = false; });
   setPose(d, 'stand', 5); d.walkSpeed = 0.5; d.wagAmpT = 0.45; d.wagSpeedT = 9;
   if (Math.hypot(d.x - w.x, d.z - w.z) > 0.1) await walkTo(tok, w.x, w.z);
-  d.face = 'cam'; await sitAs(tok, 'front', 6);
+  d.face = 'cam'; UI.poseSit = true; await sitAs(tok, 'front', 6); // 사진 찍을 때만은 테라스에 사뿐히 앉는다
   jrLean(V3(d.x * 0.85, 0.78, d.z + 1.5 * phoneK()), V3(d.x, 0.32, d.z), 0.85, 0.9, 1.0); // 엄마가 사진을 찍으러 다가가 쪼그려 앉는다
   const s = apSide(), turn = (k) => { const c = roomCam.position, r = camRight(); d.face = { x: c.x + r.x * k * 2.2, z: c.z + r.z * k * 2.2 }; }; // 몸은 비스듬히 (고개는 엄마 쪽)
   turn(s); apChin(1); d.smile = 1; d.lookFn = null; d.tgt.gaze = 1; d.wagAmpT = 0.3; d.wagSpeedT = 5; // 비스듬히 앉아 턱을 든다
@@ -9347,10 +9359,10 @@ async function apPose(tok) {
   await snap();
   turn(-s); d.tiltT = 0.12 * s; await wait(tok, 0.9); await snap(); // 반대쪽 옆얼굴도
   d.face = 'cam'; d.tiltT = 0.18; apChin(0.5); say('흐응~ 잘 나왔지?', headTop, 'soft', 1.9); heart();
-  await wait(tok, 1.9); d.tiltT = 0; apChin(0); d.smile = AP_SMILE0; jrUnlean(); setPose(d, 'stand', 4); await wait(tok, 0.5);
+  await wait(tok, 1.9); d.tiltT = 0; apChin(0); d.smile = AP_SMILE0; jrUnlean(); UI.poseSit = false; setPose(d, 'stand', 4); await wait(tok, 0.5);
 }
 // ---------- 매장 구경 (혼자 있을 때 가끔): 잔디밭 끝에 가서 유리 매장을 보고 앉는다 — …저거 공주 거 같은데~ → 어깨 너머로 엄마를 보며 엄마, 저거 사 줘~ → 다시 매장을 본다
-const AP_SHOP_AT = [{ x: -1.75, z: -5.75, tx: -3.7, tz: -21.5 }, { x: 1.15, z: -5.85, tx: 4.5, tz: -23.2 }];
+const AP_SHOP_AT = [{ x: -1.75, z: -5.75, tx: UI_SHOPS[0].x, tz: UI_SHOPS[0].z }, { x: 1.15, z: -5.85, tx: UI_SHOPS[1].x, tz: UI_SHOPS[1].z }];
 async function apShop(tok) {
   const d = pinky, w = rot('apShopAt', AP_SHOP_AT); mark('shop');
   tok.cleanups.push(() => { jrUnlean(); apChin(0); d.smile = AP_SMILE0; });

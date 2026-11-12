@@ -1046,7 +1046,10 @@ function alpangSay(s, text = s) {
   if (has(s, '안행', '안앉아', '더러워진', '차갑단')) { play('ap_chit', { vlo: 0, vhi: 2, why: text }); later(0.45, () => play('ap_hing', { force: 1, gain: -6, why: text + ' (aegyo)' })); return true; } // 공주는 그런 거 안 행~ — 칫 → 히잉~
   if (s.startsWith('칫')) return play('ap_chit', { vlo: 0, vhi: 2, why: text }), true;
   if (s.startsWith('피')) return play('ap_chit', { variant: 2, why: text }), true; // 피~ 알았어~
-  if (has(s, '줘잉', '만져줘', '히잉', '사줘')) return play('ap_hing', { why: text }), true; // 더 만져 줘잉~ · 엄마, 저거 사 줘~ — 애교 섞인 조름
+  if (has(s, '줘잉', '만져줘', '히잉', '사줘', '안아줘')) return play('ap_hing', { why: text }), true; // 더 만져 줘잉~ · 엄마, 저거 사 줘~ · 공주 안아 줘~ ♥ — 애교 섞인 조름
+  if (/^[가-힣]{1,3}♥$/.test(s)) return play('ap_heung', { gain: -2, rate: 1.06, why: text }), true; // 엄마~ ♥ (부르는 말 하나 + 하트) — 반가워서 흐응~
+  if (/^냠+$/.test(s)) { st.accent = false; play('chomp_soft', { gain: -2, rate: 1.1, why: text + ' (dainty bite)' }); return true; } // 냠 · 냠냠 — 공주님은 얌전히 한 입씩 (씹는 소리는 그다음 턱이 닫힐 때마다 저절로)
+  if (/^(쩝)+$/.test(s)) { st.smackT = T; play('smack', { gain: -2, why: text }); later(0.2, () => play('smack', { force: 1, gain: -5, why: text })); return true; } // 쩝쩝 — 입맛을 다신다
   if (has(s, '흐응')) return play('ap_heung', { why: text }), true; // 흐응~ — 흡족한 콧소리
   if (has(s, '크로와상', '치즈케이크', '상자다', '간식이다')) { play('gasp_alert', { rate: 1.15, why: text }); later(0.22, () => play('ap_hing', { force: 1, gain: -6, why: text })); return true; } // 어머, 크로와상~! — 헉 → 히잉~ (못 참는다)
   if (has(s, '어머')) { play('gasp_alert', { rate: 1.15, gain: -2, why: text }); later(0.3, () => play('ap_heung', { force: 1, gain: -6, why: text })); return true; }
