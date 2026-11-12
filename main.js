@@ -91,6 +91,8 @@ const COLORS = {
   pupu: { base: 0xfce2c6, snow: 0xfff4e8, tan: 0xeea974, headTan: 0xf8d2ac, saddle: 0xeed6bd, earIn: 0xe8a3a3, tailTan: 0xf6d6b0, nose: 0x7a5250, collar: 'band', band: 0x50686d, tag: 'star', tagColor: 0x22afd2 },
   // 재롱: 붉은 황갈과 흰색의 나이 든 비글 (검은 털이 없다). 귀·정수리·눈 둘레는 따뜻한 생강빛 황갈, 등 안장도 황갈(조금 진하게 · 노견이라 옅은 크림 털이 섞인다), 이마 흰 줄 · 흰 주둥이(조금 바랜 회백색) · 흰 목·가슴·배·다리·꼬리 끝 · 큰 검은 코 · 올리브빛 띠 목줄에 자줏빛 둥근 이름표
   jaerong: { base: 0xf6efe5, tan: 0xc8803f, headTan: 0xcd8a4b, ear: 0xc27639, saddle: 0xbf7539, grizzle: 0xebcfa6, muzzle: 0xddd6cd, nose: 0x120e0c, collar: 'band', band: 0x58623f, tag: 'round', tagColor: 0x6b2220 },
+  // 알팡: 젊은 삼색 비글 공주님 (임시 색 — 알팡 모델 작업이 사진에 맞춰 고친다)
+  alpang: { base: 0xf7f1ea, tan: 0xa8622e, headTan: 0xb26a33, ear: 0x8f4f26, saddle: 0x161211, grizzle: 0x2a2220, nose: 0x15100f, collar: 'band', band: 0x5a3a26 },
   generic: { base: 0xe9e1d6, tan: 0xc99a6c, saddle: 0x4a3c34, nose: 0x1c1513 },
   friend: { base: 0xd8a462, tan: 0xc98c4a, saddle: 0xc98c4a, nose: 0x1a1210, collar: 0xc23b2e }, // 놀이터 울타리 밖을 지나가는 동네 친구 (누렁이 진돗개 · 빨간 목줄)
 };
@@ -105,6 +107,8 @@ const PUPU_S = 1.25;
 function makePupu(scale = PUPU_S, seed = 5) { return buildDog({ kind: 'jindo', variant: 'pupu', colors: COLORS.pupu, scale, seed }); }
 // 재롱 모델은 이 함수 하나에서만 만든다 (buildDog의 variant 'jaerong': 붉은 황갈과 흰색의 나이 든 비글 — 핑키와 같은 비글 틀에서 시작)
 function makeJaerong(scale = 1, seed = 13) { return buildDog({ kind: 'beagle', variant: 'jaerong', colors: COLORS.jaerong, scale, seed }); }
+// 알팡 모델은 이 함수 하나에서만 만든다 (buildDog의 variant 'alpang': 젊은 삼색 비글 공주님 — 핑키와 같은 비글 틀에서 시작)
+function makeAlpang(scale = 1, seed = 17) { return buildDog({ kind: 'beagle', variant: 'alpang', colors: COLORS.alpang, scale, seed }); }
 // paws: 발 위치(강아지 바닥 기준). lean: 발목 아래 마디 기울기(0 = 수직, π/2 = 바닥에 눕힘). free: 1이면 다리를 곧게 뻗음
 // 비글(핑키) 관절: 어깨 관절(견단) (±0.048, -0.022, 0.226 — 걸을 때 견갑골과 함께 앞뒤로 조금 미끄러진다) → 위팔 0.10(뒤·아래로) → 팔꿈치(뒤를 향함, 가슴 바닥 높이) → 아래팔 0.122(수직) → 손목 → 발허리 0.045
 //   고관절 (±0.062, 0.015, -0.175) → 무릎(앞을 향함) → 허벅지 0.118 → 정강이 0.105(뒤·아래로) → 비절(뒤를 향함, 바닥에서 ~0.12) → 뒷발허리 0.088(거의 수직)
@@ -1030,6 +1034,8 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
   if (DM) Object.assign(d, { dami: true, variant, hipX: 0.056 });
   const JR = !J && !PU && !DM && variant === 'jaerong'; // JR: 재롱 (비글 변형 — 핑키 틀에서 시작)
   if (JR) Object.assign(d, { jaerong: true, variant, hipX: 0.064, earFlap: 0, propSpin: 0, napLids: [] }); // earFlap: 귀 펄럭임 더하기(0..1.5) · propSpin: 프로펠러 더 돌리기(0..1) · napLids: 잘 때는 제 눈꺼풀이 덮는다 (fitCurl이 큰 눈용 눈꺼풀을 만들지 않게)
+  const AP = !J && !PU && !DM && !JR && variant === 'alpang'; // AP: 알팡 (비글 변형 — 핑키 틀에서 시작)
+  if (AP) Object.assign(d, { alpang: true, variant });
   if (PU) Object.assign(d, { pupu: true, variant, hipX: 0.05, smile: 1, smileK: 1, wild: false, earSw: 0, headPts: { top: [0, 0.096, -0.01], say: [0, 0.142, -0.01], nose: [0, 0.024, 0.1035], mouth: [0, 0.002, 0.092] } }); // 푸푸: 뒷다리 뿌리는 골반 폭에 맞게 · headPts: 머리 좌표의 정수리·말풍선 자리(쫑긋 선 귀 끝 0.134 바로 위 — 말풍선이 귀를 덮지 않게)·코끝·입 앞 (킁킁·간식 자리 — 핑키·담이는 큰 머리의 예전 값 그대로) · smile: 웃는상 — 평소 얼굴은 입을 벌리고 활짝 웃는 입 (가만히 산을 바라볼 때 · 놀람 · 까치 · 터키츄 앞에서 의젓한 척할 때만 잠깐 0) · wild: 터키츄 앞에서 신나면 꼬리를 마음껏 · earSw: 귀를 좌우로 돌려 소리를 살핀다
   const CC = PU ? PUPU_COLLAR_C : COLLAR_C, CA = PU ? PUPU_COLLAR_AX : COLLAR_AX; // 목줄 고리 중심(y, z)·고리 면 법선 — 푸푸는 굵은 목 위쪽(턱 밑)에
   const silMat = silhouette ? new THREE.MeshStandardMaterial({ color: 0x2b201b, roughness: 0.9, emissive: 0x170f0b }) : null;
@@ -8233,3 +8239,4 @@ if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCom
   get pupu() { return PUPU; }, get NS() { return NS; }, magpieScene, magOff, magGo: () => startSpecial('magpie', magpieScene), pupuTall, pupuGuard, pupuInvite, pupuButterfly, bflyOff, poseFor, ROOM_NAMSAN, nsGround, nsInWater, nsWaterY, NS_SX, NS_SW, NS_SPOT, contact, toyOff, buildDog, COLORS };
 if (location.hostname === 'localhost') Object.assign(window.__dbg, { makeJaerong, updateDog, napPost, THREE }); // 재롱 모델 디버그
 if (location.hostname === 'localhost') Object.defineProperties(window.__dbg, Object.getOwnPropertyDescriptors({ get jaerong() { return JAERONG; }, get GW() { return GW; }, ROOM_GWACHEON, GW_MAT, GW_SIT, GW_SHU, GW_PEN, gwGround, gwZMin, jrMagpie, jrWatch, jrLake, jrSheep, jrCuddle, jrGreet, jrMat, jrRun, jrRelease, magStep, magFly, jrGo: () => startSpecial('magpie', jrMagpie), JR_TALK, jaerongTalk, momQuick, ballToWorld, aboveHead, headTop, mouthPt, noseTip, selDogs, DOGS, treat, jrTopLocal, shuNest, JR_FAR, nearSpot })); // 재롱 방 디버그 (게터는 그대로 옮긴다)
+if (location.hostname === 'localhost') Object.assign(window.__dbg, { makeAlpang }); // 알팡 모델 디버그
