@@ -728,7 +728,7 @@ const pupuFootSDF = (x, y, z) => {
   for (let i = 0; i < 4; i++) { const tx = (i - 1.5) * PUPU_TOE[0], tz = PUPU_TOE[1] + (Math.abs(i - 1.5) < 1 ? 0.005 : 0); d = smin(d, sdE(x, y, z, tx, -0.0188, tz, 0.0085, 0.0112, 0.0122), 0.005); } // 발가락: 사이의 골이 보이게 살짝만 이어 붙인다
   return Math.max(d, -0.03 - y);
 };
-// 자세: 다리가 길어 서 있을 때 몸이 높다(dy). 꼬리는 늘 등 위로 말려 있다. pz: 발 앞뒤 위치를 더한다 · 엎드려: 긴 아래팔이 바닥에 묻히지 않게 가슴을 조금 들고 앞발은 팔꿈치 쪽으로 (아래팔이 바닥에 얹힌다) · 배 보이기: 뒤집힌 정수리가 땅에 묻히지 않게 목을 조금 더 굽힌다 · 엄근진: 서도 앉아도 가슴을 살짝 펴고 꼬리를 높이 (더 꼿꼿이는 pupuTall) · 배 보이기: 목이 길어 뒤집히면 머리가 땅에 묻히므로 목을 가슴 쪽으로 굽히고(neck) 고개를 숙인다
+// 자세: 다리가 길어 서 있을 때 몸이 높다(dy). 꼬리는 늘 등 위로 말려 있다. pz: 발 앞뒤 위치를 더한다 · 엎드려: 긴 아래팔이 바닥에 묻히지 않게 가슴을 조금 들고 앞발은 팔꿈치 쪽으로 (아래팔이 바닥에 얹힌다) · 배 보이기: 뒤집힌 정수리가 땅에 묻히지 않게 목을 조금 더 굽힌다 · 듬직하게: 서도 앉아도 가슴을 살짝 펴고 꼬리를 높이 (더 의젓하게는 pupuTall) · 배 보이기: 목이 길어 뒤집히면 머리가 땅에 묻히므로 목을 가슴 쪽으로 굽히고(neck) 고개를 숙인다
 const PUPU_POSE = { stand: { dy: 0.042, pitch: -0.02, tail: 0.25, pz: [-0.006, -0.006, -0.03, -0.03], px: 1.08 }, eat: { dy: 0.042, tail: 0.3 }, sit: { dy: 0.042, pitch: -0.64, tail: 1.0 }, down: { dy: 0.02, tail: 0.3, pz: [-0.01, -0.01, 0, 0] }, side: { dy: 0.0, tail: -0.6, neck: 0.5 }, belly: { tail: 1.8, neck: 1.2, headPitch: 0.6, dy: 0.025 }, held: { tail: 0 }, curl: { tail: -1.2 }, bow: { dy: 0.042 } };
 // 푸푸만의 자세: 손(앉아서 앞발 하나를 엄마 손바닥 높이로 내민다) · 하이파이브(몸을 세우고 앞발을 높이 들어 발바닥이 앞을 본다) — 다리 길이에 맞춰 몸 높이·기울기를 잡아 디딘 앞발이 바닥에 닿는다
 const PUPU_POSES = {
@@ -814,7 +814,7 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
   const J = kind === 'jindo' && !PU, DM = !J && variant === 'dami'; // DM: 담이 (비글 변형 — 핑키는 variant 없이 그대로)
   const d = { kind, J, scale, seed, meshes: [], ears: [], eyes: [], legs: [] };
   if (DM) Object.assign(d, { dami: true, variant, hipX: 0.056 });
-  if (PU) Object.assign(d, { pupu: true, variant, hipX: 0.05, smile: 1, smileK: 1, wild: false, earSw: 0, headPts: { top: [0, 0.096, -0.01], say: [0, 0.142, -0.01], nose: [0, 0.024, 0.1035], mouth: [0, 0.002, 0.092] } }); // 푸푸: 뒷다리 뿌리는 골반 폭에 맞게 · headPts: 머리 좌표의 정수리·말풍선 자리(쫑긋 선 귀 끝 0.134 바로 위 — 말풍선이 귀를 덮지 않게)·코끝·입 앞 (킁킁·간식 자리 — 핑키·담이는 큰 머리의 예전 값 그대로) · smile: 웃는상 — 평소 얼굴은 입을 벌리고 활짝 웃는 입 (엄근진은 말투와 몸가짐으로. 경계 근무 · 놀람 · 까치 · 터키츄 앞에서 체통을 지킬 때만 잠깐 0) · wild: 터키츄 앞에서 체통을 잃으면 꼬리를 마음껏 · earSw: 귀를 좌우로 돌려 소리를 살핀다
+  if (PU) Object.assign(d, { pupu: true, variant, hipX: 0.05, smile: 1, smileK: 1, wild: false, earSw: 0, headPts: { top: [0, 0.096, -0.01], say: [0, 0.142, -0.01], nose: [0, 0.024, 0.1035], mouth: [0, 0.002, 0.092] } }); // 푸푸: 뒷다리 뿌리는 골반 폭에 맞게 · headPts: 머리 좌표의 정수리·말풍선 자리(쫑긋 선 귀 끝 0.134 바로 위 — 말풍선이 귀를 덮지 않게)·코끝·입 앞 (킁킁·간식 자리 — 핑키·담이는 큰 머리의 예전 값 그대로) · smile: 웃는상 — 평소 얼굴은 입을 벌리고 활짝 웃는 입 (가만히 산을 바라볼 때 · 놀람 · 까치 · 터키츄 앞에서 의젓한 척할 때만 잠깐 0) · wild: 터키츄 앞에서 신나면 꼬리를 마음껏 · earSw: 귀를 좌우로 돌려 소리를 살핀다
   const CC = PU ? PUPU_COLLAR_C : COLLAR_C, CA = PU ? PUPU_COLLAR_AX : COLLAR_AX; // 목줄 고리 중심(y, z)·고리 면 법선 — 푸푸는 굵은 목 위쪽(턱 밑)에
   const silMat = silhouette ? new THREE.MeshStandardMaterial({ color: 0x2b201b, roughness: 0.9, emissive: 0x170f0b }) : null;
   // 짧고 촘촘한 털: 거친 무광 바탕 + 몸 축을 따라 길게 늘어진 털결 노이즈(차콜 속에 낱낱의 회색 털) + 실루엣 가장자리만 보송하게 밝아지는 솜털(프레넬, 어두운 털에서는 약하게)
@@ -1690,7 +1690,7 @@ function updateDog(d, dt, t, camPos) {
     if (d.pupu) { // 푸푸: 쫑긋 선 귀 — 늘어지지 않고 걸음에 살짝 떨린다. earPerk(+)면 앞으로 세워 모으고, (-)면 뒤·옆으로 젖힌다
       e.cu = (e.cu || 0) + ((d.tgt.name === 'curl' ? 1 : 0) - (e.cu || 0)) * (1 - Math.exp(-3 * dt)); // 몸을 말고 잘 때도 귀를 뒤로 눕힌다
       const lay = Math.max(ss(0.5, 1.3, Math.abs(c.roll)), 0.85 * e.cu), back = ss(2.0, 2.7, Math.abs(c.roll)); // 옆으로 눕거나 배를 보이면 귀를 뒤로 눕힌다 (뿔처럼 서지 않게) · back: 배를 보이고 뒤집히면 귀가 머리 뒤로 납작하게 눌린다
-      const ep = d.earPerk >= 0 ? 0.35 + 0.65 * d.earPerk : d.earPerk; // 엄근진: 가만있어도 귀를 앞으로 바짝 세운다 (젖히는 것은 그대로)
+      const ep = d.earPerk >= 0 ? 0.35 + 0.65 * d.earPerk : d.earPerk; // 진돗개: 가만있어도 귀를 앞으로 쫑긋 세운다 (젖히는 것은 그대로)
       const tx = ep * 0.2 + d.gait * Math.sin(d.phase * 2) * 0.04 - 1.1 * lay - 0.55 * back, tz = -e.side * Math.max(0, -ep) * 0.35 + e.side * Math.max(0, ep) * 0.05 - e.side * 0.1 * lay;
       e.vx += (tx - e.ax) * 160 * dt; e.vx *= Math.exp(-10 * dt); e.ax += e.vx * dt;
       e.vz += (tz - e.az) * 160 * dt; e.vz *= Math.exp(-10 * dt); e.az += e.vz * dt;
@@ -1708,7 +1708,7 @@ function updateDog(d, dt, t, camPos) {
 
   // 꼬리
   const wk = 1 - Math.exp(-4 * dt);
-  const dg = d.pupu && !d.wild, wA = dg ? Math.min(d.wagAmpT * 0.6, 0.42) : d.wagAmpT, wS = dg ? Math.min(d.wagSpeedT * 0.6, 8.5) : d.wagSpeedT; // 푸푸: 점잖게 — 꼬리는 작고 느리게 (터키츄 앞에서 체통을 잃으면(d.wild) 마음껏)
+  const dg = d.pupu && !d.wild, wA = dg ? Math.min(d.wagAmpT * 0.85, 0.72) : d.wagAmpT, wS = dg ? Math.min(d.wagSpeedT * 0.85, 14) : d.wagSpeedT; // 푸푸: 크고 복슬한 꼬리라 조금 느긋하게 붕붕 (터키츄 앞에서 신나면(d.wild) 마음껏)
   d.wagAmp += (wA - d.wagAmp) * wk; d.wagSpeed += (wS - d.wagSpeed) * wk;
   d.wagPhase += dt * d.wagSpeed;
   d.tailLowS = (d.tailLowS || 0) + ((d.tailLow || 0) - (d.tailLowS || 0)) * (1 - Math.exp(-2.5 * dt)); // 방석 위에서는 꼬리를 느슨하게 내린다
@@ -3097,7 +3097,7 @@ function startCommand(name, fn, keepCam = false) {
   const tok = { cancelled: false, cleanups: [], name };
   active = tok; setActiveBtn(name); idleT = 5;
   resetTransient(pinky); releaseHands(); brainStart(name, tok);
-  if (pinky.pupu && name !== 'roam' && name !== 'touch') fadeBubbles(); // 푸푸: 엄마가 단추를 누르면 인사말(엄마, 오셨습니까.) 같은 지난 말풍선은 걷힌다 (츄츄츄~와 겹치지 않게)
+  if (pinky.pupu && name !== 'roam' && name !== 'touch') fadeBubbles(); // 푸푸: 엄마가 단추를 누르면 인사말(엄마 왔다! 헤헤) 같은 지난 말풍선은 걷힌다 (츄츄츄~와 겹치지 않게)
   if (pinky.tgt.name === 'held' || pinky.tgt.name === 'eat') setPose(pinky, 'stand', 5);
   let run = fn;
   if (!['touch', 'cushion'].includes(name)) pinky.napEnd = 0;
@@ -3140,7 +3140,7 @@ async function comeHere(tok, speed = 0.75) {
   pinky.face = 'cam'; pinky.walkSpeed = 0.5;
 }
 function happy(on) {
-  if (pinky.pupu) return void Object.assign(pinky, on ? { eyeOpen: 0.62, earPerk: -0.2, wagAmpT: 0.55, wagSpeedT: 9, pant: false, tiltT: 0.06 } : { eyeOpen: 1, earPerk: 0, wagAmpT: 0.3, wagSpeedT: 6, pant: false, tiltT: 0, paddle: 0 }); // 푸푸: 좋아도 점잖게 — 헥헥대지 않고 눈만 살짝 가늘게 (입은 늘 웃는상 그대로)
+  if (pinky.pupu) return void Object.assign(pinky, on ? { eyeOpen: 0.55, earPerk: -0.3, wagAmpT: 0.9, wagSpeedT: 15, pant: false, tiltT: 0.12 } : { eyeOpen: 1, earPerk: 0, wagAmpT: 0.4, wagSpeedT: 8, pant: false, tiltT: 0, paddle: 0 }); // 푸푸: 좋으면 눈을 가늘게 뜨고 귀를 눕히고 꼬리를 붕붕 (입은 늘 활짝 웃는상 그대로 — 헥헥대지는 않는다)
   if (on) Object.assign(pinky, { eyeOpen: 0.28, earPerk: -0.6, wagAmpT: 0.75, wagSpeedT: 15, pant: true, tiltT: 0.2 });
   else Object.assign(pinky, { eyeOpen: 1, earPerk: 0, wagAmpT: 0.4, wagSpeedT: 8, pant: false, tiltT: 0, paddle: 0 });
 }
@@ -3239,7 +3239,7 @@ const CMDS = {
   async sit(tok) { await nearFirst(tok); if (deafOK(tok)) await playDeaf(tok); await sitCommand(tok); }, // 정면(대개) 또는 옆으로 앉는다
   async down(tok) {
     await nearFirst(tok);
-    if (pinky.pupu) return pupuDown(tok); // 푸푸: 옙! 하고 곧바로
+    if (pinky.pupu) return pupuDown(tok); // 푸푸: 곧바로 (엎드렸다~)
     setPose(pinky, 'down', 4);
     pinky.wagAmpT = 0.25; pinky.wagSpeedT = 5;
     await wait(tok, 1.4);
@@ -3813,7 +3813,7 @@ async function sitAs(tok, view = 'front', rate = 6) {
 }
 let sitCount = 0, lastSit = '';
 async function sitCommand(tok) {
-  if (pinky.pupu) return pupuSit(tok); // 푸푸: 옙! 하고 곧바로 꼿꼿이
+  if (pinky.pupu) return pupuSit(tok); // 푸푸: 곧바로 얌전히 (앉았다~)
   const was = pinky.tgt.name === 'sit' ? (Math.abs(pinky.tgt.yawOff) > 0.8 ? 'side' : 'front') : null;
   // 웬만하면 마주 보고 앉는다. 옆으로 앉기는 가끔만(연달아 두 번은 없다) — 옆으로 앉아 있을 때 또 부르면 마주 보고 고쳐 앉는다
   const view = sitCount === 0 || was === 'side' || lastSit === 'side' ? 'front' : Math.random() < (was === 'front' ? 0.3 : 0.25) ? 'side' : 'front';
@@ -4499,13 +4499,13 @@ const nearSpot = () => { const dx = CAM_POS.x - HOME.x, dz = CAM_POS.z - HOME.z,
 const MOM_LINES = { entry: '왔어? ♥', tab: '왔다 왔다! ♥', quiet: '놀아줘 ♥' };
 const mouthBusy = () => pinky.chew || pinky.lick > 0 || toy.chew > 0 || toy.lap > 0 || toy.shake > 0 || ball.state === 'mouth' || pinky.jawOpen > 0.05 || (active && ['treat', 'feed', 'play'].includes(active.name));
 function momQuick() { // 다른 걸 하는 중이면 알아보기만 한다: 말풍선 + 작은 소리 (입에 뭘 물고 있으면 짖지 않는다)
-  const busy = mouthBusy(); brain.lastMom = clock; bubble(pinky.pupu && busy ? '흠.' : '엄마다!', headTop, '', 1.5); snd('phrase', 'mom', { mode: busy ? 'busy' : 'quick' }); // 푸푸: 엄마다! → 월! (낮게 한 번) · 입에 뭘 물고 있으면 흠. (콧소리)
+  const busy = mouthBusy(); brain.lastMom = clock; bubble(pinky.pupu && busy ? '음음!' : '엄마다!', headTop, '', 1.5); snd('phrase', 'mom', { mode: busy ? 'busy' : 'quick' }); // 푸푸: 엄마다! → 월! (낮게 한 번) · 입에 뭘 물고 있으면 음음! (입을 다문 채 반가운 콧소리)
   if (pinky.pupu && !busy) { const jo = (pinky.jawOpen = 0.52); wait(null, 0.15).then(() => { if (pinky.jawOpen === jo) pinky.jawOpen = 0; }); } // 푸푸: 월! 할 때 입을 한 번 벌렸다 닫는다 (그동안 웃던 입은 비켜선다)
   pinky.wagAmpT = Math.max(pinky.wagAmpT, 0.8); pinky.wagSpeedT = Math.max(pinky.wagSpeedT, 16); mark('mom:quick');
 }
 async function momGreet(tok, why = 'entry') {
   brain.lastMom = clock; brain.d.attach = Math.max(0, brain.d.attach - 0.5); mark('mom:' + why);
-  if (pinky.pupu) return pupuGreet(tok, why); // 푸푸: 꼿꼿이 와서 충성!
+  if (pinky.pupu) return pupuGreet(tok, why); // 푸푸: 꼬리를 붕붕 흔들며 달려와 엎드려 뻗기 · 엄마 왔다! 헤헤
   let slow = false;
   if (pinky.tgt.name === 'curl' || pinky.curlK > 0.3) { slow = true; mark('mom:woke'); await wakeUp(tok, 'mom'); brain.d.rest = Math.min(brain.d.rest, 0.5); } // 자다가도 엄마가 오면 일어난다 (응…? → 천천히 일어나서)
   setPose(pinky, 'stand', 7); pinky.sniff = 0; pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.tgt.headPitch = -0.12; pinky.face = 'cam';
@@ -5961,6 +5961,15 @@ function buildNamsan() {
     g.visible = false; G.add(g);
     return { g, body, head, jaw, tail, legs, wings, on: false, p: V3(), yaw: 0, pitch: -0.5, fold: 1, ph: 0, hy: 0, hop: null, peck: null, callT: -9, fly: null, watch: null };
   })();
+  // ---------- 나비 (푸푸가 혼자 놀 때 가끔 냇가 풀숲에서 날아온다 · 평소에는 숨겨 둔다): 샛노랑 앞날개 · 뒷날개, 날개 끝의 작은 갈색 점, 가는 검은 몸
+  NS.bfly = (() => {
+    const g = new THREE.Group(), wings = [], wm = M(0xffd84a, { roughness: 0.55, emissive: 0xffc83c, emissiveIntensity: 0.42 }), dot = M(0x4a3a22, { roughness: 0.6 }), bm = M(0x26221e, { roughness: 0.5 });
+    add(g, SPH, bm, [0, 0, 0], null, [0.0035, 0.0035, 0.016]); // 몸
+    for (const sd of [-1, 1]) { const w = new THREE.Group(); g.add(w); add(w, SPH, wm, [sd * 0.018, 0, 0.006], [0, sd * 0.35, 0], [0.018, 0.0012, 0.013]); add(w, SPH, wm, [sd * 0.013, 0, -0.011], [0, -sd * 0.3, 0], [0.012, 0.0012, 0.0095]); add(w, SPH, dot, [sd * 0.03, 0.0005, 0.011], null, [0.0035, 0.0013, 0.0035]); wings.push({ g: w, sd }); } // 앞날개 · 뒷날개 · 날개 끝 점 (몸 축을 따라 접었다 편다)
+    g.rotation.order = 'YXZ'; g.scale.setScalar(1.8); g.traverse((o) => { if (o.isMesh) o.castShadow = false; }); // 조금 크게 (날 때는 bflyStep이 1.3배 더 키운다 — 멀리서도 노랗게 보이게) · 고개를 돌린 다음 숙인다 (YXZ) · 그늘에서도 탁해지지 않게 날개가 스스로 조금 빛난다
+    g.visible = false; G.add(g);
+    return { g, wings, on: false, p: V3(), v: V3(), ph: 0, yaw: 0, to: null, perch: null, perchYaw: null, away: 0 };
+  })();
   // ---------- 푸푸 (이 방의 강아지)
   PUPU = makePupu(); Object.assign(PUPU, { route, routeSee: navSee, collide, speedK: 1.3, talk: pupuTalk, camK: 1.65 }); PUPU.root.visible = false; roomScene.add(PUPU.root); fitCurl(PUPU); // 1.25배 큰 몸: 보폭이 긴 만큼 조금 더 빨리 걷고(발 박자는 d.scale이 맞춘다) · 엄마는 더 물러나 앉아 본다(camK)
   // 매 프레임(푸푸를 움직이기 전): 땅 높이를 따라 걷는다 (물에 들어가면 냇바닥까지 내려간다)
@@ -5974,7 +5983,7 @@ function buildNamsan() {
 }
 const _v1n = V3();
 const ROOM_NAMSAN = {
-  id: 'namsan', built: false, name: '푸푸', place: '남산 산책길', hint: '늠름한 푸푸도 손길은 좋아해요 · 화면을 끌어서 둘러보기', navLabel: '푸푸랑 하기',
+  id: 'namsan', built: false, name: '푸푸', place: '남산 산책길', hint: '듬직한 푸푸는 엄마 손길을 제일 좋아해요 · 화면을 끌어서 둘러보기', navLabel: '푸푸랑 하기',
   navIn: (x, z) => z >= -3.301 && z <= 2.351 && x >= -1.451 && x <= NS_SX(z) + NS_SW(z) - 0.159, // 길 · 길과 냇물 사이 둑 · 냇물 속 (건너편 둑과 언덕은 아니다)
   clamp(d) { d.z = clamp(d.z, -3.3, 2.35); d.x = clamp(d.x, -1.45, NS_SX(d.z) + NS_SW(d.z) - 0.16); },
   ball: [-1.6, 2.3, -3.5, 2.6],
@@ -5987,25 +5996,26 @@ const ROOM_NAMSAN = {
   entry: [[0.8, -0.75, 1.35, -1.35], [-0.9, -0.6, -1.7, -1.1], [0.15, -1.6, 0.4, -2.6]],
   wander: [-1.2, -0.7, 1.5, 1.7],
   off: { play: true, feed: true, cushion: true, worm: true, zoom: true, dig: true }, actW: { nap: 0, bowl: 0, left: 0 }, noBowl: true,
-  lines: { gifts: ['물가, 이상 무.', '킁. 개구리 흔적.', '바위 주변 확인.'], table: ['벤치 밑, 이상 무.', '낯선 개 냄새. 기억하겠습니다.', '흔적 없음.'], window: ['물소리, 이상 무.', '바람이 시원합니다.', '물고기 발견. 보고합니다.'], tableSniff: '수색 완료.', mid: ['붓꽃입니다.', '풀숲, 이상 무.', '킁. 다람쥐 흔적.'] }, // 푸푸: 짧은 다나까 보고 (이상 무 → 소리: 낮은 콧김)
+  lines: { gifts: ['개구리 냄새다!', '바위 밑에 누구 있어?', '물 냄새 좋다~'], table: ['벤치 밑엔 아무것도 없네~', '새 친구 냄새다!', '누가 과자 먹었지?'], window: ['물소리 좋다~', '바람 시원하다!', '어! 물고기다!'], tableSniff: '여긴 없네~', mid: ['붓꽃 냄새 좋다~', '다람쥐 지나갔다!', '음~ 풀 냄새 좋다'] }, // 푸푸: 냄새 맡고 신나서 한마디 (좋다 · 시원하다 → 소리: 낮은 음~)
   sniffMid: { x: 0.8, z: 1.05, fx: 1.12, fz: 1.25 }, // 냄새 맡기 가운데 들르는 곳: 물가의 붓꽃
-  acts: (cd, d) => ({ water: (1.0 + 0.9 * d.play) * cd('water', 70), guard: 1.3 * cd('guard', 50) }), // 혼자 놀 때도 가끔 냇물에 들어가 물을 마시고 첨벙 · 엄마 앞에서 경계 근무
-  roamActs: (tok) => ({ water: () => pupuSplash(tok, true), guard: () => pupuGuard(tok) }),
+  acts: (cd, d) => ({ water: (1.0 + 0.9 * d.play) * cd('water', 70), guard: 0.45 * cd('guard', 120), invite: (0.35 + 0.5 * d.play) * cd('invite', 90), bfly: 0.6 * cd('bfly', 100) }), // 혼자 놀 때도 가끔 냇물에 들어가 물을 마시고 첨벙 · 가끔 길가에 앉아 산과 엄마를 바라본다 · 엄마 앞에서 엎드려 뻗기(놀자!) · 나비 쫓기
+  roamActs: (tok) => ({ water: () => pupuSplash(tok, true), guard: () => pupuGuard(tok), invite: () => pupuInvite(tok), bfly: () => pupuButterfly(tok) }),
   picks: { treat: [['turkey', '🦴', '터키츄']], play: [['ball', '🎾', '공']] }, labels: { treat: '터키츄' }, // 간식은 터키츄 하나 (단추를 누르면 바로)
   treat: (tok) => pupuTreat(tok), post: (d, dt, t) => pupuPost(d, dt, t),
   bg: new THREE.Color(0xdde8e0), fog: new THREE.Fog(0xd6e3d6, 16, 54), env: null,
   sound: { surf: nsSurf, cush: [99, 99, 0.3], bowl: [99, 99], tail: { gap: 0.3, gain: -4 }, voice: 'pupu', brook: null, brookGain: -2 },
 };
-// 푸푸 말투: 엄근진(엄격·근엄·진지) 용맹한 진돗개 — 짧은 다나까체 (군견처럼 '충성!' · '이상 무!'), 엄마에게만은 따뜻하게. 핑키의 나긋한 말을 푸푸답게 바꾼다
-// 소리는 바뀐 말에 맞춰 난다 (say → sound.onSay): 월 · 그르르 · 충성 · 이상 무 · 흠… · 끄응
+// 푸푸 말투: 듬직하고 다정한 큰언니 진돗개 — 쉽고 밝은 반말, 엄마를 지킬 때만 용감하게 '월월!'. 조금 엉뚱하고 잘 웃는다 ('헤헤'는 엉뚱한 순간에만 아껴 쓴다 · 제 자랑보다 엄마 걱정)
+// (핑키의 나긋한 '…'와도, 담이의 센 척 · 담과장 말투와도 다르게: 크고 느긋하고 잘 웃는 언니). 핑키의 말을 푸푸답게 바꾼다
+// 소리는 바뀐 말에 맞춰 난다 (say → sound.onSay → pupuSay): 월 · 그르르 · 끄응 · 헤헤(음~) · 놀자(낮은 웝) · 웃음(웝웝)
 const PUPU_TALK = {
-  '왔어? ♥': '엄마, 오셨습니까.', '왔다 왔다! ♥': '엄마, 오셨습니까!', '놀아줘 ♥': '엄마. 대기 중이었습니다.', '엄마다!': '월!', '엄마~ ♥': '엄마 곁이 제 자리입니다.',
-  '좋아…': '흠… 좋습니다.', '더 해줘…': '…더 하셔도 됩니다.', '포근해…': '…포근합니다.', '…하나 더?': '…하나 더 있습니까?', '…더 없어?': '더 없습니까?', '간식 있어?': '간식은 있습니까?',
-  '심심해…': '엄마, 산책 가시겠습니까?', '뭐 해?': '무엇을 하십니까?', '놀자?': '명령을 기다립니다.', '후우…': '흠.', '뒹굴': '…명령이시라면.', '뒹굴뒹굴': '뒹굴뒹굴.',
-  '찾았다!': '발견했습니다!', '헤헤, 주웠다': '확보했습니다.', '맛있다!': '…맛있습니다.', '횡재했다!': '흠. 횡재입니다.', '더 없나…': '더는 없습니다.', '응…?': '…옙?',
-  '…이따 주겠지': '…기다리겠습니다.', '안 들려~': '…', '후우… 알았어': '옙.', '재밌었다…': '훌륭했습니다.', '잘 잤다…': '기상 완료.', '배불러…': '배부릅니다.', '다 먹었다!': '다 먹었습니다.',
+  '왔어? ♥': '엄마 왔다! ♥', '왔다 왔다! ♥': '엄마, 반가워! ♥', '놀아줘 ♥': '엄마, 같이 놀자! ♥', '엄마다!': '월!', '엄마~ ♥': '엄마 옆이 제일 좋아 ♥',
+  '좋아…': '아~ 좋다~', '더 해줘…': '거기 거기, 시원하다~', '포근해…': '엄마 품 따뜻하다~', '…하나 더?': '하나 더 있지?', '…더 없어?': '더 없어~?', '간식 있어?': '엄마, 간식 있어?',
+  '심심해…': '엄마, 산책 가자!', '뭐 해?': '엄마 뭐 해?', '놀자?': '놀자, 놀자!', '후우…': '후우~ 편하다', '뒹굴': '뒹굴!', '뒹굴뒹굴': '뒹굴뒹굴~ 헤헤',
+  '찾았다!': '찾았다~!', '헤헤, 주웠다': '냠! 맛있는 거다~', '맛있다!': '맛있다~!', '횡재했다!': '오늘 운 좋다!', '더 없나…': '더 없나? 킁킁',
+  '…이따 주겠지': '이따 주겠지~?', '후우… 알았어': '알았어!', '재밌었다…': '재밌었다! 또 하자!', '잘 잤다…': '잘 잤다~!', '배불러…': '배부르다~', '다 먹었다!': '깨끗이 다 먹었다!',
 };
-function pupuTalk(s) { return PUPU_TALK[s] ?? (/\s.*[가-힣]…$/.test(s) ? s.slice(0, -1) + '.' : s); } // 나머지 '…'로 끝나는 문장은 마침표로 딱 끊는다 (그르르… · 끙… 같은 소리 말은 그대로)
+function pupuTalk(s) { return PUPU_TALK[s] ?? (/\s.*[가-힣]…$/.test(s) ? s.slice(0, -1) + '~' : s); } // 나머지 '…'로 끝나는 문장은 느긋하게 '~'로 맺는다 (그르르… · 끙… 같은 소리 말은 그대로)
 // ---------- 물방울 · 물결
 function nsDrop(p, v, col = 0xeaf6ff, s = 0.008) { const L = NS.drops; if (L.length >= NS.dropN) L.shift(); L.push({ p, v, age: 0, s, c: col }); }
 function nsRing(x, z, size = 0.12, life = 1.1) { const r = NS.rings[NS.ringI++ % NS.rings.length]; Object.assign(r.userData, { age: 0, life, size }); r.position.set(x, nsWaterY(z) + 0.003, z); r.visible = true; r.scale.setScalar(0.001); }
@@ -6015,14 +6025,14 @@ function nsSplash(p, n = 16, power = 1) { // 물보라: 물방울이 사방으�
   nsRing(p.x, p.z, 0.17 * power, 1.25); nsRing(p.x, p.z, 0.09 * power, 0.8);
   const f = NS.puffs[(NS.puffI = ((NS.puffI || 0) + 1) % NS.puffs.length)]; f.visible = true; f.position.set(p.x, y + 0.03, p.z); Object.assign(f.userData, { age: 0, y0: y + 0.03, k: power });
 }
-// 다른 명령이 끼어들 때: 터키츄 · 봉투는 치우고, 치우지 못한 볼일도 엄마가 얼른 치운다
+// 다른 놀이(단추)가 끼어들 때: 터키츄 · 봉투는 치우고, 치우지 못한 볼일도 엄마가 얼른 치운다
 function pupuRelease() {
   if (!NS) return;
   NS.turkey.hide(); NS.bag.visible = false; if (NS.bag.parent) NS.bag.parent.remove(NS.bag); NS.poop.visible = false;
-  if (PUPU) { PUPU.pawUp = null; PUPU.kick = 0; PUPU.smile = 1; PUPU.tongueOut = 0; PUPU.wild = false; PUPU.earSw = 0; } NS.lapOn = false; // 다시 평소의 웃는상으로 · 체통을 되찾는다
-  magOff(); // 까치도 날아가고 없다
+  if (PUPU) { PUPU.pawUp = null; PUPU.kick = 0; PUPU.smile = 1; PUPU.tongueOut = 0; PUPU.wild = false; PUPU.earSw = 0; PUPU.wig = 0; } NS.lapOn = false; // 다시 평소의 웃는상으로 · 엉덩이 실룩도 멈춘다
+  magOff(); bflyOff(); // 까치도 나비도 날아가고 없다
 }
-function pupuEnter() { pinky.pawUp = null; pinky.kick = 0; pinky.smile = 1; pinky.tongueOut = 0; pinky.wild = false; pinky.earSw = 0; magOff(); NS.magAt = clock + 45 + Math.random() * 25; NS.lapOn = false; NS.drops.length = 0; for (const r of NS.rings) r.visible = false; for (const f of NS.puffs) f.visible = false; }
+function pupuEnter() { pinky.pawUp = null; pinky.kick = 0; pinky.smile = 1; pinky.tongueOut = 0; pinky.wild = false; pinky.earSw = 0; pinky.wig = 0; magOff(); bflyOff(); NS.magAt = clock + 45 + Math.random() * 25; NS.lapOn = false; NS.drops.length = 0; for (const r of NS.rings) r.visible = false; for (const f of NS.puffs) f.visible = false; }
 // 자세 숫자(poseFor의 발 · 몸 기준 좌표)로 잡은 점을 월드로: d.root는 크기를 모르므로(몸은 그 밑의 sc가 키운다) 푸푸의 크기(1.25배)를 곱해서 옮긴다
 const poseW = (x, y, z) => { const s = pinky.scale; return rootW(x * s, y * s, z * s); };
 // 엄마 시점: 겨냥점(a)은 그대로 두고 k배 물러나 본다 (몸이 큰 푸푸가 화면 밖으로 잘리지 않게)
@@ -6035,7 +6045,7 @@ function pupuPost(d, dt, t) {
   const lap = toy.lap > 0 && toy.lapKind === 'water';
   if (lap) { d.smile = 0; d.tongueOut = 0.5 + 0.5 * Math.sin(t * 20 + 0.8); NS.lapOn = true; } // 물을 마실 때: 혀를 날름날름 (턱은 toy.lap이 움직인다)
   else if (NS.lapOn) { NS.lapOn = false; d.tongueOut = 0; d.smile = 1; } // 다 마시면 다시 웃는상
-  magStep(dt, t); // 까치
+  magStep(dt, t); bflyStep(dt, t); // 까치 · 나비
   if (NS.magAt && clock > NS.magAt && mode === 'room' && !transitioning) { // 까치가 날아온다: 혼자 놀고 있을 때만 (명령 중이거나 엄마가 화면을 끌고 있으면 조금 있다가)
     if (idleNow() && awakeUp() && !drag && !touch.active) { NS.magAt = clock + 150 + Math.random() * 90; startSpecial('magpie', magpieScene); } else NS.magAt = clock + 15;
   }
@@ -6071,7 +6081,7 @@ function pupuPost(d, dt, t) {
   NS.spk.material.uniforms.uT.value = t; NS.spk.material.uniforms.uK.value = (innerHeight * renderer.getPixelRatio()) / (2 * Math.tan((roomCam.fov * Math.PI) / 360));
   if (NS.bag.visible && NS.bag.parent === handR.rig.inner && !handR.vis) { NS.bag.visible = false; handR.rig.inner.remove(NS.bag); } // 손이 물러나면 봉투도
 }
-// ---------- 손: 엄마가 손바닥을 펴고 "손!" 하면 옙! — 망설임 없이 앞발을 척 올려놓는다 (누를 때마다 오른발 · 왼발 번갈아) · 끝나면 꼿꼿이 충성!
+// ---------- 손: 엄마가 손바닥을 펴고 "손!" 하면 "여기, 손!" — 망설임 없이 앞발을 척 올려놓는다 (누를 때마다 오른발 · 왼발 번갈아) · 끝나면 꼬리를 붕붕, 자, 악수~
 let pawSide = 1;
 async function pupuPaw(tok) {
   await comeHere(tok, 0.8);
@@ -6086,7 +6096,7 @@ async function pupuPaw(tok) {
   await wait(tok, 0.6);
   bubble('손!', () => handR.pos.clone().add(V3(0, 0.1, 0)), 'soft', 1.5, 0); // 엄마의 말 (손 위에)
   pinky.lookFn = () => handR.pos; pinky.earPerk = 1; pinky.tiltT = 0;
-  await wait(tok, 0.3); say('옙!', headTop, 'small', 0.9); await wait(tok, 0.15);
+  await wait(tok, 0.3); say('여기, 손!', headTop, 'small', 0.9); await wait(tok, 0.15);
   pinky.pawUp = { i, k: 0, ...UPK };
   await tween(tok, 0.24, (k) => { pinky.pawUp.k = ease(k); }); // 곧바로 척
   say('척!', headTop, 'small', 1.0); snd('sfx', 'pat', { gain: 6, force: 1, why: 'paw on palm' });
@@ -6094,9 +6104,9 @@ async function pupuPaw(tok) {
   await tween(tok, 1.0, (k) => { bob = 0.016 * Math.sin(k * Math.PI * 4); }); bob = 0; // 악수하듯 손이 앞발을 받친 채 위아래로 두 번
   heart(); await wait(tok, 0.7);
   await tween(tok, 0.22, (k) => { pinky.pawUp.k = 1 - ease(k); });
-  pinky.pawUp = null; handR.want = null; pupuTall(); await wait(tok, 0.3);
-  say('충성!', headTop, '', 1.4); // 소리: 낮고 짧게 웝
-  await wait(tok, 1.6); pinky.earPerk = 0; camHome();
+  pinky.pawUp = null; handR.want = null; pupuTall(); pinky.wagAmpT = 0.9; pinky.wagSpeedT = 15; await wait(tok, 0.3);
+  say(rot('pawEnd', ['자, 악수~', '악수! 엄마 손 따뜻하다~']), headTop, 'soft', 1.5); // 소리: 낮게 음~
+  await wait(tok, 1.6); pinky.earPerk = 0; pinky.wagAmpT = 0.4; pinky.wagSpeedT = 8; camHome();
 }
 // ---------- 하이파이브: 엄마가 손을 높이 들면 몸을 세우고 앞발을 머리 높이까지 번쩍 들어 짝! (두 번: 오른발 · 왼발)
 const mirrorFront = (T) => { const a = T.paws[0].clone(), b = T.paws[1].clone(); T.paws[0].set(-b.x, b.y, b.z); T.paws[1].set(-a.x, a.y, a.z); [T.lean[0], T.lean[1]] = [T.lean[1], T.lean[0]]; [T.abd[0], T.abd[1]] = [T.abd[1], T.abd[0]]; T.headTilt = -T.headTilt; }; // 앞발 자세를 좌우로 뒤집는다
@@ -6113,7 +6123,7 @@ async function pupuHigh5(tok) {
     let reach = 0;
     handR.want = { pos: () => (reach > 0 ? live() : tgtPt()).addScaledVector(toCamDir(), (0.2 - 0.16 * reach) * pinky.scale), up: () => toCamDir(), curl: 0.04, rate: 6 }; // 손바닥이 푸푸 쪽을 본다 (푸푸 머리 높이)
     await wait(tok, 0.5);
-    if (n === 0) say('옙! 준비 완료.', headTop, 'soft', 1.4);
+    if (n === 0) say('하이파이브? 좋아!', headTop, 'soft', 1.4);
     pinky.lookFn = () => handR.pos; pinky.earPerk = 1; pinky.wagAmpT = 0.8; pinky.wagSpeedT = 16;
     await wait(tok, 0.6);
     setPose(pinky, 'high5', 6); if (i === 1) mirrorFront(pinky.tgt); // 가슴을 펴고 앞발을 번쩍
@@ -6125,16 +6135,16 @@ async function pupuHigh5(tok) {
     await wait(tok, 0.3);
     sitFront(6); handR.want = null; pinky.lookFn = null;
     await wait(tok, 0.6);
-    if (n === 0) { pupuTall(); say('한 번 더 하겠습니다!', headTop, 'soft', 1.4); await wait(tok, 0.9); }
+    if (n === 0) { pupuTall(); say('한 번 더!', headTop, 'soft', 1.4); await wait(tok, 0.9); }
   }
-  happy(true); pupuTall(); say(rot('h5', ['훌륭합니다.', '임무 완수.', '흠. 호흡이 좋습니다.']), headTop, 'soft', 1.8); heart(); await wait(tok, 1.9); happy(false); camHome();
+  happy(true); pupuTall(); say(rot('h5', ['우리 최고!', '신난다~!', '엄마랑 푸푸랑 최고!']), headTop, 'soft', 1.8); pHeart(); await wait(tok, 1.9); happy(false); camHome();
 }
-// ---------- 물장구: 냇물에 들어가 앞발로 물을 탁탁 쳐 첨벙 · 코를 물에 퐁 · 할짝할짝 물을 마시고 · 물가로 나와 부르르
+// ---------- 물장구: "물이다!" 신나서 냇물에 들어가 앞발로 물을 탁탁 쳐 첨벙 · 코를 물에 퐁 · 할짝할짝 물을 마시고 · 물가로 나와 부르르 · 헤헤, 시원하다~
 async function pupuSplash(tok, solo = false) {
   const B = NS_SPOT.bank, W = NS_SPOT.wade, ph = phoneK(), waterAt = (x, z) => V3(x, nsWaterY(z), z);
   toy.tok = tok; tok.cleanups.push(() => { pinky.pawUp = null; toyOff(); });
   setPose(pinky, 'stand', 6); pinky.sniff = 0; pinky.lookFn = () => waterAt(W.x, W.z); pinky.earPerk = 1; pinky.wagAmpT = 0.8; pinky.wagSpeedT = 16;
-  if (!solo) say('도하 개시!', headTop, 'soft', 1.4);
+  if (!solo) say('물이다~!', headTop, 'soft', 1.4);
   await wait(tok, solo ? 0.3 : 0.6);
   pinky.walkSpeed = solo ? 0.7 : 1.0;
   if (Math.hypot(pinky.x - B.x, pinky.z - B.z) > 0.1) await walkTo(tok, B.x, B.z);
@@ -6175,13 +6185,13 @@ async function pupuSplash(tok, solo = false) {
   await wait(tok, solo ? 2.0 : 2.4); bubble('꼴깍', headTop, 'small', 0.9, -60); await wait(tok, 0.9);
   toy.lap = 0; pinky.lick = 1; await wait(tok, 0.55); pinky.lick = 0;
   setPose(pinky, 'stand', 5); pinky.tgt.yawOff = 0;
-  if (!solo) { bankCam(); pinky.face = 'cam'; pinky.tiltT = 0.2; say('수질 양호.', headTop, 'soft', 1.6); await wait(tok, 1.3); pinky.tiltT = 0; }
+  if (!solo) { bankCam(); pinky.face = 'cam'; pinky.tiltT = 0.2; pinky.wagAmpT = 0.9; pinky.wagSpeedT = 15; say('시원하다~!', headTop, 'soft', 1.6); await wait(tok, 1.3); pinky.tiltT = 0; }
   // 물가로 나와 부르르
   pinky.walkSpeed = 0.6; await walkTo(tok, B.x, B.z); pinky.walkSpeed = 0.5;
   await pupuShake(tok);
   if (solo) return;
   camHome(); await comeHere(tok, 0.85); sitFront(6);
-  happy(true); pupuTall(); say(rot('splash', ['이상 무!', '도하 완료. 이상 무!', '흠. 시원했습니다.']), headTop, 'soft', 1.8); heart();
+  happy(true); pupuTall(); say(rot('splash', ['헤헤, 시원하다~', '물놀이 최고!', '엄마도 들어올래?']), headTop, 'soft', 1.8); pHeart();
   await wait(tok, 1.9); happy(false);
 }
 async function pupuShake(tok) { // 부르르: 털에서 물방울이 사방으로
@@ -6203,7 +6213,7 @@ async function pupuPoop(tok) {
   await walkTo(tok, S.x - 0.04, S.z + 0.42);
   say('킁킁', noseTip); pinky.walkSpeed = 0.3;
   await walkTo(tok, S.x + 0.07, S.z + 0.1); say('킁킁', noseTip); await walkTo(tok, S.x, S.z);
-  pinky.sniff = 0; pinky.face = { x: S.x, z: S.z - 1.2 }; say('…실례하겠습니다.', headTop, 'soft', 1.5, 60); await wait(tok, 0.9); // 길을 따라 선 옆모습
+  pinky.sniff = 0; pinky.face = { x: S.x, z: S.z - 1.2 }; say('잠깐만~ 보지 마!', headTop, 'soft', 1.5, 60); await wait(tok, 0.9); // 길을 따라 선 옆모습 · 조금 부끄럽다
   pupuSquat(pinky); pinky.face = null;
   pinky.lookFn = () => V3(pinky.x + 1.3, 0.3, pinky.z - 0.5); pinky.earPerk = -0.4; pinky.eyeOpen = 0.55; pinky.wagAmpT = 0.04; // 부끄러워 엄마 반대쪽(냇물)을 본다
   await wait(tok, 1.0); say('끙…', headTop, 'small', 1.4, 50);
@@ -6212,14 +6222,14 @@ async function pupuPoop(tok) {
     NS.poop.position.set(p.x, nsGround(p.x, p.z) - 0.002, p.z); NS.poop.rotation.y = Math.random() * 6; NS.poop.visible = true; NS.poop.scale.setScalar(0.01); }
   await tween(tok, 0.4, (q) => { NS.poop.scale.setScalar(Math.max(0.01, ease(q) * k)); });
   await wait(tok, 0.4);
-  setPose(pinky, 'stand', 4); pinky.eyeOpen = 1; pinky.earPerk = 0.4; pinky.lookFn = null; pinky.tgt.gaze = 0.6; say('휴.', headTop, 'soft', 1.2);
+  setPose(pinky, 'stand', 4); pinky.eyeOpen = 1; pinky.earPerk = 0.4; pinky.lookFn = null; pinky.tgt.gaze = 0.6; say('휴~', headTop, 'soft', 1.2);
   await wait(tok, 0.7);
-  // 한 걸음 나가서 뒷발로 풀을 슥슥 — 꼬리를 높이, 가슴을 펴고 뿌듯하게
+  // 한 걸음 나가서 뒷발로 풀을 슥슥 — 꼬리를 높이, 가슴을 펴고 뿌듯하게 (깔끔하게 끝!)
   { const q = { x: pinky.x + Math.sin(pinky.yaw) * 0.3 * k, z: pinky.z + Math.cos(pinky.yaw) * 0.3 * k }; collide(q); pinky.walkSpeed = 0.35; await walkTo(tok, q.x, q.z); pinky.walkSpeed = 0.5; }
   const st = poseFor('stand', pinky);
   Object.assign(pinky.tgt, { headPitch: -0.28, gaze: 0.3, tail: st.tail + 0.2, pitch: st.pitch + 0.07 }); pinky.wagAmpT = 0.6; pinky.wagSpeedT = 14; pinky.earPerk = 0.6;
   pinky.kick = 1; say('슥슥!', headTop, '', 1.0, -70); await wait(tok, 0.8); say('슥슥!', headTop, '', 1.0, 70); await wait(tok, 0.8);
-  pinky.kick = 0; say('흔적 제거 완료.', headTop, 'soft', 1.5); await wait(tok, 0.6);
+  pinky.kick = 0; say('깔끔하게 끝!', headTop, 'soft', 1.5); await wait(tok, 0.6);
   // 엄마 손이 봉투로 쏙 집어서 들어 올린다
   const P = NS.poop.position.clone(); let dip = 0.24, lift = 0;
   camTo(P.clone().add(phone ? V3(-0.75, 1.05, 1.3) : V3(-0.55, 0.82, 0.95)), P.clone().add(V3(0.03, phone ? 0.3 : 0.42, -0.3)), 2.4); await wait(tok, 0.5); // 엄마가 볼일 뒤(길 쪽)에서 허리를 숙여 다가간다: 볼일이 앞 가운데, 한 걸음 앞에 나가 있던 큰 푸푸가 그 너머에서 돌아서 지켜본다 (엄마 손이 볼일에 닿는 거리) // 엄마가 허리를 숙여 다가간다 (볼일이 가운데 · 그 너머로 푸푸가 지켜본다)
@@ -6234,17 +6244,17 @@ async function pupuPoop(tok) {
   await tween(tok, 0.6, (k) => { lift = ease(k); }); // 봉투를 묶어 번쩍
   handR.want.rate = 6; await wait(tok, 0.2);
   bubble('똥츄 완료!', headTop, 'soft', 2.0, -70); // 엄마의 말 (푸푸 머리 옆)
-  pinky.wagAmpT = 0.85; pinky.wagSpeedT = 16; pinky.tgt.headPitch = -0.1; await wait(tok, 1.1);
+  pinky.wagAmpT = 0.95; pinky.wagSpeedT = 17; pinky.tgt.headPitch = -0.1; await wait(tok, 1.1);
   handR.want = null; pinky.lookFn = null;
   fadeBubbles(0.3); await wait(tok, 0.25); // 엄마의 말이 걷힌 뒤에 대답한다 (머리 위 같은 자리에 두 말풍선이 겹쳐 쌓이지 않게)
-  say('흠. 수고하셨습니다.', headTop, 'soft', 1.6, 40); await wait(tok, 0.8); // 엄마에게 깍듯이
+  say('고마워, 엄마!', headTop, 'soft', 1.6, 40); await wait(tok, 0.8); // 엄마에게 고맙다고 (꼬리 붕붕)
   camHome(); await comeHere(tok, 0.8); sitFront(9); pupuTall(); happy(true); heart(); await wait(tok, 1.4); happy(false);
 }
-// ---------- 터키츄: 엄마가 "츄츄츄~" 부르면 엄근진 푸푸도 그 자리에서 척 앉아 차렷 — 귀는 앞으로, 눈은 동그랗게, 꼬리만 참지 못하고 파르르 (…! → 흠.)
-//            "터키츄?" 하면 체통이 무너진다: 끄응…! → 달려와 엎드려 뻗기(월!) · 빙글빙글 · 꼬리 붕붕 · 활짝 웃는 입 → 엄마 손에 황금빛 링이 나타나면
-//            앉아서 기다렸다가 살며시 받아 물고 → 엎드려 두 앞발 사이에 세워 붙잡고 오독오독 → 꿀꺽 · 다시 꼿꼿이 앉아 체통을 되찾는다 (흠흠. …잘 먹었습니다.) → 눈을 지그시 감으며 흐뭇
-//            입: 차렷(…! · 흠. · 끄응…!) 동안은 웃는 입을 꾹 다물고 참다가 → 체통이 무너지면 활짝 웃는 입 · 물고 씹는 동안은 다물고 → 꿀꺽 뒤로는 평소의 웃는상
-const PTREAT = ['흠흠. …잘 먹었습니다.', '흠. 훌륭한 터키츄였습니다.', '흠흠. 체통은 지켰습니다.'];
+// ---------- 터키츄: 엄마가 "츄츄츄~" 부르면 푸푸는 그 자리에서 얼른 앉아 의젓한 척 — 귀는 앞으로, 눈은 동그랗게, 꼬리만 참지 못하고 파르르 (…! → (침착하자, 푸푸…))
+//            "터키츄?" 하면 의젓한 척이 와르르: 끄응…! → 달려와 엎드려 뻗기(월!) · 빙글빙글 · 꼬리 붕붕 · 활짝 웃는 입 → 엄마 손에 황금빛 링이 나타나면 (터키츄다!!)
+//            앉아서 기다렸다가 살며시 받아 물고 → 엎드려 두 앞발 사이에 세워 붙잡고 오독오독 → 꿀꺽 · 앉아서 활짝 웃는다 (헤헤, 최고의 터키츄!) → 눈을 지그시 감으며 흐뭇
+//            입: 의젓한 척(…! · (침착하자, 푸푸…) · 끄응…!) 하는 잠깐은 웃는 입을 꾹 다물고 참다가 → 와르르 무너지면 활짝 웃는 입 · 물고 씹는 동안은 다물고 → 꿀꺽 뒤로는 평소의 웃는상
+const PTREAT = ['헤헤, 최고의 터키츄!', '맛있다~! 엄마 최고!', '내일 또 줄 거지?'];
 async function pupuTreat(tok) {
   const T = NS.turkey, ph = phoneK(), UP = V3(0, 1, 0);
   toy.tok = tok; tok.cleanups.push(() => { toyOff(); T.hide(); pinky.smile = 1; pinky.wild = false; pinky.tiltT = 0; pinky.paddle = 0; pinky.paddleFront = false; });
@@ -6270,15 +6280,15 @@ async function pupuTreat(tok) {
   await wait(tok, 0.3);
   chuchu();
   await wait(tok, 0.3);
-  // 츄츄츄~: 그 자리에서 척 앉아 차렷 (귀는 앞으로 · 눈은 동그랗게) — 꼬리만 참지 못하고 작고 빠르게 파르르
-  if (nsInWater(pinky.x, pinky.z)) { setPose(pinky, 'stand', 12); pinky.face = 'cam'; } else sitFront(14); // 냇물 속이면 선 채로 차렷
+  // 츄츄츄~: 그 자리에서 얼른 앉아 의젓한 척 (귀는 앞으로 · 눈은 동그랗게) — 꼬리만 참지 못하고 작고 빠르게 파르르
+  if (nsInWater(pinky.x, pinky.z)) { setPose(pinky, 'stand', 12); pinky.face = 'cam'; } else sitFront(14); // 냇물 속이면 선 채로
   pupuTall(); pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.earPerk = 1; pinky.tiltT = 0; pinky.eyeOpen = 1.12; pinky.wild = true; pinky.wagAmpT = 0.16; pinky.wagSpeedT = 30;
-  pinky.smile = 0; // 웃던 입을 꾹 다물고 체통을 지킨다 (끄응…! 까지)
+  pinky.smile = 0; // 웃던 입을 꾹 다물고 의젓한 척 (끄응…! 까지만 버틴다)
   say('…!', headTop, 'small', 0.9, 0);
-  await wait(tok, 0.9); say('흠.', headTop, 'small', 1.0, 0); // 애써 체통을 지킨다
+  await wait(tok, 0.9); say('(침착하자, 푸푸…)', headTop, 'small', 1.0, 0); // 애써 의젓한 척 (소리: 콧소리로 음…)
   await wait(tok, 0.6);
   bubble('터키츄?', momAt, 'soft', 1.5, 0);
-  await wait(tok, 0.45); pinky.eyeOpen = 1.15; pinky.wagAmpT = 0.3; pinky.wagSpeedT = 34; say('끄응…!', headTop, '', 1.1); // 체통이 무너진다
+  await wait(tok, 0.45); pinky.eyeOpen = 1.15; pinky.wagAmpT = 0.3; pinky.wagSpeedT = 34; say('끄응…!', headTop, '', 1.1); // 의젓한 척이 와르르
   await wait(tok, 0.8);
   pinky.smile = 1; pinky.eyeOpen = 1; pinky.earPerk = 1; pinky.wagAmpT = 1.0; pinky.wagSpeedT = 22; // 활짝 웃는 입 · 꼬리 붕붕
   if (Math.hypot(pinky.x - HOME.x, pinky.z - HOME.z) > 0.08) { setPose(pinky, 'stand', 7); pinky.walkSpeed = 1.3; await walkTo(tok, HOME.x, HOME.z); pinky.walkSpeed = 0.5; } // 신나서 엄마 앞으로 달려온다
@@ -6294,7 +6304,7 @@ async function pupuTreat(tok) {
   handR.want = { pos: () => target(), up: () => V3(0, 1, 0), curl: 0.75, rate: 5 };
   chuchu('츄츄츄~ 여기 있지!');
   pinky.face = 'cam'; pinky.lookFn = () => T.g.position; pinky.tgt.gaze = 1;
-  await wait(tok, 0.45); say('터키츄!!', headTop, 'soft', 1.4);
+  await wait(tok, 0.45); say('터키츄다!!', headTop, 'soft', 1.4);
   await sitAs(tok, 'front', 8);
   pinky.paddle = 0.4; pinky.paddleFront = true; await wait(tok, 1.1); pinky.paddle = 0; pinky.paddleFront = false; // 앞발을 동동
   // 내밀면 살며시 받아 문다 (링 위쪽 가장자리를 입 앞에)
@@ -6332,16 +6342,16 @@ async function pupuTreat(tok) {
   toy.chewRate = 15; await wait(tok, 0.7); toy.chew = 0; say('꿀꺽', headTop, 'small', 1.0); pinky.smile = 1; // 다 먹었다: 다시 웃는상 (쩝쩝 하는 동안은 혀가 턱을 쓴다)
   await wait(tok, 0.5);
   pinky.lick = 1; say('쩝쩝', headTop, '', 1.2, 80); await wait(tok, 0.95); pinky.lick = 0;
-  // 체통을 되찾는다: 꼿꼿이 앉아 흠흠 — 웃는상 그대로 눈을 지그시 (흐뭇)
-  pinky.wild = false; pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6; pinky.earPerk = 0.8;
+  // 다 먹었다: 앉아서 활짝 웃으며 한마디 — 웃는상 그대로 눈을 지그시 (흐뭇) · 꼬리 붕붕
+  pinky.wild = false; pinky.wagAmpT = 0.8; pinky.wagSpeedT = 13; pinky.earPerk = 0.6;
   await sitAs(tok, 'front', 9); pupuTall();
   await wait(tok, 0.4);
   say(rot('pt', PTREAT), headTop, 'soft', 2.2);
-  await wait(tok, 1.4); pinky.eyeOpen = 0.7; pinky.wagAmpT = 0.5; heart();
+  await wait(tok, 1.4); pinky.eyeOpen = 0.65; pinky.wagAmpT = 0.9; pHeart();
   await wait(tok, 1.2); pinky.eyeOpen = 1; pinky.earPerk = 0; pinky.wagAmpT = 0.3; await wait(tok, 0.5);
   T.hide(); toyOff(); camHome();
 }
-// ---------- 푸푸의 몸가짐: 엄근진 · 용맹 — 가슴을 펴고 고개를 들고 귀를 앞으로 바짝 세운다 (서 있으면 꼬리도 높이). 지금 자세(서기 · 앉기) 그대로 몸만 곧게
+// ---------- 푸푸의 몸가짐: 듬직한 큰 개 — 가슴을 펴고 고개를 들고 귀를 앞으로 쫑긋 세운다 (서 있으면 꼬리도 높이). 지금 자세(서기 · 앉기) 그대로 몸만 의젓하게
 // 새 몸(곧고 긴 앞다리): 가슴을 너무 들어 올리면 앞발이 땅에서 뜬다 (앉아 3cm · 서서 1cm) — 몸은 조금만 세우고 꼿꼿함은 목과 고개로
 function pupuTall(d = pinky) {
   const T = d.tgt, s = poseFor(T.name, d);
@@ -6353,71 +6363,172 @@ function pupuTall(d = pinky) {
 function pupuBark(tok, n = 1) {
   (async () => { for (let i = 0; i < n; i++) { const bz = pinky.tgt.bodyZ; pinky.jawOpen = 0.56; pinky.tgt.bodyZ = bz + 0.014; await wait(tok, 0.15); pinky.jawOpen = 0; pinky.tgt.bodyZ = bz; await wait(tok, 0.15); } })().catch(() => {});
 }
+const pHeart = () => say('♥', headTop, 'heart', 1.4, (Math.random() < 0.5 ? -1 : 1) * (105 + Math.random() * 30)); // 푸푸: 말풍선과 함께 띄우는 하트는 말풍선 옆으로 (글자를 가리지 않게)
 const momSays = () => roomCam.localToWorld(phoneK() > 1 ? V3(0.03, -0.05, -0.5) : V3(0.12, -0.06, -0.5)); // 엄마의 말 (화면 오른쪽 아래, 엄마 쪽에서)
-// ---------- 앉아 · 엎드려: 옙! — 못 들은 척도 딴청도 없이 곧바로. 앉을 때는 늘 엄마와 마주 보고 꼿꼿이
+// ---------- 앉아 · 엎드려: 못 들은 척도 딴청도 없이 곧바로, 꼬리를 흔들며 기분 좋게 (앉았다! · 엎드렸다!). 앉을 때는 늘 엄마와 마주 보고 의젓하게
 async function pupuSit(tok) {
   sitCount++; lastSit = 'front';
-  pinky.earPerk = 1; pinky.tiltT = 0; pinky.wagAmpT = 0.15; pinky.wagSpeedT = 5; say('옙!', headTop, 'small', 0.9);
+  pinky.earPerk = 1; pinky.tiltT = 0; pinky.wagAmpT = 0.6; pinky.wagSpeedT = 11; say(rot('pSit', ['앉았다~', '응, 앉을게!', '얌전히 앉았다~']), headTop, 'small', 1.5);
   await sitAs(tok, 'front', 11); pupuTall();
-  await wait(tok, 1.6); pinky.earPerk = 0.5;
-  await wait(tok, 1.8); pinky.earPerk = 0; pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6;
+  await wait(tok, 1.6); pinky.earPerk = 0.5; pinky.tiltT = 0.22;
+  await wait(tok, 1.8); pinky.earPerk = 0; pinky.tiltT = 0; pinky.wagAmpT = 0.4; pinky.wagSpeedT = 8;
   await wait(tok, 0.8);
 }
 async function pupuDown(tok) {
-  pinky.face = 'cam'; pinky.tiltT = 0; pinky.earPerk = 1; say('옙!', headTop, 'small', 0.9);
-  setPose(pinky, 'down', 9); pinky.tgt.headPitch = -0.12; pinky.wagAmpT = 0.1; pinky.wagSpeedT = 4; // 엎드려서도 고개는 꼿꼿이
-  await wait(tok, 2.0); pinky.earPerk = 0.5;
-  await wait(tok, 3.0); pinky.earPerk = 0;
+  pinky.face = 'cam'; pinky.tiltT = 0; pinky.earPerk = 1; say(rot('pDown', ['엎드렸다~', '응, 쉬자~']), headTop, 'small', 1.5);
+  setPose(pinky, 'down', 9); pinky.tgt.headPitch = -0.12; pinky.wagAmpT = 0.5; pinky.wagSpeedT = 10; // 엎드려서도 고개는 들고 엄마를 본다
+  await wait(tok, 2.0); pinky.earPerk = 0.5; pinky.tiltT = 0.2;
+  await wait(tok, 3.0); pinky.earPerk = 0; pinky.tiltT = 0;
 }
-// ---------- 엄마가 오면: 알아보고 월! → 성큼성큼 와서 꼿꼿이 섰다가 → 척 앉아 충성! → 엄마, 오셨습니까. (꼬리는 천천히 · 얼굴은 늘 웃는상 — 말투만 깍듯하다)
+// ---------- 엄마가 오면: 알아보고 월! → 꼬리를 붕붕 흔들며 성큼성큼 달려와 → 엄마 앞에서 엎드려 뻗기 (엉덩이 실룩실룩 — 반가워서 어쩔 줄 모른다) → 앉아서 활짝 웃으며 한마디
+const PUPU_GREET = { entry: '엄마 왔다! 헤헤', tab: '엄마! 기다렸어~', quiet: '엄마, 같이 놀자!' };
 async function pupuGreet(tok, why) {
-  setPose(pinky, 'stand', 7); pinky.sniff = 0; pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.face = 'cam'; pupuTall();
-  pinky.earPerk = 1; pinky.wagAmpT = 0.4; pinky.wagSpeedT = 6; pinky.turnCap = 2.2; tok.cleanups.push(() => { pinky.turnCap = 0; snd('cancelPhrase', 'mom'); });
+  setPose(pinky, 'stand', 7); pinky.sniff = 0; pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.face = 'cam';
+  pinky.earPerk = 1; pinky.wagAmpT = 0.9; pinky.wagSpeedT = 15; pinky.turnCap = 2.2; tok.cleanups.push(() => { pinky.turnCap = 0; pinky.wig = 0; snd('cancelPhrase', 'mom'); });
   bubble('월!', headTop, '', 1.5); snd('phrase', 'mom', { mode: why === 'entry' ? 'entry' : 'again' }); // 소리: 인식표 짤랑 → 낮게 월 한 번 (들어설 때는 작게)
   const n = nearSpot();
-  if (Math.hypot(pinky.x - n.x, pinky.z - n.z) > 1.6 && !drag && !touch.active) { // 저 멀리 길 끝에서 알아보면: 엄마 눈길이 푸푸 쪽으로 살짝 다가갔다가, 걸어오는 푸푸를 따라 제자리로 (화면을 끌면 바로 놓아준다)
+  if (Math.hypot(pinky.x - n.x, pinky.z - n.z) > 1.6 && !drag && !touch.active) { // 저 멀리 길 끝에서 알아보면: 엄마 눈길이 푸푸 쪽으로 살짝 다가갔다가, 달려오는 푸푸를 따라 제자리로 (화면을 끌면 바로 놓아준다)
     camTurn = true; tok.cleanups.push(() => { if (camTurn) { camTurn = false; camHome(); } });
     (async () => { while (camTurn) { const L = Math.hypot(pinky.x - n.x, pinky.z - n.z), kp = 0.33 * ss(0.8, 2.6, L), ka = 0.9 * ss(0.4, 1.8, L); camTo(CAM_POS.clone().lerp(V3(pinky.x, 0.5, pinky.z), kp), CAM_AIM.clone().lerp(V3(pinky.x, 0.32, pinky.z), ka), 1.4); await wait(tok, 0.1); } })().catch(() => {});
   }
   await wait(tok, 0.4); pupuBark(tok, 1); await wait(tok, 0.55); // 입은 소리(짤랑 0.4초 뒤 월)에 맞춰 벌린다
   pinky.turnCap = 0;
-  if (Math.hypot(pinky.x - n.x, pinky.z - n.z) > 0.15) { pinky.walkSpeed = 0.85; await walkTo(tok, n.x, n.z); pinky.walkSpeed = 0.5; }
+  if (Math.hypot(pinky.x - n.x, pinky.z - n.z) > 0.15) { pinky.walkSpeed = 1.0; await walkTo(tok, n.x, n.z); pinky.walkSpeed = 0.5; } // 반가워서 성큼성큼
   if (camTurn) { camTurn = false; camHome(); }
-  pinky.face = 'cam'; pinky.tgt.yawOff = 0; pupuTall(); await wait(tok, 0.6);
-  sitFront(11); pupuTall(); await wait(tok, 0.5);
-  say('충성!', headTop, '', 1.3); await wait(tok, 1.2);
-  pinky.wagAmpT = 0.5; pinky.wagSpeedT = 7; say(why === 'quiet' ? '엄마. 대기 중이었습니다.' : '엄마, 오셨습니까.', headTop, 'soft', 2.2); heart();
-  await wait(tok, 2.2); pinky.earPerk = 0; pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6;
+  pinky.face = 'cam'; pinky.tgt.yawOff = 0;
+  setPose(pinky, 'bow', 8); pinky.earPerk = 0.6; pinky.wagAmpT = 1; pinky.wagSpeedT = 18; heart(); // 엄마 앞에서 엎드려 뻗기 — 엉덩이를 치켜들고 실룩실룩
+  await tween(tok, 1.0, (q) => { pinky.wig = 0.3 * Math.sin(q * Math.PI * 5) * Math.sin(Math.PI * q); }); pinky.wig = 0;
+  sitFront(11); pinky.earPerk = -0.25; pinky.eyeOpen = 0.75; await wait(tok, 0.6); // 앉아서 눈을 가늘게 · 귀를 살짝 눕히고 (반가운 얼굴)
+  say(PUPU_GREET[why] || PUPU_GREET.entry, headTop, 'soft', 2.0); pHeart();
+  await wait(tok, 1.8); pinky.eyeOpen = 1; pinky.earPerk = 0; pinky.wagAmpT = 0.45; pinky.wagSpeedT = 9;
   await idleLook(tok, 1.0, false);
 }
-// ---------- 경계 근무 (혼자 있을 때): 엄마 앞 길가로 나가 길 옆(숲 · 벤치 쪽, 냇물 쪽)을 보고 꼿꼿이 앉아, 천천히 고개를 좌우로 돌리며 살핀다 — 귀가 고개보다 먼저 돈다
-// 몸은 엄마 눈길과 거의 직각(옆모습)으로 앉아, 훑는 동안 한쪽 끝에서는 엄마 쪽으로 늠름한 얼굴이 보이고 다른 끝에서는 산책길 저쪽을 본다 → 다 살피면 엄마 쪽으로 돌아앉아 보고한다 (이상 무.)
-// 입: 근무를 서는 동안(밖을 노려보고 훑고 엄마에게 보고할 때까지)은 웃는 입을 꾹 다문다 → 이상 무. 하고 나면 다시 웃는상
+// ---------- 산과 엄마 바라보기 (혼자 있을 때 가끔): 엄마 앞 길가로 나가 산 쪽(숲 · 벤치 쪽, 냇물 쪽)을 보고 앉아, 코를 들고 산바람 냄새를 킁킁 맡고
+// 고개를 천천히 돌려 산책길 저쪽을 한 번, 엄마 쪽을 한 번 본다 — 귀가 고개보다 먼저 돈다 (길지 않게: 도착해서 15초쯤). 몸은 엄마 눈길과 거의 직각(옆모습)으로 앉아, 한쪽 끝에서는 엄마 쪽으로 듬직한 얼굴이 보이고 다른 끝에서는 산책길 저쪽을 본다
+// → 엄마 쪽으로 돌아앉아 활짝 웃으며 한마디 → 엉뚱하게 끝난다 (에취! · 털썩 엎드려 꼬리 붕붕 · 부르르 털기)
+// 입: 가만히 바라보는 동안(냄새 맡고 고개를 돌리는 동안)만 웃는 입을 다문다 → 엄마 쪽으로 돌아앉으면 다시 웃는상
 const GUARD = [{ x: -0.15, z: 0.35, fx: -3.0, fz: 0.6 }, { x: 0.35, z: 0.2, fx: 2.9, fz: 0.2 }, { x: -0.55, z: 0.6, fx: -3.2, fz: 1.0 }];
+const GUARD_WARM = ['엄마, 푸푸가 지켜 줄게!', '엄마 거기 있었네~!', '산도 좋고 엄마도 좋고~'];
 async function pupuGuard(tok) {
-  const g = rot('guard', GUARD); mark('guard');
-  tok.cleanups.push(() => { pinky.earSw = 0; pinky.smile = 1; });
-  setPose(pinky, 'stand', 5); pinky.walkSpeed = 0.45; pinky.earPerk = 0.5; pinky.wagAmpT = 0.2; pinky.wagSpeedT = 5;
+  const g = rot('guard', GUARD), end = rot('guardEnd', ['sneeze', 'flop', 'shake']); mark('guard');
+  tok.cleanups.push(() => { pinky.earSw = 0; pinky.smile = 1; pinky.sniff = 0; });
+  setPose(pinky, 'stand', 5); pinky.walkSpeed = 0.45; pinky.earPerk = 0.5; pinky.wagAmpT = 0.3; pinky.wagSpeedT = 6;
   if (Math.hypot(pinky.x - g.x, pinky.z - g.z) > 0.12) await walkTo(tok, g.x, g.z);
-  pinky.face = { x: g.fx, z: g.fz }; pinky.smile = 0; await wait(tok, 0.8); // 근무 시작: 웃음기를 거두고 입을 꾹
-  setPose(pinky, 'sit', 8); pupuTall(); pinky.wagAmpT = 0.04; pinky.wagSpeedT = 3; pinky.tgt.gaze = 1;
-  const y0 = Math.atan2(g.fx - pinky.x, g.fz - pinky.z), yc = Math.atan2(roomCam.position.x - pinky.x, roomCam.position.z - pinky.z), sg = angDiff(y0, yc) > 0 ? 1 : -1; let a = 0; // sg: 엄마 쪽으로 고개를 돌리는 방향
-  pinky.lookFn = () => V3(pinky.x + Math.sin(y0 + a) * 4, 0.45, pinky.z + Math.cos(y0 + a) * 4);
-  if (rot('guardL', [1, 0])) say('경계 근무 중.', headTop, 'soft', 1.6);
-  await wait(tok, 1.4);
-  for (const to of [-0.85 * sg, 0.85 * sg, 0]) { // 산책길 저쪽 → 엄마 쪽 → 가운데: 천천히 훑는다
+  pinky.face = { x: g.fx, z: g.fz }; pinky.smile = 0; await wait(tok, 0.6); // 가만히 바라본다: 웃던 입을 다물고
+  setPose(pinky, 'sit', 8); pupuTall(); pinky.wagAmpT = 0.1; pinky.wagSpeedT = 4; pinky.tgt.gaze = 1;
+  const y0 = Math.atan2(g.fx - pinky.x, g.fz - pinky.z), yc = Math.atan2(roomCam.position.x - pinky.x, roomCam.position.z - pinky.z), sg = angDiff(y0, yc) > 0 ? 1 : -1; let a = 0, up = 0; // sg: 엄마 쪽으로 고개를 돌리는 방향 · up: 코를 들어 바람 냄새를 맡는다
+  pinky.lookFn = () => V3(pinky.x + Math.sin(y0 + a) * 4, 0.45 + up, pinky.z + Math.cos(y0 + a) * 4);
+  await wait(tok, 0.4);
+  await tween(tok, 0.55, (k) => { up = 1.3 * ease(k); }); pinky.sniff = 0.6; say('킁킁', noseTip, 'small', 1.0); await wait(tok, 0.95); pinky.sniff = 0; // 코를 들고 산바람 냄새를 킁킁
+  say(rot('guardL', ['산바람 좋다~', '음~ 산 냄새 좋다', '오늘 산 기분 좋다~']), headTop, 'soft', 1.8);
+  await tween(tok, 0.6, (k) => { up = 1.3 * (1 - ease(k)); });
+  for (const to of [-0.85 * sg, 0.7 * sg]) { // 산책길 저쪽 → 엄마 쪽: 천천히 둘러본다 (두 번이면 넉넉하다)
     const from = a, sw = clamp(to - from, -1, 1) * 0.55;
-    await tween(tok, 0.3, (k) => { pinky.earSw = sw * ease(k); }); // 귀가 먼저 그쪽으로
-    await tween(tok, 2.3, (k) => { a = lerp(from, to, ease(k)); pinky.earSw = sw * (1 - 0.7 * k); });
-    pinky.earSw = 0; await wait(tok, 0.9 + Math.random() * 0.6);
+    await tween(tok, 0.25, (k) => { pinky.earSw = sw * ease(k); }); // 귀가 먼저 그쪽으로
+    await tween(tok, 1.8, (k) => { a = lerp(from, to, ease(k)); pinky.earSw = sw * (1 - 0.7 * k); });
+    pinky.earSw = 0; await wait(tok, 0.55 + Math.random() * 0.3);
   }
-  pinky.lookFn = null; pinky.earPerk = 0.8; setPose(pinky, 'stand', 6); pinky.face = 'cam'; await wait(tok, 0.9); // 엄마 쪽으로 돌아서서
-  sitFront(10); pupuTall(); await wait(tok, 0.7);
-  say('이상 무.', headTop, 'soft', 1.4); await wait(tok, 0.6); pinky.smile = 1; await wait(tok, 0.8); // 소리: 낮게 흡 (만족스러운 콧김) · 보고를 마치면 다시 웃는상
-  pinky.earSw = 0; pinky.earPerk = 0; setPose(pinky, 'stand', 4); await wait(tok, 0.6);
+  pinky.lookFn = null; pinky.earPerk = 0.6; pinky.smile = 1; setPose(pinky, 'stand', 6); pinky.face = 'cam'; pinky.wagAmpT = 0.7; pinky.wagSpeedT = 12; await wait(tok, 0.8); // 엄마 쪽으로 돌아서며 활짝 웃는다
+  sitFront(10); await wait(tok, 0.5);
+  say(rot('guardW', GUARD_WARM), headTop, 'soft', 1.8); pHeart(); await wait(tok, 1.6);
+  if (end === 'sneeze') { await sneeze(tok); say('헤헤', headTop, 'small', 1.0); pinky.wagAmpT = 0.9; pinky.wagSpeedT = 15; await wait(tok, 0.9); } // 바람 냄새에 코가 간질간질 — 에취!
+  else if (end === 'flop') { setPose(pinky, 'down', 4); pinky.earPerk = -0.3; pinky.eyeOpen = 0.7; pinky.wagAmpT = 1; pinky.wagSpeedT = 16; await wait(tok, 0.8); pinky.tiltT = 0.3; say('털썩~ 아, 편하다~', headTop, 'soft', 1.6); await wait(tok, 1.6); pinky.tiltT = 0; pinky.eyeOpen = 1; pinky.earPerk = 0; } // 털썩 엎드려 꼬리만 붕붕
+  else { await shakeOff(tok); say('아~ 개운하다!', headTop, 'soft', 1.6); await wait(tok, 1.2); } // 부르르 털고
+  pinky.earSw = 0; pinky.earPerk = 0; pinky.wagAmpT = 0.4; pinky.wagSpeedT = 8; setPose(pinky, 'stand', 4); await wait(tok, 0.5);
+}
+// ---------- 놀자! (혼자 놀 때): 엄마 앞으로 와서 엎드려 뻗기 — 엉덩이를 치켜들고 실룩실룩 · 꼬리 붕붕 → 껑충 일어났다 다시 뻗기 → 월! (놀자는 짖음)
+// 엄마가 안 놀아 주면 혼자 제 꼬리를 쫓아 빙글빙글 → 어지러워 털썩 앉아 고개를 갸웃갸웃 (헤헤, 어지러워~)
+// 입: 내내 활짝 웃는 입 (월! 할 때만 크게 벌렸다 닫는다)
+async function pupuInvite(tok) {
+  mark('invite'); tok.cleanups.push(() => { pinky.wig = 0; pinky.shuffle = 0; });
+  const n = nearSpot(), s = Math.random() < 0.5 ? 1 : -1, q = { x: n.x + s * 0.15, z: n.z - 0.2 }; collide(q);
+  setPose(pinky, 'stand', 6); pinky.walkSpeed = 0.8; pinky.wagAmpT = 0.8; pinky.wagSpeedT = 14; pinky.earPerk = 0.6;
+  if (Math.hypot(pinky.x - q.x, pinky.z - q.z) > 0.12) await walkTo(tok, q.x, q.z);
+  pinky.walkSpeed = 0.5; pinky.face = 'cam'; pinky.tgt.yawOff = 0; await wait(tok, 0.5);
+  const bowWig = async (sec) => { setPose(pinky, 'bow', 9); pinky.earPerk = 1; pinky.wagAmpT = 1; pinky.wagSpeedT = 18; await tween(tok, sec, (k) => { pinky.wig = 0.3 * Math.sin(k * Math.PI * 2 * sec * 2.4) * Math.sin(Math.PI * k); }); pinky.wig = 0; };
+  await bowWig(0.6); say('놀자, 놀자!', headTop, 'soft', 1.6); await bowWig(0.8);
+  setPose(pinky, 'stand', 11); await wait(tok, 0.35); // 껑충 일어났다가
+  await bowWig(0.5); say('월!', headTop, '', 1.0); pupuBark(tok, 1); await bowWig(0.6); // 다시 뻗으며 월! (놀자)
+  setPose(pinky, 'stand', 7); pinky.tiltT = 0.3; await wait(tok, 1.3); pinky.tiltT = -0.2; await wait(tok, 0.6); pinky.tiltT = 0; // 엄마를 빤히 (안 놀아 줘?)
+  // 혼자 제 꼬리를 쫓아 빙글빙글 — 고개를 꼬리 쪽으로 돌리고 몸을 둥글게 말며
+  pinky.face = null; pinky.tgt.gaze = 0.3; say('빙글빙글!', headTop, 'small', 1.4, 0);
+  { let dir = s; for (let r = 0; r < 2; r++, dir = -dir) { const y0 = pinky.yaw; await tween(tok, 0.95, (k) => { const w = Math.sin(Math.PI * k); pinky.yaw = y0 + dir * Math.PI * 2 * ease(k); pinky.shuffle = 0.25 + 0.55 * w; pinky.tgt.bendY = -dir * 0.4 * w; pinky.tgt.headTilt = dir * 0.25 * w; }); } }
+  pinky.shuffle = 0; pinky.tgt.bendY = 0; pinky.tgt.headTilt = 0;
+  // 어지러워 털썩 앉아 갸웃갸웃
+  pinky.face = 'cam'; pinky.tgt.gaze = 1; sitFront(10); pinky.eyeOpen = 0.7; pinky.earPerk = -0.3;
+  await tween(tok, 1.5, (k) => { pinky.tiltT = 0.35 * Math.sin(k * Math.PI * 3); }); pinky.tiltT = 0;
+  pinky.eyeOpen = 1; pinky.earPerk = 0; pinky.wagAmpT = 0.8; pinky.wagSpeedT = 13; say('헤헤, 어지러워~', headTop, 'soft', 1.8); await wait(tok, 1.9);
+  pinky.wagAmpT = 0.4; pinky.wagSpeedT = 8; setPose(pinky, 'stand', 4); await wait(tok, 0.5);
+}
+// ---------- 나비 쫓기 (혼자 놀 때): 냇가 풀숲에서 노랑나비가 팔랑팔랑 날아오면 → 귀를 쫑긋 세우고 고개로 따라가다 → 엎드려 뻗었다가 앙! (놓친다 · 어라?)
+// → 나비가 코끝에 살포시 앉는다 → 꼼짝 않고 눈이 동그래졌다가 (…!) → 간질간질 에취! → 나비는 날아가고, 헤헤 하고 꼬리를 붕붕
+// 입: 나비를 보는 동안에도 웃는 입 그대로 (앙! 할 때만 크게 벌렸다 닫는다)
+const BFLY_AT = [{ x: 0.35, z: 0.95, yo: 0.5 }, { x: -0.2, z: 1.0, yo: -0.45 }]; // 엄마 앞 길 위 (나비가 화면에서 보이게 가까이)
+const untilT = (tok, pred, sec) => { const t1 = clock + sec; return until(tok, () => pred() || clock > t1); }; // 기다리되 너무 오래는 말고
+async function pupuButterfly(tok) {
+  const b = NS.bfly, S = rot('bflyAt', BFLY_AT), k = pinky.scale; mark('bfly');
+  tok.cleanups.push(() => { bflyOff(); pinky.eyeOpen = 1; pinky.jawOpen = 0; pinky.wig = 0; if (camTurn) { camTurn = false; camHome(); } });
+  setPose(pinky, 'stand', 5); pinky.walkSpeed = 0.42; pinky.wagAmpT = 0.4; pinky.wagSpeedT = 8;
+  if (Math.hypot(pinky.x - S.x, pinky.z - S.z) > 0.15) await walkTo(tok, S.x, S.z);
+  pinky.face = 'cam'; pinky.tgt.yawOff = S.yo; await wait(tok, 0.4);
+  const hd = () => pinky.head.getWorldPosition(V3());
+  const around = () => { const c = hd(), a = clock * 1.7; return V3(c.x + Math.sin(a) * 0.3 * k, c.y + (0.13 + 0.05 * Math.sin(clock * 2.3)) * k, c.z + Math.cos(a) * 0.3 * k); }; // 머리 둘레를 팔랑팔랑
+  bflyGo(V3(1.3, 0.6, 1.25), around);
+  pinky.lookFn = () => b.g.position; pinky.tgt.gaze = 1;
+  await untilT(tok, () => b.p.distanceTo(hd()) < 0.7 * k, 4);
+  pinky.earPerk = 1; pinky.wagAmpT = 0.7; pinky.wagSpeedT = 13; say('어? 나비다!', headTop, 'soft', 1.6);
+  await wait(tok, 2.6); // 고개로 졸졸 따라간다
+  // 엎드려 뻗었다가 앙! — 나비는 위로 휙 (놓친다)
+  setPose(pinky, 'bow', 8); await tween(tok, 0.7, (q) => { pinky.wig = 0.3 * Math.sin(q * Math.PI * 4) * Math.sin(Math.PI * q); }); pinky.wig = 0;
+  { const c = hd(), hi = V3(c.x + 0.1, c.y + 0.5 * k, c.z + 0.12); b.to = () => hi; }
+  setPose(pinky, 'stand', 10); pinky.tgt.pitch -= 0.12; pinky.tgt.headPitch = -0.4; await wait(tok, 0.18); // 가슴을 들고 고개를 번쩍
+  pinky.jawOpen = 0.45; say('앙!', headTop, '', 0.9); await wait(tok, 0.14); pinky.jawOpen = 0;
+  await wait(tok, 0.35); setPose(pinky, 'stand', 6);
+  bubble('어라?', headTop, 'small', 1.1); pinky.tiltT = 0.35; await wait(tok, 1.1); pinky.tiltT = 0;
+  // 코끝에 살포시 앉는다 — 꼼짝 않고 눈이 동그래진다
+  const nose = () => pinky.head.localToWorld(V3(0, 0.034, 0.118)), fwd = () => { const q = pinky.head.localToWorld(V3(0, 0, 1)).sub(pinky.head.getWorldPosition(V3())); return Math.atan2(q.x, q.z); }; // 콧등 끝 (날개를 펴고 엄마 쪽을 보고 앉는다)
+  b.to = nose; pinky.lookFn = () => b.g.position; pinky.tgt.yawOff = 0;
+  if (!drag && !touch.active) { camTurn = true; const [p, a] = kneelAt(0.85, 0.5, 0.38); camTo(p, a, 1.3); } // 엄마가 살짝 다가가 본다 (화면을 끌면 바로 놓아준다)
+  await untilT(tok, () => b.p.distanceTo(nose()) < 0.05, 4);
+  b.perch = nose; b.perchYaw = fwd; pinky.lookFn = null; pinky.tgt.gaze = 1;
+  pinky.eyeOpen = 1.12; pinky.wagAmpT = 0.05; pinky.wagSpeedT = 3; pinky.earPerk = 1; say('…!', headTop, 'small', 1.1);
+  await wait(tok, 1.7); pinky.eyeOpen = 1;
+  // 간질간질 — 에취! 하면 나비는 날아간다
+  const sz = sneeze(tok); sz.catch(() => {}); await wait(tok, 0.6);
+  b.perch = null; b.away = clock + 5; b.v.set(0.3, 1.4, -0.2); { const off = V3(-1.4, 2.4, -2.8); b.to = () => off; }
+  await sz;
+  pinky.lookFn = () => b.g.position; pinky.tgt.gaze = 0.8; await wait(tok, 1.0); pinky.lookFn = null; pinky.tgt.gaze = 1;
+  if (camTurn) { camTurn = false; camHome(); }
+  pinky.face = 'cam'; pinky.tgt.yawOff = 0; pinky.wagAmpT = 1; pinky.wagSpeedT = 16; pinky.earPerk = -0.2;
+  say(rot('bflyEnd', ['헤헤, 간지러워~', '나비야, 또 놀자~!', '나비 친구 생겼다!']), headTop, 'soft', 1.8); await wait(tok, 1.9);
+  bflyOff(); pinky.earPerk = 0; pinky.wagAmpT = 0.4; pinky.wagSpeedT = 8; await wait(tok, 0.3);
+}
+// 나비: 정한 곳(to())으로 팔랑팔랑 (곧게 가지 않고 위아래 · 옆으로 흔들리며) · 앉으면(perch) 그 자리에 붙어 날개를 천천히 접었다 편다 · away: 그 시각까지 날아가다 사라진다
+const _bfv = V3();
+function bflyGo(from, to) { const b = NS.bfly; Object.assign(b, { on: true, to, perch: null, perchYaw: null, away: 0, ph: 0, sc: 0 }); b.p.copy(from); b.v.set(0, 0, 0); b.g.position.copy(from); b.g.visible = true; }
+function bflyOff() { const b = NS && NS.bfly; if (!b) return; Object.assign(b, { on: false, to: null, perch: null, perchYaw: null, away: 0 }); b.g.visible = false; }
+function bflyStep(dt, t) {
+  const b = NS.bfly; if (!b || !b.on) return;
+  if (b.away && clock > b.away) return void bflyOff();
+  b.ph += dt * (b.perch ? 4 : 40);
+  if (b.perch) { b.p.copy(b.perch()); b.g.position.copy(b.p); if (b.perchYaw) b.yaw = b.perchYaw(); }
+  else {
+    const d = _bfv.copy(b.to ? b.to() : b.p).sub(b.p), L = d.length();
+    b.v.addScaledVector(d, (L > 0.3 ? 3 : 7) * dt); b.v.multiplyScalar(Math.exp(-2.4 * dt)); // 그쪽으로 끌리되 휘청휘청
+    const sp = b.v.length(); if (sp > 1.2) b.v.multiplyScalar(1.2 / sp);
+    b.p.addScaledVector(b.v, dt);
+    const near = ss(0.02, 0.15, L); // 앉을 자리에 다 오면 흔들림을 줄인다
+    b.g.position.set(b.p.x + 0.03 * near * Math.sin(t * 7.3 + 1), b.p.y + near * (0.04 * Math.sin(t * 11) + 0.02 * Math.sin(t * 4.1)), b.p.z + 0.03 * near * Math.cos(t * 6.1));
+    if (sp > 0.03) b.yaw += angDiff(b.yaw, Math.atan2(b.v.x, b.v.z)) * (1 - Math.exp(-6 * dt));
+  }
+  { const L = b.perch ? 0 : _bfv.copy(b.to ? b.to() : b.p).sub(b.p).length(), want = b.perch ? 1.45 : 1.8 * (1 + 0.3 * ss(0.12, 0.6, L)); b.sc = (b.sc || want) + (want - (b.sc || want)) * (1 - Math.exp(-5 * dt)); b.g.scale.setScalar(b.sc); } // 날 때는 1.3배 (멀리서도 보이게) · 코끝에 앉으면 조금 작게 (동그래진 눈을 가리지 않게) — 크기는 부드럽게 바뀐다
+  b.g.rotation.set(b.perch ? -1.2 : -0.3 + 0.15 * Math.sin(t * 3), b.yaw, 0); // 앉으면 몸을 세워 콧등에 매달리듯 (편 날개가 엄마 쪽을 본다)
+  const fl = b.perch ? 0.05 + 0.45 * (0.5 + 0.5 * Math.sin(b.ph)) : 0.2 + 1.05 * Math.abs(Math.sin(b.ph)); // 날개: 날 때는 파닥파닥 · 앉으면 천천히 접었다 편다
+  for (const w of b.wings) w.g.rotation.z = w.sd * fl;
 }
 // ---------- 까치: 가끔(들어온 지 1분쯤 뒤에 처음, 그다음은 몇 분에 한 번) 냇물 건너 나무에서 날아와 산책길에 내려앉는다 — 종종 뛰고 · 콕콕 쪼고 · 까악 까악
-// 푸푸: 얼어붙은 듯 노려보다 → 살금살금 다가가 → 그르르… → 월월! → 까치가 깍! 하고 날아가면 끝까지 지켜보고 → 엄마 곁에 와 꼿꼿이 앉아 이상 무! (엄마가 칭찬하면 눈을 지그시)
+// 푸푸: 얼어붙은 듯 노려보다 → 살금살금 다가가 → 그르르… → 월월! → 까치가 깍! 하고 날아가면 끝까지 지켜보고 (…헤헤, 도망갔다!) → 꼬리를 높이 붕붕 흔들며 의기양양하게 엄마 곁으로 (내가 쫓아냈다! 엄마 괜찮지?)
+// → 엄마가 칭찬하면 눈을 지그시 · 엉덩이까지 실룩실룩 녹는다 · 가끔은 저 멀리서 까치가 또 깍깍 — 휙 돌아봤다가 엄마 한 번, 다시 휙 (두 번 돌아보기) → 멀리 있으니까 봐준다~
 // 입: 까치를 알아챈 순간부터 노려보고 · 다가가고 · 으르렁 · 월월 하고 · 까치가 날아가 사라질 때까지는 웃는 입을 꾹 다문다 → 그 뒤로는 다시 웃는상
 const MAG_LAND = [[-0.25, -1.6], [-1.0, -1.15], [0.05, -2.4], [-0.95, 0.35], [0.35, -0.65], [-0.45, 1.5]], MAG_FROM = V3(3.6, 2.6, -1.9), MAG_TO = V3(-3.4, 2.0, -0.4); // 내려앉는 길 위 (푸푸에게서 두 걸음쯤 떨어진 곳) · 날아오는 냇물 건너 나무 · 날아가 숨는 길 왼쪽 나무 (벤치 너머)
 const magHead = () => NS.mag.head.localToWorld(V3(0, 0.07, 0));
@@ -6474,7 +6585,7 @@ function magCam(A, B) { // 푸푸(A)와 까치(B)가 한 화면에: 둘을 잇�
 }
 async function magpieScene(tok) {
   const m = NS.mag, d = pinky; mark('magpie');
-  tok.cleanups.push(() => { magOff(); pinky.earSw = 0; pinky.smile = 1; if (camTurn) { camTurn = false; camHome(); } });
+  tok.cleanups.push(() => { magOff(); pinky.earSw = 0; pinky.smile = 1; pinky.wig = 0; if (camTurn) { camTurn = false; camHome(); } });
   const far = (q) => { const l = Math.hypot(q.x - d.x, q.z - d.z); return l < 1.4 ? 9 + 1 / l : Math.abs(l - 2.0); }, L = MAG_LAND.map(([x, z]) => ({ x, z })).sort((a, b) => far(a) - far(b))[0]; // 푸푸에게서 두 걸음쯤 (너무 가깝지 않게)
   const dx = L.x - d.x, dz = L.z - d.z, D = Math.hypot(dx, dz) || 1, sg = 0.65 + 0.4 * d.scale, S = { x: L.x - (dx / D) * sg, z: L.z - (dz / D) * sg }; collide(S); // 살금살금 다가가 멈출 곳 (까치 한 걸음 앞) — sg: 코끝(몸 크기 × 0.4 앞)에서 까치까지 늘 0.65 (1.25배 큰 푸푸는 그만큼 더 떨어져 선다)
   magFly(MAG_FROM, V3(L.x, nsGround(L.x, L.z), L.z), 2.0, 0.9, true);
@@ -6505,15 +6616,25 @@ async function magpieScene(tok) {
   d.face = track; d.lookFn = bird; d.tgt.gaze = 1;
   { const q = { x: d.x + (dx / D) * 0.25, z: d.z + (dz / D) * 0.25 }; collide(q); d.walkSpeed = 0.6; walkTo(tok, q.x, q.z).catch(() => {}); }
   await until(tok, () => !m.on); d.smile = 1; // 까치가 사라졌다: 다시 웃는상
-  d.walkTarget = null; d.walkSpeed = 0.5; await wait(tok, 0.4); d.lookFn = null; say('흠.', headTop, 'small', 1.1); await wait(tok, 0.9);
-  // 엄마 곁으로 돌아와 보고한다
+  d.walkTarget = null; d.walkSpeed = 0.5; await wait(tok, 0.4); d.lookFn = null; d.wagAmpT = 0.8; d.wagSpeedT = 14; say('…헤헤, 도망갔다!', headTop, 'soft', 1.5); await wait(tok, 1.2);
+  // 엄마 곁으로 의기양양하게: 꼬리를 높이 들고 붕붕, 성큼성큼
   if (camTurn) { camTurn = false; camHome(); }
-  const n = nearSpot(); setPose(d, 'stand', 6); d.face = null; d.walkSpeed = 0.7; d.wagAmpT = 0.3; d.wagSpeedT = 6; await walkTo(tok, n.x, n.z); d.walkSpeed = 0.5;
+  const n = nearSpot(); setPose(d, 'stand', 6); d.face = null; d.walkSpeed = 0.8; d.tgt.tail += 0.2; d.earPerk = 0.8; d.wagAmpT = 1; d.wagSpeedT = 16; await walkTo(tok, n.x, n.z); d.walkSpeed = 0.5;
   sitFront(11); pupuTall(); await wait(tok, 0.6);
-  say('이상 무!', headTop, '', 1.5); heart(); await wait(tok, 1.4);
+  say('내가 쫓아냈다! 엄마 괜찮지?', headTop, 'soft', 1.7); pHeart(); await wait(tok, 1.4);
   bubble('잘했어, 푸푸!', momSays, 'soft', 1.9, 0); await wait(tok, 0.7); // 엄마의 칭찬
-  d.eyeOpen = 0.7; d.wagAmpT = 0.6; d.wagSpeedT = 8; heart(); await wait(tok, 1.8); // 칭찬에 눈을 지그시 · 꼬리 살랑
-  d.eyeOpen = 1; d.earPerk = 0; d.wagAmpT = 0.3; d.wagSpeedT = 6; await wait(tok, 0.6);
+  d.eyeOpen = 0.6; d.earPerk = -0.35; d.wagAmpT = 1; d.wagSpeedT = 18; pHeart(); // 칭찬에 녹는다: 눈을 지그시 · 귀를 눕히고 · 엉덩이까지 실룩실룩
+  await tween(tok, 1.8, (q) => { d.wig = 0.22 * Math.sin(q * Math.PI * 9) * Math.sin(Math.PI * q); }); d.wig = 0;
+  if (rot('magEnd', [0, 1])) { // 가끔: 저 멀리(길 왼쪽 나무)서 까치가 또 깍깍 — 휙 돌아봤다가 엄마 한 번 · 다시 휙 (두 번 돌아보기) → 느긋하게 봐준다
+    bubble('깍깍', () => roomCam.localToWorld(V3(-0.3, 0.13, -0.6)), 'fr', 1.3, 0); snd('sfx', 'magpie_call', { pos: MAG_TO.toArray(), gain: -8, force: 1, why: 'magpie (far)' });
+    // 나무는 푸푸 등 뒤 비스듬한 쪽이라 그대로 쳐다보면 고개가 돌지 않는다 → 고개가 닿는 데까지(57°쯤) 그쪽으로 휙 · 조금 올려다본다
+    const tree = () => { const y = d.yaw, k = clamp(angDiff(y, Math.atan2(MAG_TO.x - d.x, MAG_TO.z - d.z)), -1.0, 1.0); return V3(d.x + Math.sin(y + k) * 3, 1.0, d.z + Math.cos(y + k) * 3); };
+    d.eyeOpen = 1; d.earPerk = 1; d.lookFn = tree; await wait(tok, 0.6); // 휙 (귀가 쫑긋)
+    d.lookFn = null; d.tiltT = 0.25; await wait(tok, 0.5); d.tiltT = 0; // 엄마 한 번 (갸웃 — 방금 그거 들었어?)
+    d.lookFn = tree; d.eyeOpen = 1.12; d.wagAmpT = 0.1; bubble('!', headTop, 'small', 1.1); await wait(tok, 1.0); d.lookFn = null; d.eyeOpen = 1; // 다시 휙 — 눈이 동그래져 한참
+    d.wagAmpT = 0.9; d.wagSpeedT = 15; say('멀리 있으니까 봐준다~', headTop, 'soft', 1.7); await wait(tok, 1.6); // 느긋하게 봐준다 (꼬리 붕붕)
+  }
+  d.eyeOpen = 1; d.earPerk = 0; d.wagAmpT = 0.4; d.wagSpeedT = 8; await wait(tok, 0.6);
 }
 
 // ================================================================
@@ -6721,4 +6842,4 @@ if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCom
   get dog() { return pinky; }, get dami() { return DAMI; }, get DP() { return DP; }, DUCK_OB, DUCK_SPOTS, damiTreatWag, damiDig, get RP() { return RP; }, useRoom, PARK, ROOM_HOME, ROOM_PARK, HOME_KIDS, inSand,
   brain, BRAIN, drops, dropTreat, wait, until, idleGap, idleLook, yawn, shakeOff, stretch, momCheck, hideTreat, nearestDrop, mound, updateMound, brainPoke, startSpecial, momGreet, payBall, findTreat, eatLeft, sneeze, roam, resetRoom, special: () => (active && active.special) || null, bubbles: () => bubbles.map((b) => b.el.textContent),
   DM, friendStart, friendOff, damiAttn, damiWoof, friendScene, sndUpdate: (dt, t) => updateSound(dt, t), get mode() { return mode; },
-  get pupu() { return PUPU; }, get NS() { return NS; }, magpieScene, magOff, magGo: () => startSpecial('magpie', magpieScene), pupuTall, pupuGuard, poseFor, ROOM_NAMSAN, nsGround, nsInWater, nsWaterY, NS_SX, NS_SW, NS_SPOT, contact, toyOff, buildDog, COLORS };
+  get pupu() { return PUPU; }, get NS() { return NS; }, magpieScene, magOff, magGo: () => startSpecial('magpie', magpieScene), pupuTall, pupuGuard, pupuInvite, pupuButterfly, bflyOff, poseFor, ROOM_NAMSAN, nsGround, nsInWater, nsWaterY, NS_SX, NS_SW, NS_SPOT, contact, toyOff, buildDog, COLORS };

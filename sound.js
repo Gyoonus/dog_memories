@@ -431,7 +431,7 @@ def('kiss_call', 3, -17, 'foley', () => { // 츄츄츄~ — 엄마가 입술로 
   return out;
 }, { gap: 0.4 });
 
-// --- 푸푸 목소리 (엄근진 진돗개 아가씨: 핑키 · 담이보다 한참 낮고 묵직한 "월", 짖는 일이 드물다 · 그르르 경고 · 충성의 "웝" · 이상 무의 "훕" · 점잖은 "흠")
+// --- 푸푸 목소리 (듬직하고 다정한 큰언니 진돗개: 핑키 · 담이보다 한참 낮고 묵직한 "월", 짖는 일이 드물다 · 그르르 경고 · 신나면 낮은 "웝"(두 번이면 헤헤 웃음) · 간식을 조를 때 "훕" · 입을 다문 "음")
 // 월 = ㅜ(입술을 오므린 w: 포먼트가 낮은 데서 출발) → ㅓ(가슴을 울리는 굵은 소리, 바닥음 190~215Hz) → ㄹ(혀끝이 닿으며 첫 포먼트는 내려가고 둘째 · 셋째는 올라간다, 소리가 살짝 줄며 끝난다)
 function wol(D, top, k, o = {}) {
   const tl = rr(58, 72), w = rr(26, 34);
@@ -451,7 +451,7 @@ def('pupu_grr', 3, -17, 'dog', () => { // 그르르 — 낮게 깔리는 경고 
   const env = curve([[0, 0], [170, 0.82], [D * 0.45, 1], [D - 220, 0.9], [D, 0]]);
   return mulf(y, (m) => env(m) * (0.68 + 0.32 * Math.sin((TAU * am * m) / 1000 + aph + 0.6 * Math.sin((TAU * 3.1 * m) / 1000)))); // 그르르 결: 고르지 않게 구르는 떨림
 }, { voiced: 1, vocal: 1, gap: 1.2, lo: 1, noTag: 1 });
-def('pupu_chuff', 3, -18, 'dog', () => { // 웝 — 충성! 할 때 입을 거의 다문 채 짧고 낮게 한 번 (월보다 작고 부드럽게, 입술이 닫히며 끝난다)
+def('pupu_chuff', 3, -18, 'dog', () => { // 웝 — 신나서 입을 거의 다문 채 짧고 낮게 한 번 (월보다 작고 부드럽게, 입술이 닫히며 끝난다 · 두 번 이어 내면 헤헤 웃는 소리)
   const D = rr(125, 160), k = rr(0.96, 1.04), top = rr(172, 188);
   const y = voiced(D, { f0: curve([[0, top * 0.82], [22, top], [D * 0.6, top * 0.95], [D, top * 0.78]]), jit: 0.022, shim: 0.08, oq: 0.66, tilt: 2200, sub: (m) => (m < 20 ? 0.3 : 0.08), asp: -12, hoarse: -24, dry: 0.1,
     F: [curve([[0, 330 * k], [26, 500 * k], [D - 34, 470 * k], [D - 6, 270 * k]]), curve([[0, 650 * k], [26, 900 * k], [D - 34, 860 * k], [D - 6, 600 * k]]), 2250 * k, 3150 * k], B: [120, 170, 260, 350], G: [0, -3, -10, -16] });
@@ -460,7 +460,7 @@ def('pupu_chuff', 3, -18, 'dog', () => { // 웝 — 충성! 할 때 입을 거�
   const out = mix(P(D + 40), norm(z));
   return mix(out, mulf(nb(30, 'p', 'bp', 800, 1.2), bell(30)), D - 12, db(-20)); // 입술이 닫히는 "ㅂ"
 }, { voiced: 1, vocal: 1, fat: 0.5, gap: 0.6, noTag: 1 });
-def('pupu_huff', 3, -20, 'dog', () => { // 훕 — 이상 무! 할 때 가슴으로 짧게 내쉬는 흡족한 숨 (ㅎ 바람 → ㅜ 오므린 입 → ㅂ 입술을 닫으며 뚝)
+def('pupu_huff', 3, -20, 'dog', () => { // 훕 — 간식을 기다리며 가슴으로 짧게 내쉬는 숨 (ㅎ 바람 → ㅜ 오므린 입 → ㅂ 입술을 닫으며 뚝)
   const D = rr(240, 320), k = rr(0.93, 1.07), cl = D - rr(30, 45), out = P(D + 40), n0 = noise(N(D), 'p');
   const y = norm(bq(sum(norm(bq(n0, 'bp', curve([[0, 1000 * k], [70, 600 * k], [D, 520 * k]]), 1.3)), norm(bq(n0, 'bp', curve([[0, 2000 * k], [70, 1250 * k], [D, 1100 * k]]), 1.8)), db(-10)), 'lp', 2200, 0.7)); // 오므린 입으로 나가는 어두운 바람
   mix(out, mulf(y, curve([[0, 0], [28, 1], [cl * 0.6, 0.72], [cl, 0.5], [cl + 12, 0]])));
@@ -469,7 +469,7 @@ def('pupu_huff', 3, -20, 'dog', () => { // 훕 — 이상 무! 할 때 가슴으
   mix(out, thud(40, 130, 85, 12), 4, db(-14)); // 가슴이 툭
   return mix(out, mulf(nb(22, 'p', 'bp', 700, 1.2), bell(22)), cl + 8, db(-16)); // 입술 "ㅂ"
 }, { voiced: 1, gap: 1.2 });
-def('pupu_hum', 3, -20, 'dog', () => { // 흠 — 코로 짧게 훅 내쉬고 입을 다문 채 낮게 "음" (점잖게 따져 보는 소리)
+def('pupu_hum', 3, -20, 'dog', () => { // 음 — 코로 짧게 훅 내쉬고 입을 다문 채 낮게 "음" (입에 뭘 물었을 때 · 의젓한 척 꾹 참을 때)
   const D = rr(330, 430), k = rr(0.94, 1.06), out = P(D + 40);
   mix(out, mulf(nb(60, 'w', 'bp', 1050 * k, 1.3), ad(6, 16)), 0, db(-5)); // ㅎ: 코로 훅
   const h = norm(bq(bq(bq(voiced(D, { f0: curve([[0, 128 * k], [60, 146 * k], [D, 116 * k]]), jit: 0.02, shim: 0.07, oq: 0.7, tilt: 800, sub: (m) => (m > D * 0.7 ? 0.2 : 0) }), 'pk', 260, 1.5, 8), 'pk', 750, 2, -9), 'lp', 1100, 0.7)); // 다문 입: 낮은 울림을 키우고 가운데를 판다(콧소리)
@@ -655,7 +655,7 @@ const VOICE = { yip: 'bark_yip', woof: 'bark_woof', aroo: 'bay_aroo', whine: 'wh
 // 강아지마다 목소리 (configure({ voice })): 담이는 짖는 소리 · 그르렁이 따로 있고, 낑 소리는 조금 높다(어리다)
 const DAMI_V = { yip: 'dami_yip', woof: 'dami_kk', aroo: 'dami_kk', growl: 'dami_arr' };
 const isDami = () => cfg.voice === 'dami';
-const isPupu = () => cfg.voice === 'pupu'; // 푸푸(진돗개): 낮고 묵직한 목소리 (엄근진 — 깽깽대지 않는다)
+const isPupu = () => cfg.voice === 'pupu'; // 푸푸(진돗개): 낮고 묵직한 목소리 (큰 개라 깽깽대지 않는다 — 신나도 낮게 웝 · 음~)
 // 푸푸: 짖는 소리(월) · 그르르 · 웝은 따로 있고(신나서 깽 하는 일이 없다: yip도 낮은 웝), 낑 · 음 · 한숨 · 하품은 핑키 것을 낮게(0.85배)
 const PUPU_V = { woof: 'pupu_wol', aroo: 'pupu_wol', growl: 'pupu_grr', yip: 'pupu_chuff' };
 const huff = () => (isDami() ? 'dami_pant_out' : isPupu() ? 'pupu_huff' : 'pant_out'); // 흥정 · 조를 때 내쉬는 숨 (푸푸는 가슴으로 훕)
@@ -700,7 +700,7 @@ function wolBurst(n = 1, o = {}) {
   if (!o.noJingle) later(0.05, () => play('tag_jingle', { pos: o.pos, gain: g - 2, why: 'wol' }), tag); // 가슴이 울려 인식표가 한 번 짤랑
   return n;
 }
-// 푸푸: 엄마를 맞을 때도 점잖게 — 인식표 짤랑 → 낮은 월 한 번 (들어설 때는 작게), 돌아오셨을 때는 가끔 웝으로 맺는다. 낑낑대지 않는다
+// 푸푸: 엄마를 맞을 때 — 인식표 짤랑 → 낮은 월 한 번 (들어설 때는 작게), 다시 오면 가끔 반가운 웝을 하나 더. 큰 개라 낑낑대지 않는다
 function pupuPhrase(name, o) {
   if (name === 'greet') {
     if (st) st.greetT = T;
@@ -715,7 +715,7 @@ function pupuPhrase(name, o) {
   const lead = m === 'entry' || m === 'again', first = m === 'entry', g = first ? -8 : lead ? -5 : -2; // 말풍선 '엄마다!'로만 불렸으면 전부 미뤄 둔다 (곧 mode를 달고 다시 불리면 거둬진다)
   if (lead) play('tag_jingle', { force: 1, gain: first ? 1 : -1, why: 'mom' }); else later(0.05, () => play('tag_jingle', { force: 1, gain: -1, why: 'mom' }), tag);
   later(0.4, () => wolBurst(1, { force: 1, gain: g, noJingle: 1, tag, why: 'mom' }), tag);
-  if (!first && Math.random() < 0.5) later(1.0 + Math.random() * 0.1, () => play('pupu_chuff', { force: 1, gain: g - 4, why: 'mom' }), tag); // 웝 — 다녀오셨습니까
+  if (!first && Math.random() < 0.5) later(1.0 + Math.random() * 0.1, () => play('pupu_chuff', { force: 1, gain: g - 4, why: 'mom' }), tag); // 웝 — 엄마 왔다!
 }
 function phrase(name, o = {}) {
   if (!live()) return;
@@ -823,29 +823,35 @@ function onSay(text) {
     else if (Math.random() < 0.5) voice('content', { gain: -2, why: text }); else play(huff(), { gain: -3, rate: 0.85, why: text + ' (huff)' });
     return;
   }
+  if (isPupu()) pupuChat(s, String(text)); // 푸푸: 어디에도 안 걸린 말에는 작게 음~ (핑키 · 담이는 그대로 조용히)
 }
 
-// 푸푸만의 말풍선 → 소리 (엄근진: 말수가 적고, 짖을 때는 낮고 묵직하게. 못 알아들은 말은 핑키와 같은 규칙으로 — 그때 나는 목소리도 푸푸의 낮은 목소리)
-const PUPU_HUFF_GAP = 8; // '…, 이상 무.' 훕 사이 (초)
+// 푸푸만의 말풍선 → 소리 (듬직하고 다정한 큰언니: 짖을 때는 낮고 묵직하게, 신나면 낮은 웝, 기분 좋으면 음~, 웃을 때는 웝웝. 못 알아들은 말은 핑키와 같은 규칙으로 — 그때 나는 목소리도 푸푸의 낮은 목소리)
+const PUPU_LAUGH_GAP = 3, PUPU_CHAT_GAP = 4; // 웃음(웝웝) 사이 · 어디에도 안 걸린 말에 붙이는 작은 음~ 사이 (초)
+function pupuLaugh(text) { if (T - (st.laughT ?? -99) < PUPU_LAUGH_GAP) return; st.laughT = T; play('pupu_chuff', { force: 1, gain: -5, why: text + ' (laugh)' }); later(0.24 + Math.random() * 0.04, () => play('pupu_chuff', { force: 1, gain: -9, rate: 1.04, why: text + ' (laugh)' }), 'laugh'); } // 헤헤 웃음: 낮은 웝을 짧게 두 번 (가쁘게 내쉬는 웃음)
 function pupuSay(s, text = s) {
   const n = (s.match(/월/g) || []).length;
-  if (n) { if (!wolBurst(n, { force: has(s, '지킨', '누구', '물러', '거기', '엄마'), why: text })) play('pupu_chuff', { gain: -6, why: text + ' (holds back)' }); return true; } // 월! · 월월! · 월월월! — 20초에 두 묶음까지만 (지킬 때 · 엄마 앞에서는 언제든), 넘치면 낮게 웝 한 번으로 참는다
-  if (has(s, '그르르', '으르릉')) return voice('growl', { why: text }), true; // 낮게 깔리는 경고
-  if (has(s, '충성')) return play('pupu_chuff', { force: 1, gain: -2, why: text }), true; // 충성! — 짧고 낮은 웝
-  if (has(s, '이상무')) { const big = text.includes('!'); if (big || T - (st.huffT ?? -99) > PUPU_HUFF_GAP) { st.huffT = T; play('pupu_huff', { force: 1, gain: big ? 0 : -3, why: text }); } return true; } // 이상 무! — 가슴으로 흡족하게 훕 (보고하는 '이상 무!'는 늘, 돌아다니며 하는 '…, 이상 무.'는 8초에 한 번만 · 조금 작게)
-  if (s.startsWith('흠')) { const h = Math.min(3, s.match(/^흠+/)[0].length); for (let i = 0; i < h; i++) { const fn = () => play('pupu_hum', { force: 1, gain: -i * 2.5, rate: 1 - i * 0.03, why: text }); if (i) later(i * 0.42, fn, 'hum'); else fn(); } return true; } // 흠. · 흠흠. — 점잖게 따져 본다
-  if (has(s, '끄응', '끼잉')) return voice('whimper', { force: 1, gain: 2, why: text }), true; // 끄응…! — 꾹 참다 새어 나오는 낮은 낑 (터키츄 앞에서만 체통이 무너진다)
-  if (has(s, '터키츄다')) { play('gasp_alert', { why: text }); later(0.22, () => voice('whine', { vlo: 0, vhi: 2, gain: -3, rate: 1.12, why: text })); return true; }
-  if (/^((터키)?츄+)+$/.test(s)) { voice('whine', { force: 1, vlo: 0, vhi: 2, gain: -4, why: text }); later(0.55, () => play('pupu_chuff', { force: 1, gain: -3, why: text }), 'chu'); return true; } // 터키츄!! · 츄츄츄 — 체통이 무너진다: 조르는 낮은 낑 → 웝!
-  if (has(s, '물이다')) { play('gasp_alert', { why: text }); later(0.25, () => voice('content', { gain: -3, why: text })); return true; } // 물이다 — 헉 → 낮게 음 (반가워도 점잖게)
+  if (n) { if (!wolBurst(n, { force: has(s, '지켜', '저리', '거기', '엄마'), why: text })) play('pupu_chuff', { gain: -6, why: text + ' (holds back)' }); return true; } // 월! · 월월! — 20초에 두 묶음까지만 (지킬 때 · 엄마 앞에서는 언제든), 넘치면 낮게 웝 한 번으로 참는다
+  if (has(s, '그르르', '으르릉')) return voice('growl', { why: text }), true; // 낮게 깔리는 경고 (까치 앞에서)
+  if (has(s, '끄응', '끼잉')) return voice('whimper', { force: 1, gain: 2, why: text }), true; // 끄응…! — 꾹 참다 새어 나오는 낮은 낑 (터키츄 앞에서 의젓한 척이 무너진다)
+  if (has(s, '침착')) return play('pupu_hum', { force: 1, gain: -4, why: text }), true; // (침착하자, 푸푸…) — 입을 꾹 다물고 콧소리로 음…
+  if (has(s, '터키츄다', '나비다')) { play('gasp_alert', { why: text }); later(0.22, () => voice('whine', { vlo: 0, vhi: 2, gain: -3, rate: 1.12, why: text })); return true; } // 터키츄다!! · 어? 나비다! — 헉 → 신나서 낮게 낑
+  if (has(s, '물이다')) { play('gasp_alert', { why: text }); later(0.25, () => voice('content', { gain: -3, why: text })); return true; } // 물이다! — 헉 → 낮게 음~
   if (has(s, '멍')) { if (T - (st.greetT ?? -9) > 1.5) wolBurst(1, { why: text }); return true; }
-  if (has(s, '하이파이브', '또해요', '최고')) return voice('yip', { gain: -5, why: text }), true; // 낮은 웝
-  if (has(s, '시원하다', '헤헤', '뿌듯', '깔끔')) return voice('content', { gain: -1, why: text }), true;
+  if (has(s, '뒹굴') || s.startsWith('후우')) return false; // 뒹굴! · 후우~ — 핑키와 같은 규칙 (풀 위에서 부스럭 → 음~ · 한숨)
+  if (/^(손|짝|첨벙|슥슥|척|똥츄|빙글|꼴깍|퐁)+$/.test(s)) return true; // 소리는 main.js가 그 순간에 직접 낸다 (첨벙 · 짝 · 슥슥 · 척)
+  if (has(s, '어지러워', '간지러워', '쫓아냈다', '지켜줄게', '히히', '하하')) return pupuLaugh(text), true; // 웃음 섞인 말 — 웝웝
+  if (has(s, '놀자', '하이파이브', '한번더', '최고', '신난다', '또놀자', '들어올래', '가자')) return voice('yip', { gain: -5, why: text }), true; // 놀자! · 최고! — 낮은 웝 (푸푸의 yip)
+  if (has(s, '기다렸', '친구생겼', '또줄거지')) { voice('whine', { vlo: 0, vhi: 2, gain: -7, rate: 1.05, why: text }); later(0.45, () => voice('content', { force: 1, gain: -5, why: text })); return true; } // 반가워서 낮게 낑 → 음~ (꼬리 흔드는 소리)
+  if (has(s, '봐준다')) { play('pupu_huff', { gain: -4, why: text }); later(0.35, () => voice('content', { force: 1, gain: -5, why: text })); return true; } // 멀리 있으니까 봐준다~ — 느긋하게 훕 → 음~ (어깨를 으쓱)
+  if (has(s, '간식있어')) return voice('content', { gain: -4, rate: 1.05, why: text + ' (hopeful)' }), true; // 엄마, 간식 있어? — 기대에 찬 낮은 음? (혼자 놀 때도 조용히 넘어가지 않는다 · 낑은 진짜 조를 때만)
+  if (has(s, '헤헤', '좋다', '좋고', '시원', '깔끔', '맛있', '고마워', '따뜻', '편하다', '개운', '운좋다', '여기', '앉', '엎드렸', '쉬자', '악수', '있었네')) return voice('content', { gain: -1, why: text }), true; // 헤헤 · 좋다 · 시원하다 · 악수 — 기분 좋은 음~
   if (s === '끙') return voice('content', { gain: -6, rate: 0.82, why: text }), true;
   if (s.startsWith('휴')) return voice('sigh', { gain: -4, why: text }), true;
-  if (has(s, '손', '짝', '첨벙', '슥슥', '척', '똥츄', '빙글', '꼴깍', '퐁')) return true; // 소리는 main.js가 그 순간에 직접 낸다 (첨벙 · 짝 · 슥슥 · 바스락)
   return false;
 }
+// 푸푸: 위의 어떤 규칙에도 (핑키 규칙에도) 걸리지 않은 말 — 두 글자 넘는 말이면 작게 음~ 한 번 (4초에 한 번), 소리 말(짧은 의성어)은 그대로 조용히
+function pupuChat(s, text) { if (!/[가-힣].*[가-힣]/.test(s) || T - (st.chatT ?? -99) < PUPU_CHAT_GAP) return; st.chatT = T; voice('content', { gain: -6, why: text + ' (chat)' }); }
 // 담이만의 말풍선 → 소리 (못 알아들은 말은 핑키와 같은 규칙으로: 그때 나는 목소리는 담이 목소리)
 function damiSay(s, text) {
   const n = (s.match(/컹/g) || []).length;
