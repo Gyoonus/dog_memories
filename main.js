@@ -89,6 +89,8 @@ const COLORS = {
   dami: { base: 0xf6f2ec, tan: 0x9a5c2a, headTan: 0xa96833, ear: 0x94532a, saddle: 0x0b0b0c, grizzle: 0x2a2a2e, nose: 0x0b0a0a, collar: 'harness', harness: 0xb6bac0 },
   // 푸푸: 크림빛 흰 진돗개(가슴·다리는 더 희다). 귀 뒤·귀 테두리는 옅은 살구빛, 주둥이·볼은 아주 옅은 살구 기운, 귀 안은 분홍, 꼬리는 따뜻한 크림, 분홍빛 갈색 코, 진한 청회색 띠 목줄에 은빛 고리 · 발자국 무늬 청록 별 이름표
   pupu: { base: 0xfce2c6, snow: 0xfff4e8, tan: 0xeea974, headTan: 0xf8d2ac, saddle: 0xeed6bd, earIn: 0xe8a3a3, tailTan: 0xf6d6b0, nose: 0x7a5250, collar: 'band', band: 0x50686d, tag: 'star', tagColor: 0x22afd2 },
+  // 재롱: 붉은 황갈과 흰색의 나이 든 비글 (임시 색 — 재롱 모델 작업이 사진에 맞춰 고친다)
+  jaerong: { base: 0xf4ede2, tan: 0xc0763c, headTan: 0xc47d40, ear: 0xb86f38, saddle: 0xb36a34, grizzle: 0x8c6448, nose: 0x14100e, collar: 'ribbon' },
   generic: { base: 0xe9e1d6, tan: 0xc99a6c, saddle: 0x4a3c34, nose: 0x1c1513 },
   friend: { base: 0xd8a462, tan: 0xc98c4a, saddle: 0xc98c4a, nose: 0x1a1210, collar: 0xc23b2e }, // 놀이터 울타리 밖을 지나가는 동네 친구 (누렁이 진돗개 · 빨간 목줄)
 };
@@ -101,6 +103,8 @@ function makeDami(scale = 1, seed = 11) { return buildDog({ kind: 'beagle', vari
 // PUPU_S: 푸푸는 20kg 넘는 듬직한 진돗개 — 핑키·담이보다 몸 전체가 1.25배 크다 (남산 방 · 고르기 화면 모두. 자세 숫자는 몸 기준이라 그대로 커지고, 월드 단위로 쓰는 곳만 PUPU_S를 곱한다)
 const PUPU_S = 1.25;
 function makePupu(scale = PUPU_S, seed = 5) { return buildDog({ kind: 'jindo', variant: 'pupu', colors: COLORS.pupu, scale, seed }); }
+// 재롱 모델은 이 함수 하나에서만 만든다 (buildDog의 variant 'jaerong': 붉은 황갈과 흰색의 나이 든 비글 — 핑키와 같은 비글 틀에서 시작)
+function makeJaerong(scale = 1, seed = 13) { return buildDog({ kind: 'beagle', variant: 'jaerong', colors: COLORS.jaerong, scale, seed }); }
 // paws: 발 위치(강아지 바닥 기준). lean: 발목 아래 마디 기울기(0 = 수직, π/2 = 바닥에 눕힘). free: 1이면 다리를 곧게 뻗음
 // 비글(핑키) 관절: 어깨 관절(견단) (±0.048, -0.022, 0.226 — 걸을 때 견갑골과 함께 앞뒤로 조금 미끄러진다) → 위팔 0.10(뒤·아래로) → 팔꿈치(뒤를 향함, 가슴 바닥 높이) → 아래팔 0.122(수직) → 손목 → 발허리 0.045
 //   고관절 (±0.062, 0.015, -0.175) → 무릎(앞을 향함) → 허벅지 0.118 → 정강이 0.105(뒤·아래로) → 비절(뒤를 향함, 바닥에서 ~0.12) → 뒷발허리 0.088(거의 수직)
@@ -814,6 +818,8 @@ function buildDog({ kind, colors: C, silhouette = false, scale = 1, seed = 0, va
   const J = kind === 'jindo' && !PU, DM = !J && variant === 'dami'; // DM: 담이 (비글 변형 — 핑키는 variant 없이 그대로)
   const d = { kind, J, scale, seed, meshes: [], ears: [], eyes: [], legs: [] };
   if (DM) Object.assign(d, { dami: true, variant, hipX: 0.056 });
+  const JR = !J && !PU && !DM && variant === 'jaerong'; // JR: 재롱 (비글 변형 — 핑키 틀에서 시작)
+  if (JR) Object.assign(d, { jaerong: true, variant });
   if (PU) Object.assign(d, { pupu: true, variant, hipX: 0.05, smile: 1, smileK: 1, wild: false, earSw: 0, headPts: { top: [0, 0.096, -0.01], say: [0, 0.142, -0.01], nose: [0, 0.024, 0.1035], mouth: [0, 0.002, 0.092] } }); // 푸푸: 뒷다리 뿌리는 골반 폭에 맞게 · headPts: 머리 좌표의 정수리·말풍선 자리(쫑긋 선 귀 끝 0.134 바로 위 — 말풍선이 귀를 덮지 않게)·코끝·입 앞 (킁킁·간식 자리 — 핑키·담이는 큰 머리의 예전 값 그대로) · smile: 웃는상 — 평소 얼굴은 입을 벌리고 활짝 웃는 입 (가만히 산을 바라볼 때 · 놀람 · 까치 · 터키츄 앞에서 의젓한 척할 때만 잠깐 0) · wild: 터키츄 앞에서 신나면 꼬리를 마음껏 · earSw: 귀를 좌우로 돌려 소리를 살핀다
   const CC = PU ? PUPU_COLLAR_C : COLLAR_C, CA = PU ? PUPU_COLLAR_AX : COLLAR_AX; // 목줄 고리 중심(y, z)·고리 면 법선 — 푸푸는 굵은 목 위쪽(턱 밑)에
   const silMat = silhouette ? new THREE.MeshStandardMaterial({ color: 0x2b201b, roughness: 0.9, emissive: 0x170f0b }) : null;
@@ -6843,3 +6849,4 @@ if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCom
   brain, BRAIN, drops, dropTreat, wait, until, idleGap, idleLook, yawn, shakeOff, stretch, momCheck, hideTreat, nearestDrop, mound, updateMound, brainPoke, startSpecial, momGreet, payBall, findTreat, eatLeft, sneeze, roam, resetRoom, special: () => (active && active.special) || null, bubbles: () => bubbles.map((b) => b.el.textContent),
   DM, friendStart, friendOff, damiAttn, damiWoof, friendScene, sndUpdate: (dt, t) => updateSound(dt, t), get mode() { return mode; },
   get pupu() { return PUPU; }, get NS() { return NS; }, magpieScene, magOff, magGo: () => startSpecial('magpie', magpieScene), pupuTall, pupuGuard, pupuInvite, pupuButterfly, bflyOff, poseFor, ROOM_NAMSAN, nsGround, nsInWater, nsWaterY, NS_SX, NS_SW, NS_SPOT, contact, toyOff, buildDog, COLORS };
+if (location.hostname === 'localhost') Object.assign(window.__dbg, { makeJaerong }); // 재롱 모델 디버그
