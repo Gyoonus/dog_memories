@@ -2089,7 +2089,7 @@ function updateDog(d, dt, t, camPos) {
 // ================================================================
 const DOGS = [
   { id: 'pupu', name: '푸푸', place: '남산 산책길', ready: true, kind: 'jindo', variant: 'pupu', colors: COLORS.pupu, room: 'namsan', make: (s, i) => makePupu(s * PUPU_S, i) }, // 받침대 위에서도 다른 강아지보다 1.25배 크게
-  { id: 'alpang', name: '알팡', place: '쇼핑센터', ready: false, kind: 'beagle', colors: COLORS.generic },
+  { id: 'alpang', name: '알팡', place: '의왕 아울렛', ready: true, kind: 'beagle', variant: 'alpang', colors: COLORS.alpang, room: 'uiwang', make: (s) => makeAlpang(s) }, // 알팡 모델의 크기 · 씨앗은 makeAlpang이 정한다 (받침대 위 1.3배만 곱한다)
   { id: 'pinky', name: '핑키', place: '푸맘네 집', ready: true, kind: 'beagle', colors: COLORS.pinky, room: 'home' },
   { id: 'jaerong', name: '재롱', place: '과천 잔디밭', ready: true, kind: 'beagle', variant: 'jaerong', colors: COLORS.jaerong, room: 'gwacheon', make: (s) => makeJaerong(s) }, // 재롱 모델의 크기 · 씨앗은 makeJaerong이 정한다 (받침대 위 1.3배만 곱한다)
   { id: 'dami', name: '담이', place: '놀이터', ready: true, kind: 'beagle', variant: 'dami', colors: COLORS.dami, room: 'park', make: makeDami },
@@ -3333,6 +3333,7 @@ function releaseProps() {
   damiRelease(); // 담이의 소품 (놀이터를 지은 뒤에만)
   pupuRelease(); // 푸푸의 소품 (남산을 지은 뒤에만)
   jrRelease(); // 재롱이의 소품 (과천을 지은 뒤에만)
+  apRelease(); // 알팡이의 소품 (의왕 아울렛을 지은 뒤에만)
 }
 function resetProps() { releaseProps(); yogurt.reset(); yogurtDab.set(0); goguma.reset(); rope.reset(); toyOff(); closePicker(); sitCount = 0; }
 
@@ -3345,13 +3346,14 @@ function bubble(text, anchor, cls = '', life = 1.7, dx = null) { // 글자만 (�
   if (pinky.pupu && anchor === headTop && /^…?!$/.test(text)) pinky.alertT = 1.0; // 푸푸: 놀라거나 귀를 세우고 알아챌 때('!' · '…!')는 웃던 입을 꾹 다문다 (1초 뒤 다시 웃는상)
   if (pinky.dami && cls === 'soft') cls = 'soft dm'; // 담이의 말: 해 질 녘 모래밭 위에서도 또렷하게 (조금 더 진한 바탕)
   if (pinky.jaerong && cls === 'soft') cls = 'soft dm'; // 재롱이의 말: 밝은 금빛 잔디 · 안개 낀 하늘 위에서도 또렷하게 (담이와 같은 진한 바탕)
+  if (pinky.alpang && cls === 'soft') cls = 'soft dm'; // 알팡이의 말: 한여름 밝은 잔디 · 파란 하늘 위에서도 또렷하게
   const el = document.createElement('div'); el.className = 'bubble ' + cls; el.textContent = text; el.style.opacity = 0; // 자리를 잡기 전(다음 프레임)까지는 보이지 않게 — 화면 구석에 한 번 번쩍이지 않도록
   bubbleLayer.appendChild(el);
   bubbles.push({ el, anchor, age: 0, life, dx: dx ?? (Math.random() - 0.5) * 40 });
 }
 function say(text, anchor, cls = '', life = 1.7, dx = null) {
   bubble(text, anchor, cls, life, dx);
-  snd('onSay', pinky.pupu || pinky.jaerong ? pinky.talk(text) : text); // 말풍선 글자에 맞는 소리 (왈! → 짖는 소리 …) · 푸푸 · 재롱이는 바뀐 말 그대로 (월월! → 낮게 두 번 · 왕! → 쉰 목소리로 한 번)
+  snd('onSay', pinky.pupu || pinky.jaerong || pinky.alpang ? pinky.talk(text) : text); // 말풍선 글자에 맞는 소리 (왈! → 짖는 소리 …) · 푸푸 · 재롱이는 바뀐 말 그대로 (월월! → 낮게 두 번 · 왕! → 쉰 목소리로 한 번)
 }
 // 소리는 덤이다: 소리 쪽에서 무슨 일이 나도 방은 멈추지 않는다
 function snd(fn, ...a) { try { return sound[fn](...a); } catch (e) { return null; } }
@@ -3429,7 +3431,7 @@ function startCommand(name, fn, keepCam = false) {
   const tok = { cancelled: false, cleanups: [], name };
   active = tok; setActiveBtn(name); idleT = 5;
   resetTransient(pinky); releaseHands(); brainStart(name, tok);
-  if ((pinky.pupu || pinky.jaerong) && name !== 'roam' && name !== 'touch') fadeBubbles(); // 푸푸: 엄마가 단추를 누르면 인사말(엄마 왔다! 헤헤) 같은 지난 말풍선은 걷힌다 (츄츄츄~와 겹치지 않게)
+  if ((pinky.pupu || pinky.jaerong || pinky.alpang) && name !== 'roam' && name !== 'touch') fadeBubbles(); // 푸푸: 엄마가 단추를 누르면 인사말(엄마 왔다! 헤헤) 같은 지난 말풍선은 걷힌다 (츄츄츄~와 겹치지 않게)
   if (pinky.tgt.name === 'held' || pinky.tgt.name === 'eat') setPose(pinky, 'stand', 5);
   let run = fn;
   if (!['touch', 'cushion'].includes(name)) pinky.napEnd = 0;
@@ -3474,6 +3476,7 @@ async function comeHere(tok, speed = 0.75) {
 function happy(on) {
   if (pinky.pupu) return void Object.assign(pinky, on ? { eyeOpen: 0.55, earPerk: -0.3, wagAmpT: 0.9, wagSpeedT: 15, pant: false, tiltT: 0.12 } : { eyeOpen: 1, earPerk: 0, wagAmpT: 0.4, wagSpeedT: 8, pant: false, tiltT: 0, paddle: 0 }); // 푸푸: 좋으면 눈을 가늘게 뜨고 귀를 눕히고 꼬리를 붕붕 (입은 늘 활짝 웃는상 그대로 — 헥헥대지는 않는다)
   if (pinky.jaerong) return void Object.assign(pinky, on ? { eyeOpen: 0.55, earPerk: -0.45, wagAmpT: 0.85, wagSpeedT: 16, pant: false, tiltT: 0.16 } : { eyeOpen: 1, earPerk: 0, wagAmpT: 0.4, wagSpeedT: 8, pant: false, tiltT: 0, paddle: 0 }); // 재롱이: 좋아도 헥헥대지 않는다 (눈을 지그시 · 귀를 눕히고 · 꼬리만 붕붕 — 도도하게)
+  if (pinky.alpang) return void Object.assign(pinky, on ? { eyeOpen: 0.5, earPerk: -0.4, wagAmpT: 0.85, wagSpeedT: 15, pant: false, tiltT: 0.15, smile: 1 } : { eyeOpen: 1, earPerk: 0, wagAmpT: 0.4, wagSpeedT: 8, pant: false, tiltT: 0, paddle: 0, smile: 0 }); // 알팡이: 좋으면 눈을 지그시 · 귀를 눕히고 활짝 웃는다 (공주님은 헥헥대지 않는다)
   if (on) Object.assign(pinky, { eyeOpen: 0.28, earPerk: -0.6, wagAmpT: 0.75, wagSpeedT: 15, pant: true, tiltT: 0.2 });
   else Object.assign(pinky, { eyeOpen: 1, earPerk: 0, wagAmpT: 0.4, wagSpeedT: 8, pant: false, tiltT: 0, paddle: 0 });
 }
@@ -3574,6 +3577,7 @@ const CMDS = {
     await nearFirst(tok);
     if (pinky.pupu) return pupuDown(tok); // 푸푸: 곧바로 (엎드렸다~)
     if (pinky.jaerong) return jrDown(tok); // 재롱이: 엎드려 줄게
+    if (pinky.alpang) return apOnCushion(tok, 'down'); // 알팡이: 바닥은 차갑단 말이야~ 방석!
     setPose(pinky, 'down', 4);
     pinky.wagAmpT = 0.25; pinky.wagSpeedT = 5;
     await wait(tok, 1.4);
@@ -3581,6 +3585,7 @@ const CMDS = {
     await wait(tok, 2.5);
   },
   async roll(tok) {
+    if (pinky.alpang) return apOnCushion(tok, 'roll'); // 알팡이: 공주 털 더러워진단 말이야~ (방석 위에서만)
     await nearFirst(tok);
     setPose(pinky, 'side', 3.2); pinky.eyeOpen = 0.75;
     await wait(tok, 1.2);
@@ -3602,7 +3607,7 @@ const CMDS = {
     sitFront(5);
     await wait(tok, 0.8);
     happy(true); say('좋아…', headTop, 'soft', 1.8);
-    let s = 0, lift = 0, onBack = false; const jrS = pinky.jaerong ? jrPetSide() : 0; // 재롱이: 모자 옆 귀 · 볼과 목 옆을 쓸어 준다 (jrPetPt)
+    let s = 0, lift = 0, onBack = false; const jrS = pinky.jaerong || pinky.alpang ? jrPetSide() : 0; // 재롱이: 모자 옆 귀 · 볼과 목 옆을 쓸어 준다 (jrPetPt) · 알팡이: 리본 매듭을 피해 귀 · 볼을
     const upOf = () => (jrS ? jrPetUp(onBack, jrS) : frameUp(onBack ? pinky.body : pinky.head));
     const pt = () => jrS ? jrPetPt(s, onBack, jrS) : (onBack ? pinky.body.localToWorld(V3(0, 0.115, lerp(0.05, -0.08, s))) : pinky.head.localToWorld(pinky.headPts ? V3(0, pinky.headPts.top[1], lerp(0.03, -0.045, s)) : V3(0, 0.125, lerp(0.04, -0.06, s)))); // 머리 쓰다듬기: 정수리를 따라 (푸푸는 제 머리 크기대로)
     handR.want = { pos: () => pt().addScaledVector(upOf(), 0.02 + lift), up: upOf, curl: 0.12, rate: 12, shoulder: [0.36, -0.12, 0.05] };
@@ -3618,9 +3623,9 @@ const CMDS = {
   },
   async hug(tok) {
     await comeHere(tok, 0.75);
-    const [p, a] = pinky.jaerong ? kneelAt(1.12, 0.8, 0.36) : kneelAt(0.95, 0.74, 0.32); camTo(p, a); // 재롱: 모자만큼 조금 더 물러나 높이 본다 (모자 · 말풍선이 잘리지 않게)
+    const [p, a] = pinky.jaerong || pinky.alpang ? kneelAt(1.12, 0.8, 0.36) : kneelAt(0.95, 0.74, 0.32); camTo(p, a); // 재롱: 모자만큼 조금 더 물러나 높이 본다 (모자 · 말풍선이 잘리지 않게)
     setPose(pinky, 'stand', 5); pinky.tgt.yawOff = 0;
-    pinky.wagAmpT = 0.65; pinky.wagSpeedT = 14; pinky.earPerk = 0.6; say('!', headTop, '', 1);
+    pinky.wagAmpT = 0.65; pinky.wagSpeedT = 14; pinky.earPerk = 0.6; if (pinky.alpang) say('공주 안아 줘~ ♥', headTop, 'soft', 1.5); else say('!', headTop, '', 1); // 알팡이: 먼저 안아 달라고 한다
     await wait(tok, 0.7);
     const center = () => pinky.body.localToWorld(V3(0, -0.03, 0.115));
     const armpit = (sx) => pinky.body.localToWorld(V3(sx * 0.115, -0.03, 0.115));
@@ -3631,7 +3636,7 @@ const CMDS = {
     setPose(pinky, 'held', 3.5); pinky.liftT = 0.2;
     const p0 = { x: pinky.x, z: pinky.z }, dx = roomCam.position.x - p0.x, dz = roomCam.position.z - p0.z, L = Math.hypot(dx, dz);
     const p1 = { x: p0.x + (dx / L) * 0.33, z: p0.z + (dz / L) * 0.33 };
-    camTo(cam.tPos, V3(p1.x, 0.64 + ((pinky.camK || 1) - 1) * 0.3 + (pinky.jaerong ? 0.05 : 0), p1.z), 2.2); // 큰 강아지(푸푸)를 안으면 품이 그만큼 높다 (재롱: 모자만큼 조금 위)
+    camTo(cam.tPos, V3(p1.x, 0.64 + ((pinky.camK || 1) - 1) * 0.3 + (pinky.jaerong || pinky.alpang ? 0.05 : 0), p1.z), 2.2); // 큰 강아지(푸푸)를 안으면 품이 그만큼 높다 (재롱: 모자만큼 조금 위)
     await tween(tok, 1.1, (k) => { const e = ease(k); pinky.x = lerp(p0.x, p1.x, e); pinky.z = lerp(p0.z, p1.z, e); });
     happy(true); pinky.pant = false; pinky.tiltT = 0;
     for (let i = 0; i < 3; i++) {
@@ -3798,12 +3803,15 @@ const CMDS = {
   async worm(tok) { await wormDance(tok); }, // 담이(놀이터)에만 있는 버튼
   async zoom(tok) { await zoomies(tok); },
   async dig(tok) { await damiDig(tok); }, // 담이(놀이터)에만 있는 버튼: 땅 파기
-  async paw(tok) { await pupuPaw(tok); }, // 푸푸(남산)에만 있는 버튼: 손 · 하이파이브 · 물장구 · 똥츄
+  async paw(tok) { if (pinky.alpang) return apPaw(tok); await pupuPaw(tok); }, // 푸푸(남산)에만 있는 버튼: 손 · 하이파이브 · 물장구 · 똥츄 — 알팡이(의왕 아울렛)의 손은 공주님 버전 (공주는 그런 거 안 행~)
   async high5(tok) { await pupuHigh5(tok); },
   async splash(tok) { await pupuSplash(tok); },
   async poop(tok) { await pupuPoop(tok); },
   async mat(tok) { if (pinky.jaerong) await jrMat(tok); }, // 재롱이(과천)에만 있는 버튼: 돗자리 · 달려오기
   async run(tok) { if (pinky.jaerong) await jrRun(tok); },
+  async kiss(tok) { if (pinky.alpang) await apKiss(tok); }, // 알팡이(의왕 아울렛)에만 있는 버튼: 뽀뽀하기 · 만져줘(치대기) · 에르메스 상자
+  async lean(tok) { if (pinky.alpang) await apLean(tok); },
+  async box(tok) { if (pinky.alpang) await apBox(tok); },
 };
 // ---------- 담이: 지렁이 댄스 — 벌러덩 드러누워 등을 바닥에 비비며 몸을 좌우로 꿈틀꿈틀, 다 하고 나면 부르르 털고 일어난다
 async function wormDance(tok, solo = false) {
@@ -4151,6 +4159,7 @@ let sitCount = 0, lastSit = '';
 async function sitCommand(tok) {
   if (pinky.pupu) return pupuSit(tok); // 푸푸: 곧바로 얌전히 (앉았다~)
   if (pinky.jaerong) return jrSit(tok); // 재롱이: 앉아 줄게 (가끔은 못 들은 척부터)
+  if (pinky.alpang) return apOnCushion(tok, 'sit'); // 알팡이: 공주는 바닥에 안 앉아. 방석 깔아 줘~
   const was = pinky.tgt.name === 'sit' ? (Math.abs(pinky.tgt.yawOff) > 0.8 ? 'side' : 'front') : null;
   // 웬만하면 마주 보고 앉는다. 옆으로 앉기는 가끔만(연달아 두 번은 없다) — 옆으로 앉아 있을 때 또 부르면 마주 보고 고쳐 앉는다
   const view = sitCount === 0 || was === 'side' || lastSit === 'side' ? 'front' : Math.random() < (was === 'front' ? 0.3 : 0.25) ? 'side' : 'front';
@@ -4844,6 +4853,7 @@ async function momGreet(tok, why = 'entry') {
   brain.lastMom = clock; brain.d.attach = Math.max(0, brain.d.attach - 0.5); mark('mom:' + why);
   if (pinky.pupu) return pupuGreet(tok, why); // 푸푸: 꼬리를 붕붕 흔들며 달려와 엎드려 뻗기 · 엄마 왔다! 헤헤
   if (pinky.jaerong) return jrGreet(tok, why); // 재롱이: 도도하게 걸어와 시치미 — 꼬리는 붕붕
+  if (pinky.alpang) return apGreet(tok, why); // 알팡이: 사뿐사뿐 깡총깡총 와서 공주님처럼 앉는다
   let slow = false;
   if (pinky.tgt.name === 'curl' || pinky.curlK > 0.3) { slow = true; mark('mom:woke'); await wakeUp(tok, 'mom'); brain.d.rest = Math.min(brain.d.rest, 0.5); } // 자다가도 엄마가 오면 일어난다 (응…? → 천천히 일어나서)
   setPose(pinky, 'stand', 7); pinky.sniff = 0; pinky.lookFn = null; pinky.tgt.gaze = 1; pinky.tgt.headPitch = -0.12; pinky.face = 'cam';
@@ -4997,7 +5007,7 @@ function brainDone(name) { // 명령이 끝까지 갔을 때. true를 돌려주�
   return false;
 }
 // 앉아! 를 한 번 못 들은 척 (가끔만) — 딴청을 부리다가 한숨 쉬고 앉는다
-const deafOK = (tok) => !pinky.pupu && clock - tok.t0 < 0.5 && pinky.tgt.name !== 'sit' && (brain.force.deaf ?? (sitCount > 0 && cdOK('deaf', BRAIN.deafCd) && Math.random() < BRAIN.deafP));
+const deafOK = (tok) => !pinky.pupu && !pinky.alpang && clock - tok.t0 < 0.5 && pinky.tgt.name !== 'sit' && (brain.force.deaf ?? (sitCount > 0 && cdOK('deaf', BRAIN.deafCd) && Math.random() < BRAIN.deafP));
 async function playDeaf(tok) {
   brain.cd.deaf = clock; mark('deaf'); lastSit = 'side'; // 딴청 뒤에는 마주 보고 앉는다
   const s = sideSign, side = () => V3(pinky.x, 0.25, pinky.z).addScaledVector(camRight(), s * 1.6).addScaledVector(toCamDir(), 0.4);
@@ -5037,6 +5047,7 @@ function brainEnter() { // 방에 들어설 때: 저쪽에서 냄새를 맡고 �
   if (pinky.dami) damiEnter();
   if (pinky === PUPU) pupuEnter();
   if (pinky === JAERONG) jrEnter();
+  if (pinky === ALPANG) apEnter();
 }
 // 한참 조용하다가 다시 만질 때 · 다른 창에 갔다가 돌아올 때
 document.addEventListener('pointerdown', (e) => { if (mode !== 'room') return; const q = clock - brain.lastInput; brain.lastInput = clock; if (q > BRAIN.quiet) brainPoke('quiet', e.target === canvas); }, true);
@@ -5317,7 +5328,7 @@ const ROOM_PARK = {
   WIN: V3(0.6, 0.9, -9), ROPE: { x: -0.95, z: -0.55, yaw: -0.5 },
   entry: [[1.0, -0.9, 1.9, -1.7], [-1.0, -0.7, -1.8, -1.2], [0.3, -1.6, 0.4, -2.6]],
   wander: [-1.5, -1.0, 3.0, 2.2],
-  off: { feed: true, cushion: true, paw: true, high5: true, splash: true, poop: true, mat: true, run: true }, actW: { nap: 0, bowl: 0, left: 0, rest: 0.35, window: 0.7 }, noBowl: true, // 놀이터에서는 잠잘 틈 없이 논다 (손 · 하이파이브 · 물장구 · 똥츄는 푸푸만 · 돗자리 · 달려오기는 재롱이만)
+  off: { feed: true, cushion: true, paw: true, high5: true, splash: true, poop: true, mat: true, run: true, kiss: true, lean: true, box: true }, actW: { nap: 0, bowl: 0, left: 0, rest: 0.35, window: 0.7 }, noBowl: true, // 놀이터에서는 잠잘 틈 없이 논다 (손 · 하이파이브 · 물장구 · 똥츄는 푸푸만 · 돗자리 · 달려오기는 재롱이만 · 뽀뽀하기 · 만져줘 · 에르메스 상자는 알팡이만)
   lines: { gifts: ['미끄럼틀 냄새!', '누가 여기 왔었네?', '킁킁, 친구 냄새~'], table: ['벤치 밑에 뭐 있다!', '과자 냄새 났는데!', '여긴 없네~'], window: ['저기 비둘기다!', '바람 좋다~', '친구 오나?'], tableSniff: '뭐 떨어진 거 없나~', mid: ['오리야 안녕!', '여기도 친구 냄새!', '킁킁, 과자 냄새~'] },
   sniffMid: { x: PARK.riders[0][0] - 0.55, z: PARK.riders[0][1] + 0.3, fx: PARK.riders[0][0], fz: PARK.riders[0][1] }, // 냄새 맡기 가운데 들르는 곳: 오리 스프링 놀이기구 옆 (미끄럼틀 끝 → 오리 → 벤치, 멀리 돌지 않게)
   zoom: [[1.4, -0.9], [0.78, 0.18], [-0.48, 0.18], [-1.1, -0.9], [-0.48, -1.98], [0.78, -1.98]], // 우다다: 모래밭 가운데 빈 곳을 크게 도는 길
@@ -5336,7 +5347,7 @@ Object.assign(ROOM_HOME, {
   bg: roomScene.background, fog: roomScene.fog, env: roomScene.environment,
   sound: { surf: null, tail: null, rug: [0.1, 0.8, 1.45, 0.95], cush: [CUSH.x, CUSH.z, CUSH.R], bowl: [BOWL.x, BOWL.z], voice: 'pinky', brook: null },
   name: $('#roomUI .title .name').textContent, place: $('#roomUI .title .place').textContent, hint: $('#hint').textContent, navLabel: actionsEl.getAttribute('aria-label'),
-  off: { worm: true, zoom: true, dig: true, paw: true, high5: true, splash: true, poop: true, mat: true, run: true }, wander: [-0.6, 0.2, 1.4, 1.0],
+  off: { worm: true, zoom: true, dig: true, paw: true, high5: true, splash: true, poop: true, mat: true, run: true, kiss: true, lean: true, box: true }, wander: [-0.6, 0.2, 1.4, 1.0],
   lines: { gifts: GIFT_LINES, table: TABLE_LINES, window: ['단풍 예쁘다…', '새 왔다…', '바람 냄새…'], tableSniff: '뭐 떨어진 거 없나' },
 });
 function setDog(d) { // 방에 있는 강아지를 바꿔 끼운다 (코에 묻는 요거트도 그 얼굴로) · 강아지마다 따로 기억하는 것(옆으로 앉은 쪽 · 로프 놀이 횟수 · 혼자 로프 갖고 놀 때까지)도 바꿔 든다
@@ -5358,11 +5369,12 @@ const DAMI_TALK = {
 };
 function damiTalk(s) { return DAMI_TALK[s] ?? (/[가-힣]…$/.test(s) ? s.slice(0, -1) + '~' : s); }
 function useRoom(id) {
-  const R = id === 'park' ? ROOM_PARK : id === 'namsan' ? ROOM_NAMSAN : id === 'gwacheon' ? ROOM_GWACHEON : ROOM_HOME;
+  const R = id === 'park' ? ROOM_PARK : id === 'namsan' ? ROOM_NAMSAN : id === 'gwacheon' ? ROOM_GWACHEON : id === 'uiwang' ? ROOM_UIWANG : ROOM_HOME;
   if (R === RP) return;
   if (!R.built && R === ROOM_PARK) buildPark();
   if (!R.built && R === ROOM_NAMSAN) buildNamsan();
   if (!R.built && R === ROOM_GWACHEON) buildGwacheon();
+  if (!R.built && R === ROOM_UIWANG) buildUiwang();
   RP.ropeN0 = rope.frames().map((v) => v.clone()); if (R.ropeN0) rope.frames().forEach((v, i) => v.copy(R.ropeN0[i])); // 핑키 방의 로프는 놀이터에 다녀와도 그대로 (줄 단면 방향까지)
   RP = R;
   Object.assign(HOME, R.HOME); BOWL.copy(R.BOWL); Object.assign(EAT, R.EAT); Object.assign(SPOTS, R.SPOTS); Object.assign(CUSH, R.CUSH);
@@ -5373,8 +5385,9 @@ function useRoom(id) {
   if (parkG) parkG.visible = R === ROOM_PARK;
   if (nsG) nsG.visible = R === ROOM_NAMSAN;
   if (gwG) { gwG.visible = R === ROOM_GWACHEON; GW.face.visible = R === ROOM_GWACHEON; GW.tennis.visible = R !== ROOM_GWACHEON; } // 과천: 공은 빨간 삑삑이공 얼굴로
+  if (uiG) { uiG.visible = R === ROOM_UIWANG; UI.pinkBall.visible = R === ROOM_UIWANG; UI.tennis.visible = R !== ROOM_UIWANG && R !== ROOM_GWACHEON; if (R !== ROOM_UIWANG) { apStashClear(); UI.held = null; } } // 의왕 아울렛: 공은 분홍 공으로 · 다른 곳으로 가면 보물 더미는 비운다
   roomScene.background = R.bg; roomScene.fog = R.fog; roomScene.environment = R.env;
-  setDog(R === ROOM_PARK ? DAMI : R === ROOM_NAMSAN ? PUPU : R === ROOM_GWACHEON ? JAERONG : PINKY);
+  setDog(R === ROOM_PARK ? DAMI : R === ROOM_NAMSAN ? PUPU : R === ROOM_GWACHEON ? JAERONG : R === ROOM_UIWANG ? ALPANG : PINKY);
   snd('configure', R.sound);
   $('#roomUI .title .name').textContent = R.name; $('#roomUI .title .place').textContent = R.place; $('#hint').textContent = R.hint; actionsEl.setAttribute('aria-label', R.navLabel);
   for (const b of actionsEl.querySelectorAll('button[data-cmd]')) {
@@ -5383,8 +5396,9 @@ function useRoom(id) {
     if (b.dataset.menu) { if (((R.picks || PICKS)[b.dataset.menu] || []).length === 1) b.removeAttribute('aria-haspopup'); else b.setAttribute('aria-haspopup', 'menu'); } // 고를 것이 하나뿐이면 메뉴 없이 바로
   }
   actionsEl.classList.toggle('many', actionsEl.querySelectorAll('button[data-cmd]:not([hidden])').length > 10); // 놀이터: 단추가 11개 (땅 파기)
+  actionsEl.classList.toggle('lots', actionsEl.querySelectorAll('button[data-cmd]:not([hidden])').length > 11); // 의왕 아울렛: 단추가 12개 (뽀뽀하기 · 만져줘 · 에르메스 상자)
   rope.g.visible = R === ROOM_HOME; // 로프는 핑키 방에만 (담이의 장난감은 패트병 · 나뭇가지 · 오둥이)
-  if ((R === ROOM_PARK || R === ROOM_NAMSAN || R === ROOM_GWACHEON) && !R.compiled) { R.compiled = true; try { renderer.compile(roomScene, roomCam); } catch (e) { /* 처음 그릴 때 맞춰진다 */ } } // 화면이 어두운 동안 미리 셰이더를 만들어 둔다
+  if ((R === ROOM_PARK || R === ROOM_NAMSAN || R === ROOM_GWACHEON || R === ROOM_UIWANG) && !R.compiled) { R.compiled = true; try { renderer.compile(roomScene, roomCam); } catch (e) { /* 처음 그릴 때 맞춰진다 */ } } // 화면이 어두운 동안 미리 셰이더를 만들어 둔다
 }
 
 // ================================================================
@@ -6341,7 +6355,7 @@ const ROOM_NAMSAN = {
   WIN: V3(1.7, 0.05, 0.0), ROPE: { x: -1.0, z: -2.6, yaw: 0 },
   entry: [[0.8, -0.75, 1.35, -1.35], [-0.9, -0.6, -1.7, -1.1], [0.15, -1.6, 0.4, -2.6]],
   wander: [-1.2, -0.7, 1.5, 1.7],
-  off: { play: true, feed: true, cushion: true, worm: true, zoom: true, dig: true, mat: true, run: true }, actW: { nap: 0, bowl: 0, left: 0 }, noBowl: true,
+  off: { play: true, feed: true, cushion: true, worm: true, zoom: true, dig: true, mat: true, run: true, kiss: true, lean: true, box: true }, actW: { nap: 0, bowl: 0, left: 0 }, noBowl: true,
   lines: { gifts: ['개구리 냄새다!', '바위 밑에 누구 있어?', '물 냄새 좋다~'], table: ['벤치 밑엔 아무것도 없네~', '새 친구 냄새다!', '누가 과자 먹었지?'], window: ['물소리 좋다~', '바람 시원하다!', '어! 물고기다!'], tableSniff: '여긴 없네~', mid: ['붓꽃 냄새 좋다~', '다람쥐 지나갔다!', '음~ 풀 냄새 좋다'] }, // 푸푸: 냄새 맡고 신나서 한마디 (좋다 · 시원하다 → 소리: 낮은 음~)
   sniffMid: { x: 0.8, z: 1.05, fx: 1.12, fz: 1.25 }, // 냄새 맡기 가운데 들르는 곳: 물가의 붓꽃
   acts: (cd, d) => ({ water: (1.0 + 0.9 * d.play) * cd('water', 70), guard: 0.45 * cd('guard', 120), invite: (0.35 + 0.5 * d.play) * cd('invite', 90), bfly: 0.6 * cd('bfly', 100) }), // 혼자 놀 때도 가끔 냇물에 들어가 물을 마시고 첨벙 · 가끔 길가에 앉아 산과 엄마를 바라본다 · 엄마 앞에서 엎드려 뻗기(놀자!) · 나비 쫓기
@@ -7275,7 +7289,7 @@ const ROOM_GWACHEON = {
   WIN: V3(0.4, 0.1, -9), ROPE: { x: -1.0, z: -2.6, yaw: 0 },
   entry: [[1.2, -1.7, 1.9, -2.5], [-1.15, -1.45, -1.9, -2.0], [0.45, -2.5, 0.5, -3.4]],
   wander: [-1.7, -2.4, 3.6, 3.0],
-  off: { feed: true, cushion: true, paw: true, high5: true, splash: true, poop: true, worm: true, zoom: true, dig: true }, actW: { nap: 0, bowl: 0, left: 0, window: 0, attend: 0.7 }, noBowl: true, // 잔디밭에는 밥그릇 · 방석이 없다 (손 · 하이파이브 · 물장구 · 똥츄는 푸푸만, 지렁이 댄스 · 우다다 · 땅 파기는 담이만) — 호수 구경은 재롱이 몫(lake)으로
+  off: { feed: true, cushion: true, paw: true, high5: true, splash: true, poop: true, worm: true, zoom: true, dig: true, kiss: true, lean: true, box: true }, actW: { nap: 0, bowl: 0, left: 0, window: 0, attend: 0.7 }, noBowl: true, // 잔디밭에는 밥그릇 · 방석이 없다 (손 · 하이파이브 · 물장구 · 똥츄는 푸푸만, 지렁이 댄스 · 우다다 · 땅 파기는 담이만, 뽀뽀하기 · 만져줘 · 에르메스 상자는 알팡이만) — 호수 구경은 재롱이 몫(lake)으로
   lines: { gifts: ['…누가 김밥 먹었네.', '흥, 과자 부스러기.', '…돗자리 냄새.'], table: ['…물 냄새.', '흥, 오리 냄새.', '…바람 냄새 좋네.'], window: ['…호수 예쁘다.'], tableSniff: '…없네.', mid: ['…봄 냄새.', '흥, 양 냄새.', '…풀 냄새 좋네.'] },
   sniffMid: { x: -0.85, z: -3.0, fx: -0.95, fz: -3.9 }, // 냄새 맡기 가운데 들르는 곳: 물가 갈대 앞
   acts: (cd, d) => ({ watch: (0.6 + 1.3 * d.attach) * cd('watch', 75), lake: 0.9 * cd('lake', 80), sheep: 0.45 * cd('sheep', 140), cuddle: (0.4 + 0.9 * d.rest) * cd('cuddle', 100) }), // 혼자 있을 때: 조금 떨어져서 언니 바라보기 · 호수 구경 · 양 구경 · 슈슈 끌어안고 쉬기
@@ -8032,6 +8046,942 @@ async function jrMagpie(tok) {
 }
 
 // ================================================================
+// 알팡이의 의왕 아울렛 — 한여름 맑은 날의 의왕 프리미엄 아울렛 잔디밭 (새파란 하늘 · 커다란 뭉게구름 · 짙푸른 숲 언덕)
+// 앞에는 나무 데크 테라스(벤치 · 꽃 화분 · 파라솔 탁자): 보는 사람(엄마)은 테라스에 서서 넓은 잔디밭 건너 삼각 지붕 유리 매장(CHANEL · PRADA)을 본다
+// 하얀 버섯 그늘막과 그 밑 벤치 · 큰 바위와 꽃밭(흰 수국 · 연둣빛 덤불 · 억새) · 까만 T자 가로등 · 연한 돌 산책길
+// 처음 들어갈 때 한 번만 짓는다. 알팡이가 다니는 테라스 · 잔디밭은 평평하다(y = 0). 매장 · 바위 · 벤치 · 그늘막 기둥 · 가로등 · 화분 · 탁자는 돌아서 다닌다
+// 알팡 모델(알팡 모델 가지)이 주는 것: d.headPts(정수리 · 말풍선 · 코 · 입) · d.ribbon · d.ribbonTails · d.ribbonFlutter(리본 펄럭임 더하기 0..1.5) · d.tag(금빛 자물쇠 장식) · d.collarBow · d.smile(활짝 웃는 입 0..1) · d.chinUp(공주님 턱 들기 0..1)
+// — 아직 없으면 비글 몸의 기본 자리를 쓰고 숫자만 정해 둔다 (모든 곳에서 ?. · ?? 로 받는다)
+// ================================================================
+const AP_CALL = '엄마'; // 알팡이가 보는 사람을 부르는 말 — 여기 하나만 바꾸면 알팡이의 모든 말이 바뀐다 ('언니' · '이모' …: 모두 모음으로 끝나 뒤의 조사가 그대로 맞는다)
+const UI_DECK = { x0: -3.4, x1: 3.4, z0: -0.3, z1: 4.8 }; // 나무 데크 테라스 (앞 끝 z0에서 잔디밭으로 이어진다 · 엄마는 데크 위에 서 있다)
+const UI_NAV = { x0: -2.9, x1: 2.9, z0: -6.1, z1: 2.4 }; // 알팡이가 다니는 곳: 테라스와 잔디밭 (매장 앞 돌길 앞까지)
+const UI_SHOPS = [ // 삼각 지붕 유리 매장: 유리 정면 가운데(x, z) · 밑변 폭 · 높이 · 깊이 · 돌린 각 · 간판 (글자만 — 상표 그림은 없다)
+  { x: -3.7, z: -21.5, w: 7.6, h: 7.8, d: 9, ry: 0.12, sign: 'CHANEL' },
+  { x: 4.5, z: -23.2, w: 8.0, h: 8.2, d: 9, ry: -0.14, sign: 'PRADA' },
+  { x: -14.2, z: -24.2, w: 7.0, h: 7.2, d: 7, ry: 0.42, sign: null },
+  { x: 15.4, z: -25.6, w: 6.6, h: 6.8, d: 6, ry: -0.46, sign: null },
+];
+const UI_CANOPY = { x: -3.55, z: -3.7, R: 1.05, h: 2.3 }; // 하얀 버섯 그늘막: 기둥 자리 · 지붕 반지름 · 높이
+const UI_ROCKS = { x: 2.3, z: -3.35 }; // 큰 바위와 꽃밭
+const UI_STASH = { x: -1.66, z: -0.08 }; // 괴도 알팡의 비밀 보물 자리: 테라스 왼쪽 앞 꽃 화분 옆
+const UI_PLANTER = { x: -2.45, z: 0.02 }, UI_TABLE = { x: 2.38, z: 0.2 };
+const UI_PATH = [[0.95, -0.25], [0.75, -1.6], [-0.15, -3.0], [-1.05, -4.7], [-1.0, -7.4], [-0.2, -9.6], [0.1, -11.6]]; // 테라스에서 잔디밭을 가로질러 매장 앞 돌길로 이어지는 산책길 (가운데 선)
+const UI_PATH_W = 0.85;
+let uiG = null, ALPANG = null, UI = null, uiPathPts = null;
+const uiOnPath = (x, z) => { if (z < -11.4 && z > -13.1) return true; if (!uiPathPts) return false; for (const p of uiPathPts) if ((x - p.x) ** 2 + (z - p.z) ** 2 < (UI_PATH_W / 2) ** 2) return true; return false; };
+const uiSurf = (x, z) => (apOnCush(x, z) ? 'cushion' : z > UI_DECK.z0 ? 'wood' : uiOnPath(x, z) ? 'path' : 'grass'); // 발소리: 데크는 발톱이 톡톡 · 잔디는 사박 · 돌길 · 방석은 폭신
+function buildUiwang() {
+  const G = uiG = new THREE.Group(); G.visible = false; roomScene.add(G);
+  const R = rng(53), B = batcher(), OB = [], one = V3(1, 1, 1), _m4 = new THREE.Matrix4(), _q4 = new THREE.Quaternion(), _e4 = new THREE.Euler();
+  UI = { stash: [], lastLoot: -1, lootN: 0, pawAt: -99, flash: 0, held: null };
+  // ---------- 하늘: 한여름 새파란 하늘 (지평선 쪽은 옅은 하늘빛 · 해 쪽은 환하게) + 커다란 뭉게구름
+  {
+    const sky = new THREE.SphereGeometry(36, 32, 16), p = sky.attributes.position, col = [], c = new THREE.Color(), v = V3();
+    const cH = new THREE.Color(0xc9e5f8), cM = new THREE.Color(0x6fb3ea), cT = new THREE.Color(0x2a6fcb), sunDir = V3(-0.45, 0.6, 0.65).normalize(), cS = new THREE.Color(0xfffcec);
+    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).normalize(); const h = Math.max(0, v.y); c.copy(cH).lerp(cM, ss(0.0, 0.16, h)).lerp(cT, ss(0.16, 0.7, h)); c.lerp(cS, 0.5 * Math.max(0, v.dot(sunDir)) ** 8); col.push(c.r, c.g, c.b); }
+    sky.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    const m = new THREE.Mesh(sky, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false })); m.renderOrder = -1; G.add(m);
+    const ctex = canvasTex(256, 128, (x, w, h) => { // 뭉게구름 한 덩이: 둥근 솜뭉치를 겹쳐 그리고 밑은 살짝 잿빛 하늘색
+      const r = rng(19); x.clearRect(0, 0, w, h);
+      const puffs = []; for (let i = 0; i < 16; i++) { const t = i / 15, px = 30 + t * 196 + (r() - 0.5) * 20, py = 78 - Math.sin(Math.PI * t) * 34 + (r() - 0.5) * 14, pr = 18 + Math.sin(Math.PI * t) * 26 + r() * 10; puffs.push([px, py, pr]); }
+      for (const [px, py, pr] of puffs) { const g = x.createRadialGradient(px, py + pr * 0.35, 0, px, py, pr); g.addColorStop(0, 'rgba(214,226,238,0.95)'); g.addColorStop(0.55, 'rgba(232,240,248,0.9)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.beginPath(); x.arc(px, py, pr, 0, Math.PI * 2); x.fill(); }
+      for (const [px, py, pr] of puffs) { const g = x.createRadialGradient(px - pr * 0.25, py - pr * 0.35, 0, px, py, pr * 0.95); g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.6, 'rgba(255,255,255,0.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.beginPath(); x.arc(px, py, pr, 0, Math.PI * 2); x.fill(); }
+    });
+    const cm = new THREE.MeshBasicMaterial({ map: ctex, transparent: true, depthWrite: false, fog: false }), CB = batcher(), pg = new THREE.PlaneGeometry(1, 0.5);
+    for (const [cx, cy, cz, s] of [[-16, 11, -26, 14], [2, 14.2, -29, 18], [16, 10.6, -25, 13], [-27, 9.8, -15, 11], [27, 12, -12, 12], [-6, 17.5, -24, 13], [9, 9.6, -29, 10]]) CB.put(cm, pg, [cx, cy, cz], [0, Math.atan2(-cx, 3.5 - cz), 0], [s, s, 1]);
+    CB.flush(G, false);
+  }
+  // ---------- 잔디밭: 잘 깎은 밝은 초록 (가로로 번갈아 깎은 줄무늬 · 멀어질수록 조금 푸르스름하게)
+  {
+    const xs = [], zs = [], LT = LITE ? 1.6 : 1;
+    const seg = (a, b, st, arr) => { const n = Math.max(1, Math.round(Math.abs(b - a) / st)); for (let i = 0; i < n; i++) arr.push(a + ((b - a) * i) / n); };
+    seg(-34, -6, 2, xs); seg(-6, 6, 0.3 * LT, xs); seg(6, 34, 2, xs); xs.push(34);
+    seg(UI_DECK.z0 + 0.05, -8.4, 0.3 * LT, zs); seg(-8.4, -34, 1.3, zs); zs.push(-34);
+    const nx = xs.length, nz = zs.length, pos = new Float32Array(nx * nz * 3), col = new Float32Array(nx * nz * 3), uv = new Float32Array(nx * nz * 2), idx = [];
+    const g0 = new THREE.Color(0x67ad38), g1 = new THREE.Color(0x82c24a), g2 = new THREE.Color(0x5a9a30), far = new THREE.Color(0x76a882), c = new THREE.Color();
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+      const x = xs[i], z = zs[j], k = j * nx + i;
+      pos[k * 3] = x; pos[k * 3 + 1] = -0.012; pos[k * 3 + 2] = z; uv[k * 2] = x * 0.7; uv[k * 2 + 1] = z * 0.7;
+      const stripe = 0.5 + 0.5 * Math.sin(z * (Math.PI / 1.1)); // 잔디 깎은 줄 (1.1 m마다 밝고 어둡게)
+      c.copy(g0).lerp(g1, 0.55 * ss(0.2, 0.8, stripe)).lerp(g2, 0.25 * ss(0.3, -0.6, Math.sin(x * 0.43 + z * 0.29) * Math.sin(z * 0.61 - x * 0.17)));
+      c.lerp(far, 0.4 * ss(-10, -32, z) + 0.2 * ss(8, 20, Math.abs(x)));
+      c.multiplyScalar(0.95 + 0.1 * hash3(_gv.set(x * 2.3, 0, z * 2.3)));
+      col[k * 3] = c.r; col[k * 3 + 1] = c.g; col[k * 3 + 2] = c.b;
+    }
+    for (let j = 0; j < nz - 1; j++) for (let i = 0; i < nx - 1; i++) { const a = j * nx + i, b = a + 1, cc = a + nx, d = cc + 1; idx.push(a, b, cc, b, d, cc); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+    const detail = canvasTex(256, 256, (x, w) => { // 짧게 깎은 잔디결 (정점 색 위에 얹는 가는 결)
+      const r = rng(67); x.fillStyle = '#dfe8d4'; x.fillRect(0, 0, w, w);
+      for (let i = 0; i < 2600; i++) { const px = r() * w, py = r() * w, l = 2 + r() * 5, a = -Math.PI / 2 + (r() - 0.5) * 1.4, q = r(); x.strokeStyle = q < 0.45 ? `rgba(255,255,240,${0.25 + r() * 0.35})` : `rgba(40,80,20,${0.18 + r() * 0.25})`; x.lineWidth = 1; x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(a) * l, py + Math.sin(a) * l); x.stroke(); }
+    }, [1, 1]);
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, map: detail, roughness: 0.95 })); m.receiveShadow = true; G.add(m);
+  }
+  // ---------- 돌길: 매장 앞을 가로지르는 넓은 돌길 + 테라스에서 잔디밭을 가로질러 가는 굽은 산책길 (연한 베이지 · 회색 판석)
+  {
+    const paver = canvasTex(256, 256, (x, w) => {
+      const r = rng(71); x.fillStyle = '#c9c4ba'; x.fillRect(0, 0, w, w);
+      for (let j = 0; j < 8; j++) for (let i = -1; i < 5; i++) { const ox = (j % 2) * 32, c = 196 + Math.floor(r() * 30); x.fillStyle = `rgb(${c + 8},${c + 4},${c - 4})`; x.fillRect(i * 64 + ox + 2, j * 32 + 2, 60, 28); }
+      for (let i = 0; i < 900; i++) { x.fillStyle = r() < 0.5 ? 'rgba(255,255,255,0.12)' : 'rgba(80,70,60,0.08)'; x.fillRect(r() * w, r() * w, 2, 2); }
+    }, [1, 1]);
+    paver.wrapS = paver.wrapT = THREE.RepeatWrapping;
+    const pm = new THREE.MeshStandardMaterial({ map: paver, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+    const wide = new THREE.PlaneGeometry(68, 1.7, 1, 1), wu = wide.attributes.uv; for (let i = 0; i < wu.count; i++) wu.setXY(i, wu.getX(i) * 68 / 1.6, wu.getY(i) * 1.7 / 1.6);
+    const wm = new THREE.Mesh(wide, pm); wm.rotation.x = -Math.PI / 2; wm.position.set(0, -0.006, -12.25); wm.receiveShadow = true; G.add(wm);
+    const curve = new THREE.CatmullRomCurve3(UI_PATH.map(([x, z]) => V3(x, 0, z))), N = 90, P = [], U = [], I = [];
+    uiPathPts = curve.getSpacedPoints(120).map((v) => ({ x: v.x, z: v.z }));
+    let along = 0, prev = null;
+    for (let i = 0; i <= N; i++) {
+      const p = curve.getPointAt(i / N), t = curve.getTangentAt(i / N), nrm = V3(-t.z, 0, t.x).normalize(); if (prev) along += p.distanceTo(prev); prev = p;
+      for (const s of [-1, 1]) { P.push(p.x + nrm.x * s * UI_PATH_W / 2, -0.005, p.z + nrm.z * s * UI_PATH_W / 2); U.push((s + 1) / 2 * UI_PATH_W / 1.6, along / 1.6); }
+      if (i) { const a = (i - 1) * 2; I.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    }
+    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); pg.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); pg.setIndex(I); pg.computeVertexNormals();
+    if (pg.attributes.normal.getY(0) < 0) { pg.setIndex(I.map((v, k) => I[k - (k % 3) + [0, 2, 1][k % 3]])); pg.computeVertexNormals(); }
+    const cm = new THREE.Mesh(pg, pm); cm.receiveShadow = true; G.add(cm);
+    for (const s of UI_SHOPS) { const a = new THREE.Mesh(new THREE.PlaneGeometry(s.w + 2.4, 3.2), pm); a.rotation.set(-Math.PI / 2, 0, s.ry); a.position.set(s.x + Math.sin(s.ry) * 1.4, -0.004, s.z + Math.cos(s.ry) * 1.4); a.receiveShadow = true; G.add(a); } // 매장 앞 돌 마당
+  }
+  // ---------- 나무 데크 테라스: 따뜻한 갈색 판재(잔디밭 쪽으로 길게) · 앞 끝 마감 판
+  {
+    const tex = canvasTex(512, 512, (x, w, h) => {
+      const r = rng(29), n = 8, pw = w / n;
+      for (let i = 0; i < n; i++) {
+        const base = [[166, 112, 70], [176, 121, 77], [158, 104, 64], [171, 117, 74]][Math.floor(r() * 4)];
+        const cut = (0.3 + r() * 0.4) * h; // 판재마다 이음매 한 곳 (색이 살짝 다른 두 판)
+        for (const [y0, y1] of [[0, cut], [cut, h]]) { const k = 0.92 + r() * 0.16; x.fillStyle = `rgb(${base[0] * k | 0},${base[1] * k | 0},${base[2] * k | 0})`; x.fillRect(i * pw, y0, pw, y1 - y0); }
+        x.fillStyle = 'rgba(60,38,22,0.55)'; x.fillRect(i * pw + 3, cut - 1, pw - 3, 2);
+        for (let j = 0; j < 26; j++) { const gx = i * pw + 3 + r() * (pw - 6); x.strokeStyle = r() < 0.5 ? 'rgba(90,55,30,0.25)' : 'rgba(230,190,140,0.18)'; x.lineWidth = 1 + r(); x.beginPath(); x.moveTo(gx, 0); for (let yy = 0; yy <= h; yy += 32) x.lineTo(gx + Math.sin(yy * 0.02 + j) * 2, yy); x.stroke(); } // 나뭇결
+        x.fillStyle = 'rgba(45,28,16,0.9)'; x.fillRect(i * pw, 0, 3, h); // 판 사이 틈
+      }
+    }, [1, 1]);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 8;
+    const W = UI_DECK.x1 - UI_DECK.x0, D = UI_DECK.z1 - UI_DECK.z0, g = new THREE.PlaneGeometry(W, D), u = g.attributes.uv;
+    for (let i = 0; i < u.count; i++) u.setXY(i, (u.getX(i) * W) / 1.2, (u.getY(i) * D) / 2.6); // 판재 폭 15 cm · 길이 2.6 m
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.72 })); m.rotation.x = -Math.PI / 2; m.position.set((UI_DECK.x0 + UI_DECK.x1) / 2, 0, (UI_DECK.z0 + UI_DECK.z1) / 2); m.receiveShadow = true; G.add(m);
+    const fas = M(0x7a5233, { roughness: 0.8 });
+    B.put(fas, box(W + 0.04, 0.07, 0.05), [(UI_DECK.x0 + UI_DECK.x1) / 2, -0.03, UI_DECK.z0 - 0.02]); // 앞 끝 마감 판
+    for (const sx of [UI_DECK.x0, UI_DECK.x1]) B.put(fas, box(0.05, 0.07, D), [sx, -0.03, (UI_DECK.z0 + UI_DECK.z1) / 2]);
+  }
+  // ---------- 테라스 소품: 나무 벤치 둘(가운데를 보고) · 꽃 화분 · 파라솔 탁자
+  const wood = M(0x9b6a42, { roughness: 0.7 }), iron = M(0x2b2d2f, { roughness: 0.5, metalness: 0.4 }), white = M(0xf4f3ee, { roughness: 0.55 });
+  const bench = (cx, cz, ry, len = 1.4, back = true) => { // 판재 벤치: 길이 방향 = 로컬 z (ry로 돌린다) · 앉는 쪽 = 로컬 +x
+    const c = Math.cos(ry), s = Math.sin(ry), Pt = (x, y, z) => [cx + x * c + z * s, y, cz - x * s + z * c];
+    for (let i = 0; i < 4; i++) B.put(wood, box(0.085, 0.032, len), Pt(-0.16 + i * 0.105, 0.44, 0), [0, ry, 0]);
+    if (back) for (let i = 0; i < 3; i++) B.put(wood, box(0.03, 0.085, len), Pt(-0.235 - i * 0.012, 0.56 + i * 0.12, 0), [0, ry, -0.12]);
+    for (const sz of [-1, 1]) { B.put(iron, box(0.4, 0.04, 0.05), Pt(-0.02, 0.41, sz * (len / 2 - 0.12)), [0, ry, 0]); for (const sx of [-0.16, 0.14]) B.put(iron, box(0.04, 0.42, 0.05), Pt(sx, 0.2, sz * (len / 2 - 0.12)), [0, ry, 0]); if (back) B.put(iron, box(0.04, 0.48, 0.05), Pt(-0.24, 0.62, sz * (len / 2 - 0.12)), [0, ry, -0.12]); }
+    for (let k = -1; k <= 1; k++) OB.push({ x: Pt(0, 0, k * len * 0.33)[0], z: Pt(0, 0, k * len * 0.33)[2], r: 0.26, h: 0.46 });
+  };
+  bench(-2.62, 1.6, 0); bench(2.66, 1.45, Math.PI);
+  {
+    const box2 = M(0x8a5a36, { roughness: 0.75 }), soil = M(0x4a3626, { roughness: 1 }), leaf = M(0x4f8a35, { roughness: 0.9 }), leaf2 = M(0x6aa443, { roughness: 0.9 }), ico = new THREE.IcosahedronGeometry(1, 1);
+    const { x: px, z: pz } = UI_PLANTER;
+    B.put(box2, box(0.78, 0.5, 0.78), [px, 0.25, pz]); B.put(soil, box(0.7, 0.02, 0.7), [px, 0.495, pz]);
+    for (let i = 0; i < 9; i++) { const a = R() * 6.28, rr = R() * 0.22; B.put(i % 2 ? leaf : leaf2, ico, [px + Math.cos(a) * rr, 0.62 + R() * 0.16, pz + Math.sin(a) * rr], [R(), R(), R()], [0.17 + R() * 0.08, 0.15 + R() * 0.07, 0.17 + R() * 0.08], true); }
+    const fl = [M(0xf3a6c0, { roughness: 0.6 }), M(0xfdfbf6, { roughness: 0.6 }), M(0xe86a92, { roughness: 0.6 })]; // 분홍 · 하얀 꽃
+    for (let i = 0; i < 26; i++) { const a = R() * 6.28, rr = 0.06 + R() * 0.24; B.put(fl[i % 3], SPH, [px + Math.cos(a) * rr, 0.7 + R() * 0.18, pz + Math.sin(a) * rr], null, 0.025 + R() * 0.012); }
+    OB.push({ x: px, z: pz, r: 0.5, h: 0.9 });
+    // 파라솔 탁자: 둥근 하얀 탁자 · 크림색 파라솔
+    const { x: tx, z: tz } = UI_TABLE;
+    B.put(white, cyl(0.36, 0.36, 0.03, 32), [tx, 0.72, tz]); bar(B, iron, [tx, 0, tz], [tx, 0.72, tz], 0.03, 10); B.put(iron, cyl(0.2, 0.22, 0.03, 20), [tx, 0.015, tz]);
+    bar(B, white, [tx, 0.72, tz], [tx, 2.05, tz], 0.02, 8); // 접어 둔 크림색 파라솔 (펼치면 엄마 시야를 가린다)
+    B.put(M(0xf0e6d0, { roughness: 0.85 }), new THREE.CylinderGeometry(0.035, 0.11, 0.95, 8), [tx, 1.45, tz], null, null, true); B.put(white, new THREE.ConeGeometry(0.035, 0.1, 8), [tx, 1.97, tz]);
+    OB.push({ x: tx, z: tz, r: 0.42, h: 0.8 });
+  }
+  // ---------- 하얀 버섯 그늘막: 가지를 뻗은 하얀 기둥 위에 둥글고 납작한 지붕 · 그 밑 나무 벤치
+  {
+    const { x, z, R: cr, h } = UI_CANOPY, wm = M(0xf6f5f0, { roughness: 0.45 });
+    const prof = []; for (let i = 0; i <= 16; i++) { const t = i / 16, y = t * (h - 0.04); prof.push(new THREE.Vector2(0.1 + 0.03 * t + 0.62 * Math.pow(t, 6), y)); } // 버섯 기둥: 가늘게 올라가다 위에서 나팔처럼 벌어져 지붕을 받친다
+    B.put(wm, new THREE.LatheGeometry(prof, 28), [x, 0, z]);
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * 6.28 + 0.3, m1 = [x + Math.cos(a) * 0.3, 1.75, z + Math.sin(a) * 0.3], e = [x + Math.cos(a) * cr * 0.78, h - 0.04, z + Math.sin(a) * cr * 0.78]; bar(B, wm, [x, 1.25, z], m1, 0.05, 8); bar(B, wm, m1, e, 0.035, 8); } // 가지를 뻗은 갈빗살
+    B.put(wm, cyl(cr, cr * 0.97, 0.1, 40), [x, h, z]);
+    OB.push({ x, z, r: 0.2, h: 2.4 });
+    bench(x + 0.7, z + 0.15, Math.PI / 2, 1.2, false); // 그늘막 밑 벤치 (등받이 없이)
+  }
+  // ---------- 큰 바위와 꽃밭: 누런 갈색 바위 · 흰 수국 · 연둣빛 덤불 · 억새 (그늘막 옆에도 작은 꽃밭)
+  const tuftMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.9 });
+  tuftMat.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('float faceDirection = gl_FrontFacing ? 1.0 : - 1.0;', 'float faceDirection = 1.0;'); };
+  tuftMat.customProgramCacheKey = () => 'ui-grass';
+  {
+    const stone = [M(0xb59a74, { roughness: 0.93 }), M(0x9d8462, { roughness: 0.95 }), M(0xc4ab86, { roughness: 0.9 })], ico = new THREE.IcosahedronGeometry(1, 1);
+    const rock = (x, z, r, h, sd) => {
+      const g = ico.clone(), p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) { _gv.fromBufferAttribute(p, i); const k = 1 + (hash3(_v1n.copy(_gv).multiplyScalar(2.3).addScalar(sd)) - 0.5) * 0.45; p.setXYZ(i, _gv.x * k, Math.max(-0.3, _gv.y) * k, _gv.z * k); }
+      B.put(stone[Math.floor(R() * 3)], g, [x, r * h * 0.25, z], [R() * 0.3, R() * 6.28, R() * 0.3], [r, r * h, r * (0.8 + R() * 0.3)], true);
+    };
+    const { x: rx, z: rz } = UI_ROCKS;
+    rock(rx + 0.15, rz - 0.15, 0.55, 0.75, 1); rock(rx - 0.45, rz + 0.25, 0.36, 0.7, 2); rock(rx + 0.6, rz + 0.35, 0.3, 0.6, 3); rock(rx - 0.15, rz - 0.6, 0.32, 0.55, 4);
+    rock(UI_CANOPY.x - 1.6, UI_CANOPY.z - 0.9, 0.42, 0.65, 5); rock(-6.2, -5.2, 0.6, 0.7, 6); rock(6.6, -6.0, 0.5, 0.6, 7);
+    OB.push({ x: rx, z: rz, r: 0.95, h: 0.6 });
+    const hyd = M(0xf8f9f2, { roughness: 0.75 }), hyd2 = M(0xe4efd2, { roughness: 0.75 }), shrub = M(0x9cbf3c, { roughness: 0.9 }), shrub2 = M(0x6e9d34, { roughness: 0.9 });
+    const bed = (x, z, n, rad) => {
+      for (let i = 0; i < n; i++) { const a = R() * 6.28, rr = rad * (0.5 + R() * 0.5), bx = x + Math.cos(a) * rr, bz = z + Math.sin(a) * rr; B.put(i % 3 ? shrub : shrub2, ico, [bx, 0.13, bz], [R(), R(), R()], [0.2 + R() * 0.12, 0.17 + R() * 0.08, 0.2 + R() * 0.12], true); if (i % 2 === 0) for (let k = 0; k < 3; k++) B.put(k % 2 ? hyd : hyd2, ico, [bx + (R() - 0.5) * 0.2, 0.3 + R() * 0.08, bz + (R() - 0.5) * 0.2], [R(), R(), R()], 0.075 + R() * 0.035, true); } // 덤불 위에 흰 수국 송이
+    };
+    bed(rx, rz + 0.1, 12, 0.85); bed(UI_CANOPY.x - 1.5, UI_CANOPY.z - 0.5, 7, 0.55); bed(-6.0, -4.8, 8, 0.9); bed(6.4, -5.6, 8, 0.8);
+    const tuft = (blades, seed, wid, lm, base, tip) => { const P = [], C = [], Nm = [], r = rng(seed); for (let b = 0; b < blades; b++) { const a = r() * Math.PI * 2, lean = 0.1 + r() * lm, hh = 0.6 + r() * 0.4, w = wid * (0.7 + r() * 0.6), bx = Math.cos(a) * 0.04, bz = Math.sin(a) * 0.04, tx = bx + Math.cos(a) * lean * hh, tz = bz + Math.sin(a) * lean * hh, qx = -Math.sin(a) * w, qz = Math.cos(a) * w; P.push(bx - qx, 0, bz - qz, bx + qx, 0, bz + qz, tx, hh, tz); C.push(...base, ...base, ...tip); Nm.push(0, 1, 0, 0, 1, 0, 0, 1, 0); } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(Nm, 3)); return g; };
+    const grass = [], ge = tuft(14, 31, 0.012, 0.5, [0.45, 0.5, 0.3], [1.0, 0.95, 0.72]);
+    for (const [x, z, n, rad] of [[rx, rz, 7, 0.9], [UI_CANOPY.x - 1.5, UI_CANOPY.z - 0.5, 4, 0.6], [-6.0, -4.8, 4, 0.9], [6.4, -5.6, 4, 0.8], [UI_PLANTER.x - 0.55, UI_PLANTER.z - 0.35, 1, 0.1]]) for (let i = 0; i < n; i++) { const a = R() * 6.28, rr = rad * R(); grass.push([x + Math.cos(a) * rr, z + Math.sin(a) * rr, 0.3 + R() * 0.2, 0.45 + R() * 0.35]); } // 억새
+    const im = new THREE.InstancedMesh(ge, tuftMat, grass.length), o = new THREE.Object3D(), c = new THREE.Color();
+    grass.forEach(([x, z, s, hh], i) => { o.position.set(x, 0, z); o.rotation.set(0, R() * 6.28, 0); o.scale.set(s, hh, s); o.updateMatrix(); im.setMatrixAt(i, o.matrix); im.setColorAt(i, c.setHex([0xd6c993, 0xc9c27c, 0xb9c27a][i % 3])); });
+    im.receiveShadow = true; G.add(im);
+  }
+  // ---------- 까만 T자 가로등 (돌길 따라 · 잔디밭 끝에 하나)
+  {
+    const lamp = M(0x1f2123, { roughness: 0.45, metalness: 0.5 }), glow = new THREE.MeshBasicMaterial({ color: 0xfff6dc });
+    for (const [x, z] of [[1.85, -5.45], [-2.4, -11.0], [3.3, -10.9], [-8.0, -11.2], [9.0, -11.3]]) {
+      bar(B, lamp, [x, 0, z], [x, 3.2, z], 0.042, 10); B.put(lamp, box(1.05, 0.07, 0.1), [x, 3.22, z]);
+      for (const sx of [-0.44, 0.44]) B.put(glow, box(0.15, 0.02, 0.08), [x + sx, 3.175, z]);
+      if (Math.abs(x) < 3 && z > -6.2) OB.push({ x, z, r: 0.12, h: 3.5 });
+    }
+  }
+  // ---------- 매장: 회색 금속 지붕이 땅 가까이까지 내려오는 높은 삼각 지붕 · 하늘을 비추는 청록빛 유리 정면(격자 창살) · 글자 간판
+  {
+    const glassTex = canvasTex(512, 512, (x, w, h) => { // 하늘과 구름이 비친 유리 (아래쪽은 매장 안 · 문) + 격자 창살 — 0..1로 맞춘 좌표 (매장마다 늘려 쓴다)
+      const g = x.createLinearGradient(0, h, 0, 0); g.addColorStop(0, '#2f4f57'); g.addColorStop(0.18, '#46717c'); g.addColorStop(0.3, '#5f98a7'); g.addColorStop(0.62, '#8cc3d4'); g.addColorStop(1, '#c4e4ef'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+      const r = rng(37); for (let i = 0; i < 9; i++) { const cx = r() * w, cy = h * (0.15 + r() * 0.5), rg = x.createRadialGradient(cx, cy, 0, cx, cy, 40 + r() * 70); rg.addColorStop(0, 'rgba(250,252,255,0.55)'); rg.addColorStop(1, 'rgba(250,252,255,0)'); x.fillStyle = rg; x.fillRect(0, 0, w, h); } // 비친 구름
+      for (let i = 0; i < 14; i++) { x.fillStyle = `rgba(${r() < 0.5 ? '255,228,190' : '235,240,236'},${0.25 + r() * 0.25})`; x.fillRect(r() * w, h * (0.8 + r() * 0.12), 6 + r() * 26, 10 + r() * 30); } // 매장 안 불빛 · 진열대
+      x.fillStyle = 'rgba(25,40,44,0.55)'; x.fillRect(w * 0.42, h * 0.82, w * 0.16, h * 0.18); // 문
+      x.strokeStyle = 'rgba(224,230,232,0.95)'; x.lineWidth = 4;
+      for (let i = 0; i <= 10; i++) { x.beginPath(); x.moveTo((i * w) / 10, 0); x.lineTo((i * w) / 10, h); x.stroke(); }
+      for (let j = 0; j <= 9; j++) { x.beginPath(); x.moveTo(0, (j * h) / 9); x.lineTo(w, (j * h) / 9); x.stroke(); }
+      x.lineWidth = 9; x.beginPath(); x.moveTo(0, h * 0.78); x.lineTo(w, h * 0.78); x.stroke(); // 문 위 굵은 가로 창살
+    });
+    const glassM = new THREE.MeshBasicMaterial({ map: glassTex });
+    const seamTex = canvasTex(64, 64, (x, w) => { x.fillStyle = '#c3c8cc'; x.fillRect(0, 0, w, w); x.fillStyle = 'rgba(255,255,255,0.55)'; x.fillRect(0, 0, w, 3); x.fillStyle = 'rgba(70,78,84,0.35)'; x.fillRect(0, 4, w, 2); }, [1, 1]); // 금속 지붕의 이음 골 (판마다)
+    seamTex.wrapS = seamTex.wrapT = THREE.RepeatWrapping;
+    const roofM = new THREE.MeshStandardMaterial({ map: seamTex, roughness: 0.42, metalness: 0.45 }), base = M(0xd4d2cc, { roughness: 0.85 }), frame = M(0xe2e5e6, { roughness: 0.5, metalness: 0.3 });
+    const put = (S, mat, geo, p, r, s) => { _m4.compose(V3(...p), _q4.setFromEuler(_e4.set(r ? r[0] : 0, r ? r[1] : 0, r ? r[2] : 0)), s ? V3(...s) : one); B.putM(mat, geo, S.clone().multiply(_m4)); };
+    for (const sh of UI_SHOPS) {
+      const S = new THREE.Matrix4().compose(V3(sh.x, 0, sh.z), _q4.setFromAxisAngle(_yAx, sh.ry), one), b = sh.w / 2, hw = 0.95, h = sh.h, d = sh.d;
+      // 지붕: 양쪽 판 (두께 0.16) — 처마는 땅 가까이 · 앞으로 조금 나온다
+      const ax = b + 0.3, ay = hw - 0.25, L = Math.hypot(ax, h + 0.08 - ay), a = Math.atan2(h + 0.08 - ay, ax);
+      const rg = box(L, 0.16, d + 0.4), ruv = rg.attributes.uv; for (let i = 0; i < ruv.count; i++) ruv.setXY(i, ruv.getX(i) * L / 3, ruv.getY(i) * (d + 0.4) / 0.42);
+      for (const sx of [-1, 1]) put(S, roofM, rg, [(sx * ax) / 2, (ay + h + 0.08) / 2, 0.2 - d / 2], [0, 0, -sx * a]); // 처마(±ax, ay)에서 용마루(0, h)까지
+      put(S, frame, box(0.22, 0.12, d + 0.42), [0, h + 0.1, 0.2 - d / 2]); // 용마루
+      // 유리 정면 (오각형) · 옆 아랫단 유리 · 받침
+      const shp = new THREE.Shape(); shp.moveTo(-b, 0); shp.lineTo(b, 0); shp.lineTo(b, hw); shp.lineTo(0, h); shp.lineTo(-b, hw); shp.closePath();
+      const fg = new THREE.ShapeGeometry(shp), fu = fg.attributes.uv, fp = fg.attributes.position; for (let i = 0; i < fu.count; i++) fu.setXY(i, fp.getX(i) / sh.w + 0.5, fp.getY(i) / h);
+      put(S, glassM, fg, [0, 0.12, 0.22]);
+      for (const sx of [-1, 1]) put(S, glassM, box(0.04, hw, d), [sx * b, hw / 2 + 0.12, 0.22 - d / 2]);
+      put(S, base, box(sh.w + 0.8, 0.14, d + 0.8), [0, 0.06, 0.22 - d / 2]);
+      put(S, frame, box(sh.w + 0.06, 0.08, 0.06), [0, 0.13, 0.25]); // 아래 테두리
+      if (!sh.sign) continue;
+      const tex = signTex(sh.sign), sw = 5.0, sm = new THREE.Mesh(new THREE.PlaneGeometry(sw, sw / 4), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+      sm.position.set(0, hw + (h - hw) * 0.36, 0.26).applyMatrix4(S); sm.rotation.y = sh.ry; sm.renderOrder = 1; G.add(sm);
+    }
+  }
+  // ---------- 잔디밭 가장자리: 둥근 덤불 줄 · 양옆의 키 큰 나무 / 뒤: 짙푸른 숲 언덕 (나무 덩어리가 줄지어 울퉁불퉁)
+  {
+    const ico = new THREE.IcosahedronGeometry(1, 1), trunk = M(0x6a5240, { roughness: 0.9 }), crown = [M(0x3f7a2e, { roughness: 0.9 }), M(0x4c8a36, { roughness: 0.9 })];
+    const tree = (x, z, s) => { bar(B, trunk, [x, 0, z], [x, 1.6 * s, z], 0.1 * s, 7); const im = crown[R() < 0.5 ? 0 : 1]; for (let k = 0; k < 5; k++) B.put(im, ico, [x + (R() - 0.5) * 1.1 * s, (2.1 + R() * 1.1) * s, z + (R() - 0.5) * 1.1 * s], [R(), R(), R()], [(0.75 + R() * 0.4) * s, (0.65 + R() * 0.3) * s, (0.75 + R() * 0.4) * s], true); };
+    for (const [x, z, s] of [[-6.4, -1.2, 1.15], [-8.2, -3.6, 1.3], [6.8, -1.6, 1.2], [8.6, -4.2, 1.35], [-9.5, -15.5, 1.3], [10, -16.5, 1.3], [-19, -17, 1.4], [20, -18, 1.4], [0.4, -28.5, 1.5], [-9.5, -28, 1.4], [10.5, -29, 1.5]]) tree(x, z, s);
+    const N = LITE ? 30 : 56, hm = new THREE.InstancedMesh(ico, M(0xffffff, { roughness: 0.9 }), N), o = new THREE.Object3D(), c = new THREE.Color(); // 잔디밭 끝 둥근 덤불 줄
+    for (let i = 0; i < N; i++) { const side = i % 2 ? 1 : -1, x = side * (4.2 + R() * 9), z = -6.35 + (R() - 0.5) * 0.3; o.position.set(x, 0.22, z); o.rotation.set(R(), R(), R()); o.scale.set(0.35 + R() * 0.15, 0.3 + R() * 0.08, 0.32 + R() * 0.1); o.updateMatrix(); hm.setMatrixAt(i, o.matrix); hm.setColorAt(i, c.setHex([0x4f8a33, 0x5d9a3a, 0x467e2d][i % 3])); }
+    hm.castShadow = true; hm.receiveShadow = true; G.add(hm);
+    // 숲 언덕: 능선 두 겹 (가까운 쪽은 짙은 초록) + 능선을 따라 나무 덩어리
+    const hillY = (x, z0, h0, amp, ph) => h0 + amp * (0.55 * Math.sin(x * 0.09 + ph) + 0.3 * Math.sin(x * 0.23 + ph * 2.1) + 0.15 * Math.sin(x * 0.51 + ph * 3.3));
+    const ridge = (z, h0, amp, ph, cb, ct) => {
+      const P = [], C = [], I = [], n = 80, bot = new THREE.Color(cb), top = new THREE.Color(ct);
+      for (let i = 0; i <= n; i++) { const x = lerp(-34, 34, i / n), y = hillY(x, z, h0, amp, ph); P.push(x, -0.02, z, x, y, z); C.push(bot.r, bot.g, bot.b, top.r, top.g, top.b); if (i) { const a = (i - 1) * 2; I.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); g.setIndex(I);
+      G.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true })));
+    };
+    ridge(-35.5, 6.4, 1.6, 1.3, 0x6b9478, 0x86ab93); ridge(-32.5, 4.4, 1.3, 0.4, 0x30602e, 0x417238);
+    const NT = LITE ? 150 : 280, fm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), M(0xffffff, { roughness: 0.95 }), NT);
+    for (let i = 0; i < NT; i++) {
+      const x = (R() - 0.5) * 62, top = hillY(x, -32.5, 4.4, 1.3, 0.4), y = top * (0.45 + 0.6 * Math.sqrt(R())), s = 0.8 + R() * 0.9;
+      o.position.set(x, y, -32 + R() * 0.8); o.rotation.set(R(), R(), R()); o.scale.set(s * 1.1, s, s * 0.8); o.updateMatrix(); fm.setMatrixAt(i, o.matrix); fm.setColorAt(i, c.setHex([0x2c5a28, 0x3a6c31, 0x46793a, 0x335f2b][i % 4]));
+    }
+    fm.castShadow = false; G.add(fm);
+  }
+  B.flush(G);
+  // ---------- 빛: 한여름 한낮 (높은 해는 앞 왼쪽 뒤 하늘에 — 매장 유리 정면과 알팡이 얼굴에 볕이 든다 · 그림자는 또렷하게)
+  UI.hemi = new THREE.HemisphereLight(0xdcefff, 0x6f9448, 1.2); UI.hemiI = 1.2; G.add(UI.hemi);
+  const sun = new THREE.DirectionalLight(0xfff3df, 2.5);
+  sun.target.position.set(0, 0, -1.6); sun.position.copy(V3(-0.5, 1.0, 0.55).normalize()).multiplyScalar(20).add(sun.target.position);
+  sun.castShadow = true; Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: 4, far: 40 }); sun.shadow.camera.updateProjectionMatrix();
+  sun.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.025; sun.shadow.radius = 3;
+  G.add(sun, sun.target);
+  // ---------- 알팡이의 소품
+  buildAlpangProps(G, OB);
+  // ---------- 알팡이 (이 방의 강아지)
+  ALPANG = makeAlpang();
+  ALPANG.ribbonFlutter ??= 0; ALPANG.smile ??= 0; ALPANG.chinUp ??= 0; // 알팡 모델이 아직 없으면(임시 비글 몸) 숫자만 정해 둔다
+  Object.assign(ALPANG, { route, routeSee: navSee, collide, speedK: 1.05, talk: alpangTalk }); ALPANG.root.visible = false; roomScene.add(ALPANG.root); fitCurl(ALPANG);
+  // ---------- 다니는 길 · 냄새 맡는 곳 · 둘러보는 곳
+  Object.assign(ROOM_UIWANG, {
+    built: true, OBST: OB,
+    SPOTS: { cushion: SPOTS.cushion, gifts: { x: -1.92, z: 1.5, fx: -2.5, fz: 1.55 }, /* 왼쪽 벤치 밑 */ table: { x: 1.75, z: -2.85, fx: 2.2, fz: -3.25 }, /* 꽃밭 수국 */ window: { x: -1.7, z: -5.8, fx: -3.7, fz: -21.5 } },
+    looks: [V3(-3.7, 3.4, -21.5), V3(4.5, 3.6, -23.2), V3(UI_CANOPY.x, 1.8, UI_CANOPY.z), V3(UI_ROCKS.x, 0.4, UI_ROCKS.z), V3(UI_PLANTER.x, 0.75, UI_PLANTER.z), V3(-8, 3.5, -3.6), V3(0.5, 6, -26)],
+  });
+}
+const ROOM_UIWANG = {
+  id: 'uiwang', built: false, name: '알팡', place: '의왕 아울렛', hint: '공주님 알팡이는 방석 없이는 안 앉아요 · 화면을 끌어서 둘러보기', navLabel: '알팡이랑 하기',
+  navIn: (x, z) => x >= UI_NAV.x0 - 0.001 && x <= UI_NAV.x1 + 0.001 && z >= UI_NAV.z0 - 0.001 && z <= UI_NAV.z1 + 0.001,
+  clamp(d) { d.x = clamp(d.x, UI_NAV.x0, UI_NAV.x1); d.z = clamp(d.z, UI_NAV.z0, UI_NAV.z1); },
+  ball: [-3.05, 3.05, -6.3, 2.7], ballFric: 4.2, // 공은 잔디에서 금방 선다
+  NAV: { x0: UI_NAV.x0, z0: UI_NAV.z0, h: 0.08, nx: 74, nz: 108, pad: 0.15 },
+  HOME: { x: 0.1, z: 0.85 }, AIM: V3(0.05, 0.74, -1.0), camPos: (v, a) => (a < 0.8 ? v.set(0, 1.45, 3.95) : v.set(0, 1.3, 3.6)), // 알팡이 너머로 잔디밭과 매장 간판이 정면에 (세로 화면은 조금 높이 · 멀리)
+  BOWL: V3(99, 0.006, 99), EAT: { x: 99, z: 99 }, CUSH: { x: 99, z: 99 }, // 밥그릇 · 도넛 방석은 없다 (공주님 방석은 앉아 · 엎드려 할 때 엄마가 깔아 준다)
+  THROW: [[-0.6, -1.5], [0.9, -1.2], [-1.2, -0.6], [0.4, -2.4], [1.3, -2.0], [-0.7, -2.9], [0.2, -0.6], [-1.6, -1.9]],
+  HIDE: [[-0.45, 0.45], [0.75, 0.4], [-0.15, 1.2], [0.95, 1.15], [0.5, 0.05], [1.3, 0.75], [-0.85, 0.1], [0.25, 1.4]],
+  WIN: V3(-3.7, 3.0, -21.5), ROPE: { x: 99, z: 99, yaw: 0 },
+  entry: [[1.45, -2.35, 2.0, -3.0], [-1.25, -1.6, -1.6, -2.4], [0.4, -2.2, 0.2, -3.2]], // 꽃밭 앞 · 잔디밭에서 킁킁하다가 엄마를 알아본다
+  wander: [-1.6, -2.6, 3.4, 4.6],
+  off: { feed: true, cushion: true, high5: true, splash: true, poop: true, worm: true, zoom: true, dig: true, mat: true, run: true }, actW: { nap: 0, bowl: 0, left: 0, window: 0, rest: 0, attend: 0.8 }, noBowl: true, // 밥그릇 · 도넛 방석은 없다 (공주님은 맨바닥에 엎드려 쉬지 않는다) · 손은 공주님 버전으로
+  lines: { gifts: ['어머, 신상 냄새~', '킁킁, 쇼핑백 냄새~', '빵 냄새 난다~'], table: ['수국 냄새~ 공주 향수 같아~', '흐응~ 꽃 냄새 좋아~', '나비 왔다 갔나~'], window: ['…저거 공주 거 같은데~'], tableSniff: '뭐 떨어진 거 없나~', mid: ['풀 냄새~', '어머, 누가 커피 흘렸네~', '여기도 신상 냄새~'] },
+  sniffMid: { x: -0.4, z: -3.6, fx: -0.9, fz: -4.4 }, // 냄새 맡기 가운데 들르는 곳: 산책길 옆 잔디
+  acts: (cd, d) => ({ pose: (0.55 + 0.9 * d.attach) * cd('pose', 70), shop: 0.85 * cd('shop', 90), prance: (0.5 + 1.1 * d.play) * cd('prance', 60) }), // 혼자 있을 때: 공주님 포즈 · 매장 구경 · 사뿐사뿐 산책
+  roamActs: (tok) => ({ pose: () => apPose(tok), shop: () => apShop(tok), prance: () => apPrance(tok) }),
+  picks: { treat: [['croissant', '🥐', '크로와상'], ['cheesecake', '🍰', '치즈케이크']], play: [['ball', '🎾', '공']] }, // 알팡이의 간식 · 장난감 (공은 공주님 분홍 공)
+  treat: (tok, kind) => apTreat(tok, kind), toyIdle: (tok) => apPrance(tok), post: (d, dt, t) => apPost(d, dt, t),
+  bg: new THREE.Color(0xbfe0f6), fog: new THREE.Fog(0xcfe5f5, 26, 90), env: null,
+  sound: { surf: uiSurf, cush: [99, 99, 0.3], bowl: [99, 99], tail: { gap: 0.4, gain: -6 }, voice: 'alpang', brook: null, birds: [[-7, 4, -3], [8, 4.5, -4], [-9.5, 4, -15], [10, 4, -16], [0.4, 5, -28]] }, // 데크는 발톱 톡톡 · 잔디 사박 · 돌길 · 숲에서 새소리
+};
+// ---------- 간판 글자: 획으로 그린 단정한 대문자 (글꼴 없이 — 어느 기기에서도 같다 · 글자만, 상표 그림은 없다)
+const SIGN_GLYPH = { // [폭(글자 높이 1 기준), 획] — canvas 좌표 (y는 아래로)
+  C: [0.78, (x) => { x.ellipse(0.4, 0.5, 0.38, 0.5, 0, 0.24 * Math.PI, 1.76 * Math.PI); }],
+  H: [0.72, (x) => { x.moveTo(0, 0); x.lineTo(0, 1); x.moveTo(0.72, 0); x.lineTo(0.72, 1); x.moveTo(0, 0.5); x.lineTo(0.72, 0.5); }],
+  A: [0.8, (x) => { x.moveTo(0, 1); x.lineTo(0.4, 0); x.lineTo(0.8, 1); x.moveTo(0.15, 0.64); x.lineTo(0.65, 0.64); }],
+  N: [0.74, (x) => { x.moveTo(0, 1); x.lineTo(0, 0); x.lineTo(0.74, 1); x.lineTo(0.74, 0); }],
+  E: [0.6, (x) => { x.moveTo(0.6, 0); x.lineTo(0, 0); x.lineTo(0, 1); x.lineTo(0.6, 1); x.moveTo(0, 0.5); x.lineTo(0.52, 0.5); }],
+  L: [0.56, (x) => { x.moveTo(0, 0); x.lineTo(0, 1); x.lineTo(0.56, 1); }],
+  P: [0.64, (x) => { x.moveTo(0, 1); x.lineTo(0, 0); x.lineTo(0.38, 0); x.arc(0.38, 0.26, 0.26, -Math.PI / 2, Math.PI / 2); x.lineTo(0, 0.52); }],
+  R: [0.68, (x) => { x.moveTo(0, 1); x.lineTo(0, 0); x.lineTo(0.4, 0); x.arc(0.4, 0.26, 0.26, -Math.PI / 2, Math.PI / 2); x.lineTo(0, 0.52); x.moveTo(0.3, 0.52); x.lineTo(0.68, 1); }],
+  D: [0.74, (x) => { x.moveTo(0, 0); x.lineTo(0.24, 0); x.ellipse(0.24, 0.5, 0.5, 0.5, 0, -Math.PI / 2, Math.PI / 2); x.lineTo(0, 1); x.closePath(); }],
+};
+function signTex(word) {
+  return canvasTex(512, 128, (x, w, h) => {
+    const H = 76, gap = 0.32, ws = [...word].map((c) => SIGN_GLYPH[c][0]), tot = ws.reduce((a, b) => a + b, 0) + gap * (ws.length - 1);
+    let cx = w / 2 - (tot * H) / 2; const top = (h - H) / 2;
+    x.clearRect(0, 0, w, h); x.lineCap = 'butt'; x.lineJoin = 'miter';
+    [...word].forEach((c, i) => {
+      for (const [col, lw] of [['rgba(255,255,255,0.45)', 0.21], ['#1f2326', 0.13]]) { x.save(); x.translate(cx, top); x.scale(H, H); x.lineWidth = lw; x.strokeStyle = col; x.beginPath(); SIGN_GLYPH[c][1](x); x.stroke(); x.restore(); } // 밝은 테두리를 깔고 짙은 글자 (유리 위에서도 또렷하게)
+      cx += (ws[i] + gap) * H;
+    });
+  });
+}
+// ---------- 알팡이의 소품 (의왕 아울렛을 처음 지을 때 같이 만든다 · 좌표는 uiG(= 월드) 기준)
+// 공주님 방석(장밋빛 벨벳 · 금빛 파이핑 · 네 귀퉁이 금빛 술) · 주황 선물 상자(짙은 갈색 리본 — 글자 없음) · 괴도 알팡의 보물 아홉 가지(상표 없음) · 크로와상 · 치즈케이크(하얀 접시 · 작은 포크) · 엄마 무릎(회색 담요) · 분홍 공 · 반짝이
+const AP_CUSH = { half: 0.3, lift: 0.06 }; // 방석 반 폭 · 위에 올라서면 몸이 올라가는 높이
+const apOnCush = (x, z) => { const C = UI && UI.cush; if (!C || !C.on || !C.down || C.k < 0.9) return false; const dx = x - C.x, dz = z - C.z, c = Math.cos(C.yaw), s = Math.sin(C.yaw); return Math.abs(dx * c - dz * s) < AP_CUSH.half - 0.02 && Math.abs(dx * s + dz * c) < AP_CUSH.half - 0.02; };
+function buildAlpangProps(G, OB) {
+  const gold = new THREE.MeshStandardMaterial({ color: 0xd8b25a, metalness: 0.85, roughness: 0.3 });
+  // ---------- 공주님 방석: 통통한 장밋빛 벨벳 네모 방석 · 둘레에 금빛 파이핑 · 네 귀퉁이에 금빛 술 (원점 = 방석 바닥 가운데)
+  {
+    const g = new THREE.Group(); g.visible = false; G.add(g);
+    const hw = AP_CUSH.half, geo = new THREE.BoxGeometry(hw * 2, 0.1, hw * 2, 16, 4, 16), p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i), nx = x / hw, nz = z / hw, puff = (1 - nx ** 4) * (1 - nz ** 4), t = (y + 0.05) / 0.1; // 가운데가 볼록 · 가장자리는 얇게
+      const top = 0.024 + 0.062 * puff - 0.012 * Math.exp(-((nx * nx + nz * nz) / 0.012)), bot = 0.003, yy = lerp(bot, top, t); // 가운데 단추 자리는 살짝 눌려 있다
+      p.setXYZ(i, x * (1 - 0.05 * nz * nz), yy, z * (1 - 0.05 * nx * nx));
+    }
+    geo.computeVertexNormals();
+    const vel = new THREE.MeshPhysicalMaterial({ color: 0xd2668a, roughness: 0.82, sheen: 1, sheenColor: new THREE.Color(0xffc6d6), sheenRoughness: 0.32 });
+    add(g, geo, vel);
+    const pts = []; for (let i = 0; i < 48; i++) { const a = (i / 48) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a), k = 1 / Math.max(Math.abs(c), Math.abs(s)) ** 0.82; pts.push(V3(c * k * hw * 0.955, 0.022, s * k * hw * 0.955)); } // 둘레 솔기 (모서리는 둥글게)
+    add(g, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 96, 0.0085, 6, true), gold);
+    add(g, SPH, gold, [0, 0.068, 0], null, [0.012, 0.006, 0.012]); // 가운데 금빛 단추
+    const CB = batcher(), cone = new THREE.ConeGeometry(0.02, 0.07, 12, 1, true), bead = new THREE.SphereGeometry(0.014, 12, 8);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const cx = sx * hw * 0.93, cz = sz * hw * 0.93; CB.put(gold, bead, [cx, 0.026, cz]); CB.put(gold, cone, [cx + sx * 0.02, 0.006, cz + sz * 0.02], [sz * 0.9, 0, -sx * 0.9]); } // 술: 금빛 구슬 + 늘어진 술 (바닥 쪽으로)
+    CB.flush(g);
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    UI.cush = { g, on: false, down: false, away: false, k: 0, x: 0, z: 0, yaw: 0 };
+  }
+  // ---------- 주황 선물 상자 (짙은 갈색 리본 · 글자 없음): 몸통(속에 크림색 얇은 종이) · 뚜껑(리본 · 나비 모양 매듭) · 풀려 떨어진 리본 (원점 = 상자 바닥 가운데)
+  {
+    const g = new THREE.Group(); g.visible = false; G.add(g);
+    const org = new THREE.MeshStandardMaterial({ color: 0xf07a22, roughness: 0.6 }), brown = new THREE.MeshStandardMaterial({ color: 0x4a2d1d, roughness: 0.55 }), tissue = M(0xfff2e2, { roughness: 0.95 });
+    const W = 0.17, H = 0.105, T = 0.006, BB = batcher();
+    BB.put(org, box(W, T, W), [0, T / 2, 0]); for (const s of [-1, 1]) { BB.put(org, box(T, H, W), [s * (W - T) / 2, H / 2, 0]); BB.put(org, box(W, H, T), [0, H / 2, s * (W - T) / 2]); }
+    BB.put(tissue, box(W - 2 * T, 0.004, W - 2 * T), [0, H - 0.03, 0]); for (let i = 0; i < 4; i++) BB.put(tissue, box(0.05, 0.002, 0.07), [(i % 2 ? 0.03 : -0.03), H - 0.022, (i < 2 ? 0.03 : -0.03)], [0.3 * (i % 2 ? 1 : -1), i, 0.2]); // 구겨 넣은 얇은 종이
+    BB.flush(g);
+    const lid = new THREE.Group(); lid.position.set(0, H - 0.012, 0); g.add(lid);
+    const LB = batcher(), LW = W + 0.008;
+    LB.put(org, box(LW, 0.006, LW), [0, 0.028, 0]); for (const s of [-1, 1]) { LB.put(org, box(0.006, 0.03, LW), [s * LW / 2, 0.016, 0]); LB.put(org, box(LW, 0.03, 0.006), [0, 0.016, s * LW / 2]); }
+    for (const s2 of [-1, 1]) { LB.put(brown, box(LW + 0.004, 0.005, 0.004), [0, 0.003, s2 * (LW / 2 + 0.001)]); LB.put(brown, box(0.004, 0.005, LW + 0.004), [s2 * (LW / 2 + 0.001), 0.003, 0]); } // 뚜껑 아랫단 갈색 테
+    LB.put(brown, box(0.022, 0.003, LW + 0.004), [0, 0.032, 0]); LB.put(brown, box(LW + 0.004, 0.003, 0.022), [0, 0.0322, 0]); // 리본 띠 (열십자)
+    for (const s of [-1, 1]) { LB.put(brown, box(0.022, 0.03, 0.003), [0, 0.016, s * (LW / 2 + 0.002)]); LB.put(brown, box(0.003, 0.03, 0.022), [s * (LW / 2 + 0.002), 0.016, 0]); }
+    const loop = new THREE.TorusGeometry(0.022, 0.005, 6, 18);
+    for (const s of [-1, 1]) LB.put(brown, loop, [s * 0.02, 0.04, 0], [Math.PI / 2, 0, 0], [1, 0.55, 1.4]); // 나비 매듭 고리 둘
+    LB.put(brown, SPH, [0, 0.038, 0], null, [0.009, 0.006, 0.009]);
+    for (const s of [-1, 1]) LB.put(brown, box(0.016, 0.002, 0.05), [s * 0.012, 0.034, 0.03], [0, s * 0.35, 0]); // 늘어진 리본 끝
+    LB.flush(lid);
+    const loose = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(-0.12, 0.003, 0.02), V3(-0.06, 0.004, -0.03), V3(0, 0.003, 0.02), V3(0.06, 0.004, -0.02), V3(0.13, 0.003, 0.03)]), 40, 0.0035, 5, false), brown); // 풀려 바닥에 떨어진 리본
+    loose.scale.set(1, 0.4, 3.2); loose.visible = false; G.add(loose);
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    UI.box = { g, lid, loose, H, W, on: false };
+  }
+  // ---------- 괴도 알팡의 보물 (상표 · 글자 없음): 원점 = 입에 무는 자리 · inner는 입에 물렸을 때(hang)와 바닥에 놓였을 때(rest: 높이 · 각) 모양을 바꾼다
+  {
+    const L = (UI.loot = []), S = 1.3;
+    const item = (name, build, hang, rest) => { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); inner.scale.setScalar(S); build(inner); g.visible = false; g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); L.push({ name, g, inner, hang, rest: { y: rest[0] * S, r: rest.slice(1) } }); };
+    const paper = M(0xf3dccf, { roughness: 0.85 }), rope = M(0xa3735a, { roughness: 0.8 }), whiteP = M(0xfbfaf6, { roughness: 0.8 }), ink = M(0xd8cfc6, { roughness: 0.9 });
+    // 1. 쇼핑백: 연분홍 종이 가방 · 꼰 끈 손잡이 둘 (손잡이 꼭대기를 문다)
+    item('bag', (o) => {
+      add(o, box(0.11, 0.13, 0.05), paper, [0, -0.1, 0]); add(o, box(0.104, 0.004, 0.046), M(0xd9b8a8, { roughness: 0.9 }), [0, -0.034, 0]);
+      for (const sz of [-1, 1]) add(o, new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(-0.026, -0.036, sz * 0.012), V3(-0.016, -0.008, sz * 0.006), V3(0, 0.0, 0), V3(0.016, -0.008, sz * 0.006), V3(0.026, -0.036, sz * 0.012)]), 16, 0.0022, 5, false), rope);
+    }, [0, 0, 0], [0.165, 0, 0, 0]);
+    // 2. 하얀 봉투: 뚜껑 접힌 선 (한쪽 긴 가장자리를 문다)
+    item('envelope', (o) => {
+      const tex = canvasTex(128, 84, (x, w, h) => { x.fillStyle = '#fbfaf5'; x.fillRect(0, 0, w, h); x.strokeStyle = 'rgba(150,140,130,0.6)'; x.lineWidth = 2; x.beginPath(); x.moveTo(2, 2); x.lineTo(w / 2, h * 0.58); x.lineTo(w - 2, 2); x.stroke(); x.fillStyle = '#d64d6e'; x.beginPath(); x.arc(w / 2, h * 0.58, 6, 0, Math.PI * 2); x.fill(); }); // 분홍 봉인 스티커 (무늬 없음)
+      add(o, box(0.13, 0.084, 0.003), [whiteP, whiteP, whiteP, whiteP, M(0xffffff, { map: tex, roughness: 0.8 }), whiteP], [0, -0.04, 0.004]);
+    }, [-0.25, 0, 0], [0.002, -Math.PI / 2, 0, 0]);
+    // 3. 실크 스카프: 장밋빛 바탕에 금빛 · 하늘빛 무늬 — 가운데를 물고 두 끝이 늘어진다
+    item('scarf', (o) => {
+      const tex = canvasTex(64, 256, (x, w, h) => { x.fillStyle = '#e07a9a'; x.fillRect(0, 0, w, h); for (let i = 0; i < 9; i++) { x.fillStyle = i % 2 ? '#f6d27a' : '#8fc5e6'; x.beginPath(); x.arc(w / 2 + (i % 2 ? 12 : -12), 14 + i * 28, 8, 0, Math.PI * 2); x.fill(); } x.strokeStyle = '#f6d27a'; x.lineWidth = 4; x.strokeRect(3, 3, w - 6, h - 6); });
+      const silk = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38, side: THREE.DoubleSide });
+      for (const [sx, len, ph] of [[-0.016, 0.17, 0], [0.018, 0.14, 1.3]]) { const pg = new THREE.PlaneGeometry(0.045, len, 1, 10), pp = pg.attributes.position; for (let i = 0; i < pp.count; i++) { const y = pp.getY(i) - len / 2; pp.setXYZ(i, pp.getX(i) + sx, y, 0.012 * Math.sin(y * 40 + ph) + 0.02 * (y / len) * (y / len)); } pg.computeVertexNormals(); add(o, pg, silk, [0, -0.004, 0.006]); }
+    }, [0, 0, 0], [0.004, -Math.PI / 2 + 0.05, 0, 0]);
+    // 4. 작은 파우치: 연보랏빛 가죽 · 금빛 잠금쇠
+    item('pouch', (o) => { add(o, new THREE.CapsuleGeometry(0.026, 0.05, 6, 12), M(0xc4a0d4, { roughness: 0.5 }), [0, -0.03, 0], [0, 0, Math.PI / 2], [1, 1.1, 0.5]); add(o, box(0.032, 0.006, 0.004), gold, [0, -0.018, 0.013]); add(o, box(0.006, 0.012, 0.003), gold, [0, -0.026, 0.015]); }, [0, 0, 0], [0.013, -Math.PI / 2, 0, 0]);
+    // 5. 선글라스: 금빛 테 · 짙은 알 (콧등 다리를 문다)
+    item('shades', (o) => {
+      const lens = new THREE.MeshPhysicalMaterial({ color: 0x2a2228, roughness: 0.08, clearcoat: 1, metalness: 0.2 });
+      for (const sx of [-1, 1]) { add(o, cyl(0.021, 0.021, 0.003, 24), lens, [sx * 0.026, -0.012, 0.004], [Math.PI / 2, 0, 0]); add(o, new THREE.TorusGeometry(0.021, 0.0022, 6, 28), gold, [sx * 0.026, -0.012, 0.004]); add(o, box(0.003, 0.003, 0.07), gold, [sx * 0.048, -0.004, -0.032]); }
+      add(o, box(0.012, 0.003, 0.003), gold, [0, -0.002, 0.004]);
+    }, [-0.15, 0, 0], [0.004, -Math.PI / 2, 0, 0]);
+    // 6. 하이힐 한 짝: 빨간 에나멜 구두 (뒤축 테두리를 물고 앞코가 아래로)
+    item('heel', (o) => {
+      const red = new THREE.MeshPhysicalMaterial({ color: 0xc8243e, roughness: 0.22, clearcoat: 0.9 }), sole = M(0x3a1d1f, { roughness: 0.6 });
+      const s = new THREE.Group(); s.position.set(0, -0.012, -0.004); s.rotation.x = 1.0; o.add(s); // 앞코가 아래 앞으로
+      add(s, box(0.042, 0.008, 0.12), sole, [0, -0.052, 0.04], [-0.32, 0, 0]); add(s, box(0.01, 0.055, 0.012), sole, [0, -0.045, -0.018], [0.08, 0, 0]); // 밑창 · 굽
+      add(s, new THREE.SphereGeometry(1, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), red, [0, -0.032, 0.075], [-0.3, 0, 0], [0.024, 0.02, 0.05]); // 앞코
+      add(s, new THREE.CylinderGeometry(0.024, 0.022, 0.03, 18, 1, true, Math.PI * 0.6, Math.PI * 0.8), red, [0, -0.02, 0.0], [0, Math.PI, 0]); // 뒤축 테
+    }, [0, 0, 0], [0.012, -1.0, 0, 0]);
+    // 7. 립스틱: 금빛 통 · 빨간 심 (가로로 문다)
+    item('lipstick', (o) => { add(o, cyl(0.0085, 0.0085, 0.042, 18), gold, [0, -0.004, 0], [0, 0, Math.PI / 2]); add(o, cyl(0.0068, 0.0068, 0.016, 16), M(0xb8203a, { roughness: 0.4 }), [0.028, -0.004, 0], [0, 0, Math.PI / 2]); add(o, new THREE.ConeGeometry(0.0068, 0.008, 16), M(0xb8203a, { roughness: 0.4 }), [0.04, -0.004, 0], [0, 0, -Math.PI / 2 - 0.4]); }, [0, 0, 0], [0.009, 0, 0, 0]);
+    // 8. 진주 목걸이: 하얀 진주 알 스물여섯 개가 길쭉한 고리로 · 금빛 걸쇠 (고리 꼭대기를 문다)
+    item('pearls', (o) => {
+      const pm = new THREE.MeshPhysicalMaterial({ color: 0xfbf5ea, roughness: 0.18, clearcoat: 1, sheen: 0.6, sheenColor: new THREE.Color(0xffeef6) }), pg = new THREE.SphereGeometry(0.0062, 10, 8), PB = batcher();
+      for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2; PB.put(pm, pg, [Math.sin(a) * 0.028, -0.05 + Math.cos(a) * 0.05, 0.004 * Math.sin(a * 2)]); }
+      PB.flush(o); add(o, box(0.008, 0.006, 0.005), gold, [0, -0.096, 0]);
+    }, [-0.2, 0, 0], [0.006, -Math.PI / 2, 0, 0]);
+    // 9. 작은 향수병: 팔각 분홍 유리병 · 금빛 뚜껑 (뚜껑 목을 문다)
+    item('perfume', (o) => { add(o, cyl(0.009, 0.009, 0.014, 16), gold, [0, -0.002, 0]); add(o, cyl(0.006, 0.006, 0.008, 12), gold, [0, -0.012, 0]); add(o, cyl(0.022, 0.024, 0.048, 8), new THREE.MeshPhysicalMaterial({ color: 0xf2a7c0, roughness: 0.05, clearcoat: 1, transparent: true, opacity: 0.82 }), [0, -0.04, 0]); add(o, cyl(0.016, 0.018, 0.034, 8), M(0xf6c6d6, { roughness: 0.3 }), [0, -0.044, 0]); }, [0, 0, 0], [0.064, 0, 0, 0]);
+    for (const it of L) G.add(it.g);
+  }
+  // ---------- 크로와상: 노릇한 결이 겹겹이 (초승달 모양 · 원점 = 엄마가 쥐는 끝 · 알팡이는 반대쪽 끝부터 조금씩)
+  {
+    const g = new THREE.Group(), parts = [], R0 = 0.06, A = 1.25, NP = 7, NR = 8, NS = 12, mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5 });
+    const ctr = (t) => { const a = lerp(-A, A, t); return V3(Math.sin(a) * R0, 0, R0 - Math.cos(a) * R0); }, o0 = ctr(0);
+    const rad = (t) => (0.005 + 0.026 * Math.pow(Math.sin(Math.PI * t), 0.75)) * (1 + 0.13 * Math.abs(Math.sin(t * Math.PI * NP))); // 가운데가 통통하고 양 끝은 뾰족 · 결마다 볼록
+    const cA = new THREE.Color(0xd99a44), cB = new THREE.Color(0x9c5a1e), cT = new THREE.Color(0xf0c070), cc = new THREE.Color();
+    for (let k = 0; k < NP; k++) { // 일곱 마디 (끝부터 한 입씩 감춘다) — 초승달 모양으로 휜 결
+      const P = [], C = [], I = [];
+      for (let j = 0; j <= NR; j++) {
+        const t = (k + j / NR) / NP, c = ctr(t), tg = ctr(Math.min(1, t + 0.01)).sub(ctr(Math.max(0, t - 0.01))).normalize(), b = V3().crossVectors(tg, _yAx).normalize(), r = rad(t), groove = Math.abs(Math.sin(t * Math.PI * NP));
+        for (let i = 0; i <= NS; i++) { const q = (i / NS) * Math.PI * 2, cy = Math.cos(q), sy = Math.sin(q); const p = c.clone().addScaledVector(b, sy * r).add(V3(0, (cy * 0.78 + 0.25) * r, 0)).sub(o0); P.push(p.x, p.y, p.z); cc.copy(cB).lerp(cA, ss(0.05, 0.45, groove)).lerp(cT, 0.5 * Math.max(0, cy) * groove); C.push(cc.r, cc.g, cc.b); }
+      }
+      for (let j = 0; j < NR; j++) for (let i = 0; i < NS; i++) { const a = j * (NS + 1) + i, b2 = a + 1, c2 = a + NS + 1, d2 = c2 + 1; I.push(a, b2, c2, b2, d2, c2); }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); geo.setIndex(I); geo.computeVertexNormals();
+      parts.push(add(g, geo, mat));
+    }
+    g.visible = false; G.add(g); g.traverse((o) => { o.castShadow = true; });
+    UI.croissant = { g, parts };
+    UI.flake = M(0xe2a650, { roughness: 0.6 });
+  }
+  // ---------- 치즈케이크 한 조각 · 하얀 접시 · 작은 은빛 포크 (원점 = 접시 바닥 가운데 · 조각의 뾰족한 끝이 +z)
+  {
+    const g = new THREE.Group(); g.visible = false; G.add(g);
+    const prof = [[0, 0.002], [0.06, 0.002], [0.078, 0.008], [0.082, 0.012], [0.07, 0.009], [0, 0.007]].map(([a, b]) => new THREE.Vector2(a, b));
+    add(g, new THREE.LatheGeometry(prof, 40), new THREE.MeshPhysicalMaterial({ color: 0xfbfbf8, roughness: 0.2, clearcoat: 0.8 }));
+    const slice = new THREE.Group(); slice.position.set(0, 0.008, -0.04); g.add(slice); // 원점 = 조각 뒤(둥근 끝) — 먹을수록 앞(+z)이 짧아진다
+    const sh = new THREE.Shape(); sh.moveTo(0, 0.085); sh.lineTo(-0.034, 0); sh.absarc(0, 0.0, 0.034, Math.PI, 0, true); sh.lineTo(0, 0.085);
+    const ex = (h, col, y) => { const geo = new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: false, curveSegments: 10 }); geo.rotateX(Math.PI / 2); geo.translate(0, y + h, 0); return add(slice, geo, M(col, { roughness: 0.7 })); };
+    ex(0.008, 0xb88a52, 0); ex(0.03, 0xfff0cc, 0.008); ex(0.004, 0xd7a25e, 0.038);
+    const fork = new THREE.Group(); fork.position.set(0.05, 0.011, 0.02); fork.rotation.y = -0.5; g.add(fork); const silver = new THREE.MeshStandardMaterial({ color: 0xd9dde0, metalness: 0.9, roughness: 0.25 });
+    add(fork, box(0.006, 0.002, 0.05), silver, [0, 0, 0]); for (let i = 0; i < 3; i++) add(fork, box(0.0016, 0.0016, 0.018), silver, [(i - 1) * 0.0028, 0.0004, 0.033]);
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    UI.cake = { g, slice, fork };
+  }
+  // ---------- 엄마 무릎: 바닥에 책상다리로 앉은 엄마의 다리 (회색 담요를 덮은 앞쪽 다리가 가로로 · 뒤로 다른 쪽 무릎) — 만져줘: 알팡이가 턱을 괸다 · 뽀뽀하기: 앞발을 올린다
+  // 원점 = 앞쪽 다리 위 가운데 (+z = 알팡이 쪽 · -z = 엄마 쪽)
+  {
+    const g = new THREE.Group(); g.visible = false; G.add(g);
+    const fab = new THREE.MeshPhysicalMaterial({ color: 0x8f969a, roughness: 0.95, sheen: 0.8, sheenColor: new THREE.Color(0xd8dde0), sheenRoughness: 0.6 });
+    const Rl = 0.1, zc = -0.04, yc = -Rl;
+    add(g, new THREE.CapsuleGeometry(Rl, 0.62, 8, 20), fab, [0.02, yc, zc], [0, 0.08, Math.PI / 2]); // 앞쪽 다리 (가로)
+    add(g, new THREE.CapsuleGeometry(0.095, 0.36, 8, 16), fab, [0.3, -0.115, -0.3], [Math.PI / 2, 0, 0.0], [1, 1, 1]).rotation.set(Math.PI / 2, 0, -0.5); // 뒤쪽 무릎 (엄마 쪽으로)
+    const NX = 28, NU = 18, P2 = [], I2 = [], U2 = [];
+    for (let j = 0; j <= NU; j++) for (let i = 0; i <= NX; i++) {
+      const x = lerp(-0.42, 0.44, i / NX), u = j / NU, fold = 0.007 * Math.sin(x * 26 + u * 9) + 0.005 * Math.sin(x * 61 - u * 4);
+      let y, z;
+      if (u < 0.7) { const ph = lerp(1.95, -1.35, u / 0.7), r = Rl + 0.012 + fold; z = zc + Math.sin(ph) * r; y = yc + Math.cos(ph) * r; } // 다리를 감싸는 쪽: 앞 아래에서 위를 지나 뒤로
+      else { const t = (u - 0.7) / 0.3; z = zc - (Rl + 0.012) * Math.sin(1.35) - t * 0.85; y = yc + (Rl + 0.012) * Math.cos(1.35) - 0.06 * t - 0.05 * t * t + fold; } // 엄마 무릎 위로 덮여 엄마 쪽(화면 아래)까지 이어지는 담요
+      const edge = ss(0.34, 0.44, Math.abs(x - 0.01)); y -= 0.05 * edge; // 양끝은 아래로 처진다
+      P2.push(x, y, z); U2.push(i / NX, u);
+    }
+    for (let j = 0; j < NU; j++) for (let i = 0; i < NX; i++) { const a = j * (NX + 1) + i, b = a + 1, c = a + NX + 1, d = c + 1; I2.push(a, c, b, b, c, d); }
+    const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(P2, 3)); bg.setAttribute('uv', new THREE.Float32BufferAttribute(U2, 2)); bg.setIndex(I2); bg.computeVertexNormals();
+    add(g, bg, new THREE.MeshPhysicalMaterial({ color: 0xa7adb1, roughness: 1, sheen: 0.9, sheenColor: new THREE.Color(0xe2e6e8), sheenRoughness: 0.5, side: THREE.DoubleSide }));
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });
+    UI.lap = g;
+  }
+  // ---------- 분홍 공 (공 ball.g에 끼워 둔다 — 의왕 아울렛에서만 보인다): 연분홍 펠트 · 하얀 곡선 줄
+  {
+    const tex = canvasTex(128, 64, (x, w, h) => { x.fillStyle = '#f2a3bf'; x.fillRect(0, 0, w, h); x.strokeStyle = '#fff6f8'; x.lineWidth = 5; x.beginPath(); for (let i = 0; i <= w; i++) { const yy = h / 2 + Math.sin((i / w) * Math.PI * 4) * h * 0.28; if (i) x.lineTo(i, yy); else x.moveTo(i, yy); } x.stroke(); });
+    const m = add(ball.g, new THREE.SphereGeometry(ball.r * 1.004, 24, 16), M(0xffffff, { map: tex, roughness: 0.95 })); m.visible = false;
+    UI.pinkBall = m; UI.tennis = ball.g.children[0];
+  }
+  // ---------- 반짝이: 보물이 상자에서 톡 튀어나올 때 (반짝 · 빛 점 여덟 개)
+  {
+    const N = 10, P = new Float32Array(N * 3), g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3));
+    const sp = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xfff1b8, size: 0.06, map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); sp.visible = false; sp.renderOrder = 3; sp.frustumCulled = false; G.add(sp);
+    UI.spark = { sp, P, dirs: Array.from({ length: N }, (_, i) => V3(Math.cos((i / N) * 6.28), 0.6 + 0.5 * Math.sin(i * 2.3), Math.sin((i / N) * 6.28)).normalize()) };
+  }
+}
+// 알팡이 말투: 공주님 — 자기를 '공주'라고 부르고, 애교 섞인 반말 ('안 행~' · '~줘잉' · '흐응~' · '어머~'). 사랑받는 데 익숙한 응석받이지만 밉지 않다 · 아울렛의 꼬마 패셔니스타 · 장난꾸러기 괴도 알팡
+// 핑키의 나긋한 '…좋아…', 담이의 담과장 · 컹 · ~요, 푸푸의 헤헤 · 월월, 재롱이의 츤데레 '흥' · '…언니니까'와 다르게: 투정은 '칫' · '피~' · '흐응~' (흥은 재롱이 것) · 존댓말 · 군대 말투는 쓰지 않는다 · 못되거나 무례한 말은 없다
+// 보는 사람을 부르는 말은 AP_CALL 하나 (엄마를 부르는 모든 말이 그것을 쓴다)
+// 소리는 바뀐 말에 맞춰 난다 (say → sound.onSay → alpangSay): 앙! · 히잉~ · 흐응~ · 칫 · 피~ · 쪽
+const AP_TALK = {
+  '왔어? ♥': `${AP_CALL} 왔어? 공주 기다렸잖아~ ♥`, '왔다 왔다! ♥': `${AP_CALL} 왔다~! ♥`, '놀아줘 ♥': '공주랑 놀아 줘잉~ ♥', '엄마다!': `${AP_CALL}다!`, '엄마~ ♥': `${AP_CALL}~ ♥`,
+  '좋아…': '공주 머리는 살살~', '더 해줘…': '흐응~ 더 해 줘잉~', '포근해…': '공주 안아 주니까 좋지~ ♥', '…하나 더?': '하나 더 줘잉~', '…더 없어?': '어머, 벌써 끝이야?',
+  '간식이다!': '어머, 간식이다~!', '간식 있어?': '공주 간식은~?', '심심해…': '흐응~ 공주 심심해~', '뭐 해?': `${AP_CALL}, 뭐 해~?`, '놀자?': '공주랑 놀래~?',
+  '응…?': '응~?', '잘 잤다…': '공주 잘 잤다~', '재밌었다…': '재밌었어~', '…같이 할래?': '같이 할래~?', '…또 줘?': '또 줄 거지~?',
+  '…이번만이야': '이번만이야~', '후우… 알았어': '피~ 알았어~', '안 들려~': '피~ 안 들려~', '또 던져!': '또 던져 줘잉~', '또 하자!': '또 하자~',
+  '…이따 주겠지': '…이따 주겠지~', '달다…': '달콤해~', '다 먹었다!': '다 먹었어~', '뒹굴': '뒹굴~', '뒹굴뒹굴': '뒹굴뒹굴~',
+  '찾았다!': '찾았다~ 공주 코 최고~', '헤헤, 주웠다': '어머, 주웠다~', '맛있다!': '맛있어~', '횡재했다!': '어머, 횡재~', '하나만 더…?': '하나만 더~?', '더 없나…': '더 없나~', '배불러…': '공주 배불러~',
+  '간식 주면 공 줄게': '간식 주면 공 줄게~', '간식 주면 줄게!': '간식 주면 줄게~', '간식 주면… 마저 갈게': '간식 주면 갈게~', '간식이랑 바꿀래?': '간식이랑 바꿀래~?', '내 꺼야!': '이건 공주 거야~!', '내 꺼야 ♪': '공주 거야~ ♪',
+  '이제 줄게!': '이제 줄게~', '자, 여기!': '자, 여기~', '왈!': '앙!', '흥!': '칫!', '밥 줘…': '공주 밥~', '밥그릇 비었네…': '비었네~', '이따 먹어야지': '이따 먹을래~', '음… 엄마…': `음… ${AP_CALL}…`,
+  '후우…': '흐응…', '쭈욱…': '쭈욱~', '하암…': '하암~',
+};
+function alpangTalk(s) { return AP_TALK[s] ?? (/[가-힣]…$/.test(s) ? s.slice(0, -1) + '~' : s); } // 나머지 말(킁킁 · 할짝 · 부르르 · 에취! · …)은 그대로 · '…'로 끝나는 말은 '~'로 (애교 섞인 말끝)
+const apHearts = (tok, n = 5) => { for (let i = 0; i < n; i++) wait(tok, i * 0.09).then(() => bubble('♥', headTop, 'heart', 1.5, (i - (n - 1) / 2) * 50 + (Math.random() - 0.5) * 14), () => {}); }; // 하트가 퐁퐁 (옆으로 퍼지게 — 글자를 가리지 않게)
+const apAway = (s = 1, up = 0.62) => () => V3(pinky.x, up, pinky.z).addScaledVector(camRight(), s * 1.6).addScaledVector(toCamDir(), 0.5); // 새침하게: 턱을 들고 엄마 옆 허공을 본다
+const apSide = () => (pinky.x > HOME.x ? -1 : 1);
+const apChin = (k) => { pinky.chinUp = k; }; // 공주님 턱 들기 (알팡 모델이 머리를 들어 준다)
+// 알팡이 자세: 엄마 무릎에 앞발을 올리고 일어서기(뽀뽀) · 엄마 무릎에 턱 괴기(만져줘) — 핑키 비글 틀의 다리 길이 기준 (알팡 모델이 오면 맞춰 본다)
+POSES.apUp = { bodyY: 0.375, bodyZ: -0.05, pitch: -1.0, roll: 0, yawOff: 0, gaze: 1, headPitch: 0, headTilt: 0, tail: -0.9, level: 0, free: 0, neck: 0.2, lumbar: 0.32, tailCurl: 0.2, abd: [0.04, 0.04, 0.05, 0.05],
+  lean: [0.9, 0.9, 1.05, 1.05], paws: [P(0.06, 0.295, 0.335), P(-0.06, 0.295, 0.335), P(0.085, 0.03, -0.04), P(-0.085, 0.03, -0.04)] };
+POSES.apLean = { bodyY: 0.282, bodyZ: 0, pitch: 0.07, roll: 0, yawOff: 0, gaze: 0.6, headPitch: 0.06, headTilt: 0, tail: -1.7, level: 1, free: 0, neck: 0.62, reach: 0.05, abd: [0.06, 0.06, 0, 0],
+  lean: [0.16, 0.16, 0.14, 0.14], paws: [P(0.066, 0.03, 0.2), P(-0.066, 0.03, 0.2), P(0.072, 0.03, -0.19), P(-0.072, 0.03, -0.19)] };
+// 방석 · 상자 · 보물 정리
+function apCushOff() { const C = UI && UI.cush; if (!C) return; Object.assign(C, { on: false, down: false, away: false, k: 0 }); C.g.visible = false; if (C.g.parent !== uiG) uiG.add(C.g); if (ALPANG && ALPANG.liftT === AP_CUSH.lift) ALPANG.liftT = 0; }
+function apBoxOff() { const B = UI && UI.box; if (!B) return; B.on = false; B.g.visible = false; B.loose.visible = false; if (B.g.parent !== uiG) uiG.add(B.g); B.lid.position.set(0, B.H - 0.012, 0); B.lid.rotation.set(0, 0, 0); B.g.scale.setScalar(1); }
+const apRestAt = (it, x, z, yaw) => { it.g.position.set(x, it.rest.y, z); it.g.rotation.set(0, yaw, 0); it.inner.rotation.set(...it.rest.r); it.g.visible = true; }; // 바닥에 놓인 보물
+function apStashCap() { while (UI.stash.length > 4) { const o = UI.stash.shift(); uiG.remove(o.g); } } // 보물 더미는 넷까지 (오래된 것부터 사라진다)
+function apStashClear() { if (!UI) return; for (const o of UI.stash) uiG.remove(o.g); UI.stash.length = 0; }
+function apDropHeld() { // 입에 물고 있던 보물: 그 자리 바닥에 내려놓는다 (보물 더미에 센다)
+  const h = UI && UI.held; if (!h) return; UI.held = null;
+  const p = h.it.g.position, q = { x: p.x, z: p.z }; RP === ROOM_UIWANG && collide(q); apRestAt(h.it, q.x, q.z, h.it.g.rotation.y || 0); UI.stash.push(h.it); apStashCap();
+}
+// 다른 놀이(단추)가 끼어들 때 · 방을 나갈 때: 손 · 입의 소품은 내려놓고, 상자 · 무릎은 치우고, 방석은 알팡이가 내려온 뒤에 접는다(앉아 · 엎드려 · 드러눕기 · 만지기에는 그대로)
+function apRelease() {
+  if (!UI) return;
+  const exit = !active, C = UI.cush;
+  if (C.on) { if (exit || !C.down) apCushOff(); else if (!['sit', 'down', 'roll', 'touch'].includes(active.name)) C.away = true; }
+  apBoxOff(); apDropHeld();
+  UI.lap.visible = false; UI.spark.sp.visible = false; UI.flash = 0; UI.hemi.intensity = UI.hemiI;
+  for (const o of [UI.croissant.g, UI.cake.g]) { o.visible = false; uiG.add(o); }
+  for (const m of UI.croissant.parts) m.visible = true; UI.cake.slice.scale.set(1, 1, 1); UI.cake.slice.visible = true;
+  if (ALPANG) { Object.assign(ALPANG, { ribbonFlutter: 0, smile: 0, chinUp: 0, bounce: 0, pawUp: null }); if (/^ap/.test(ALPANG.tgt.name)) setPose(ALPANG, 'stand', 5); }
+}
+function apEnter() { // 의왕 아울렛에 들어설 때 (엄마가 왔다): 방석 · 상자는 치워 두고 보물 더미는 비운다
+  Object.assign(pinky, { ribbonFlutter: 0, smile: 0, chinUp: 0, bounce: 0, liftT: 0, pawUp: null });
+  apCushOff(); apBoxOff(); UI.held = null; apStashClear(); UI.pawAt = -99; UI.flash = 0;
+}
+// ---------- 의왕 아울렛에서 매 프레임 (알팡이를 움직인 뒤)
+function apHeldPlace(d) { // 입에 문 보물: 앞니 사이(문 자리)에 걸려 아래로 늘어진다 (알팡이와 같은 쪽을 본다)
+  const h = UI.held; if (!h) return;
+  d.hp.updateWorldMatrix(true, true); const at = d.jaw.localToWorld(h.jl.clone()), f = jawDir(0, 0, 1); f.y = 0; if (f.lengthSq() < 1e-6) f.set(Math.sin(d.yaw), 0, Math.cos(d.yaw)); orientProp(h.it.g, at, f.normalize(), _yAx);
+}
+function apPost(d, dt, t) {
+  if (!UI) return;
+  // 방석: 위에 올라서면 폭신한 만큼 몸이 올라간다 · 다른 놀이로 넘어가면 알팡이가 내려온 뒤 작게 오므라들며 치운다
+  const C = UI.cush;
+  if (C.on && C.down) {
+    const on = apOnCush(d.x, d.z);
+    if (on && !C.away && d.tgt.name !== 'held') d.liftT = AP_CUSH.lift; else if (d.liftT === AP_CUSH.lift) d.liftT = 0;
+    if (C.away && (!on || d.tgt.name === 'stand' || d.walkTarget)) { C.k = Math.max(0, C.k - dt / 0.3); C.g.scale.setScalar(Math.max(0.01, ease(C.k))); if (C.k <= 0) apCushOff(); } // 일어서거나 내려오면 엄마가 접어 치운다 (그 자리에서 다른 놀이를 해도 방석이 남아 있지 않게)
+  }
+  apHeldPlace(d); // 입에 문 보물
+  // 찰칵 (공주님 사진): 한순간 환하게
+  if (UI.flash > 0) { UI.flash = Math.max(0, UI.flash - dt * 5); UI.hemi.intensity = UI.hemiI + 2.4 * UI.flash; }
+}
+// 엄마 두 손이 큰 소품(방석 · 상자)을 들고 와서 알팡이 앞 바닥에 살며시 내려놓는다 (half: 소품 반 폭 · hy: 손이 잡는 높이)
+async function apCarry(tok, g, P, yaw, half, hy, dur = 1.1) {
+  const from = roomCam.localToWorld(V3(0, -0.26, -0.55)), to = V3(P.x, 0, P.z); let u = 0;
+  const at = () => V3().lerpVectors(from, to, ease(u)).add(V3(0, 0.07 * Math.sin(Math.PI * u), 0));
+  g.visible = true; g.rotation.set(0, yaw, 0); g.position.copy(at()); g.updateMatrixWorld(true);
+  const side = (s) => () => g.localToWorld(V3(s * (half + 0.012), hy, 0.01)), out = (s) => () => V3(Math.cos(yaw) * s, 0, -Math.sin(yaw) * s);
+  handR.want = { pos: side(1), up: out(1), curl: 0.42, rate: 16 }; handL.want = { pos: side(-1), up: out(-1), curl: 0.42, rate: 16 };
+  await tween(tok, dur, (q) => { u = q; g.position.copy(at()); g.updateMatrixWorld(true); });
+  await wait(tok, 0.2); handR.want = null; handL.want = null;
+}
+// ---------- 엄마가 오면: 어머! 알아보고 → 사뿐사뿐 깡총깡총 엄마 앞으로 (리본 끈이 나풀나풀) → 공주님처럼 반듯하게 앉아 턱을 살짝 들고 — 엄마 왔어? 공주 기다렸잖아~ ♥
+const AP_GREET = { entry: `${AP_CALL} 왔어? 공주 기다렸잖아~`, tab: `${AP_CALL}, 어디 갔다 왔어~ 공주 심심했잖아~`, quiet: `${AP_CALL}~ 공주 여기 있어~` };
+async function apGreet(tok, why) {
+  const d = pinky;
+  setPose(d, 'stand', 7); d.sniff = 0; d.lookFn = null; d.tgt.gaze = 1; d.tgt.headPitch = -0.12; d.face = 'cam'; d.earPerk = 1; d.eyeOpen = 1.1; d.wagAmpT = 0.95; d.wagSpeedT = 19; d.turnCap = 2.4; d.smile = 1;
+  tok.cleanups.push(() => { d.turnCap = 0; d.eyeOpen = 1; d.bounce = 0; d.ribbonFlutter = 0; d.smile = 0; apChin(0); snd('cancelPhrase', 'mom'); });
+  bubble('어머!', headTop, 'small', 1.1); snd('phrase', 'mom', { mode: why === 'entry' ? 'entry' : why === 'quiet' ? 'quick' : 'again' }); // 소리: 인식표 짤랑 → 반가운 앙!
+  await wait(tok, 0.5); d.turnCap = 0;
+  const n = nearSpot();
+  if (Math.hypot(d.x - n.x, d.z - n.z) > 0.15) { Object.assign(d, { walkSpeed: 1.0, bounce: 0.011, ribbonFlutter: 0.8 }); await walkTo(tok, n.x, n.z); Object.assign(d, { walkSpeed: 0.5, bounce: 0, ribbonFlutter: 0 }); }
+  sitFront(9); apChin(0.5); d.eyeOpen = 1; d.wagAmpT = 1.0; d.wagSpeedT = 20; await wait(tok, 0.45);
+  say(AP_GREET[why] || AP_GREET.entry, headTop, 'soft', 2.6); apHearts(tok, 3);
+  await wait(tok, 2.4); apChin(0); d.tiltT = 0.18; d.earPerk = 0.2;
+  await wait(tok, 1.0); d.tiltT = 0; d.earPerk = 0; d.wagAmpT = 0.45; d.wagSpeedT = 9; d.smile = 0;
+  await idleLook(tok, 1.0, false);
+}
+// 공주님 거절: 코를 들고 고개를 홱 · 몸을 살짝 틀고 꼬리를 탁 (칫)
+async function apRefuse(tok, line, s = apSide()) {
+  const d = pinky;
+  d.lookFn = apAway(s, 0.78); d.tgt.yawOff = s * 0.45; apChin(1); d.eyeOpen = 0.62; d.earPerk = -0.2; d.wagAmpT = 0.95; d.wagSpeedT = 24; d.tiltT = -0.12 * s;
+  say(line, headTop, 'soft', 2.3);
+  await wait(tok, 0.45); d.wagAmpT = 0.25; d.wagSpeedT = 6;
+  await wait(tok, 1.5);
+}
+// ---------- 손: 엄마가 손바닥을 내밀며 "손!" — 공주는 그런 거 안 행~ (코를 들고 홱) · 조금 뒤에 또 내밀면 …딱 한 번만이야~ 공주 손은 비싸. 하고 사뿐히 한 번
+async function apPaw(tok) {
+  const d = pinky; await comeHere(tok, 0.75);
+  const ph = phoneK(); { const [p, a] = kneelAt(1.0 * ph, 0.62, 0.3); camTo(p, a); }
+  sitFront(9); d.wagAmpT = 0.4; d.wagSpeedT = 8; await wait(tok, 0.8);
+  const give = clock - UI.pawAt < 8, i = 0, sx = d.legs[i].sx, base = poseFor('sit', d).paws[i], UPK = { y: 0.15, z: 0.13 };
+  tok.cleanups.push(() => { d.pawUp = null; apChin(0); d.tgt.yawOff = 0; d.smile = 0; });
+  let bob = 0; const palm = () => rootW(base.x + sx * 0.02, base.y + UPK.y - 0.046 + bob, base.z + UPK.z + 0.012);
+  handR.want = { pos: palm, up: () => V3(0, -1, 0), curl: 0.05, rate: 5 };
+  await wait(tok, 0.6); bubble('손!', () => handR.pos.clone().add(V3(0, 0.1, 0)), 'soft', 1.4, 0);
+  d.lookFn = () => handR.pos; d.earPerk = 0.4; await wait(tok, 0.6);
+  if (!give) {
+    UI.pawAt = clock; mark('ap:paw:no');
+    await apRefuse(tok, '공주는 그런 거 안 행~');
+    handR.want = null; await wait(tok, 0.5);
+    d.lookFn = null; d.tgt.yawOff = 0; apChin(0.4); d.tiltT = 0.15; d.eyeOpen = 1; d.earPerk = 0; d.wagAmpT = 0.5; d.wagSpeedT = 10; // 슬쩍 엄마를 본다 (꼬리는 살랑)
+    await wait(tok, 1.2); d.tiltT = 0; apChin(0); camHome(); return;
+  }
+  UI.pawAt = -99; mark('ap:paw:yes');
+  apChin(0.7); d.lookFn = apAway(apSide(), 0.7); say('…딱 한 번만이야~ 공주 손은 비싸.', headTop, 'soft', 2.4); await wait(tok, 1.0);
+  d.lookFn = () => handR.pos; d.pawUp = { i, k: 0, ...UPK };
+  await tween(tok, 0.5, (k) => { d.pawUp.k = ease(k); }); // 사뿐히 (천천히)
+  snd('sfx', 'pat', { gain: 4, force: 1, why: 'princess paw on palm' }); d.lookFn = null; d.tgt.gaze = 1; d.smile = 1; d.wagAmpT = 0.8; d.wagSpeedT = 15;
+  await tween(tok, 0.8, (k) => { bob = 0.01 * Math.sin(k * Math.PI * 2); }); bob = 0; heart(); await wait(tok, 0.5);
+  await tween(tok, 0.25, (k) => { d.pawUp.k = 1 - ease(k); }); d.pawUp = null; handR.want = null;
+  say('흐응~', headTop, 'soft', 1.3); await wait(tok, 1.4); d.smile = 0; apChin(0); camHome();
+}
+// ---------- 앉아 · 엎드려 · 드러눕기: 공주님은 맨바닥에서는 안 한다 — 바닥을 내려다보고 엄마를 보며 방석을 조른다 → 엄마가 공주님 방석을 깔아 주면 사뿐 올라가서 한다
+// (깔아 둔 방석이 아직 있으면 바로 올라간다 · 방석은 알팡이가 그 위에 있는 동안 그대로 — 다른 놀이로 넘어가 내려오면 접어 치운다)
+const AP_ASK = { sit: '공주는 바닥에 안 앉아. 방석 깔아 줘~', down: '바닥은 차갑단 말이야~ 방석!', roll: '공주 털 더러워진단 말이야~' };
+const AP_ON = { sit: '흐응~ 이제 좀 공주답네.', down: '흐응~ 폭신해~', roll: '흐응~ 방석 위는 괜찮아~' };
+async function apOnCushion(tok, kind) {
+  const d = pinky, C = UI.cush, ph = phoneK();
+  tok.cleanups.push(() => { apChin(0); d.tgt.yawOff = 0; d.smile = 0; d.paddle = 0; });
+  await nearFirst(tok);
+  if (!(C.on && C.down && !C.away && Math.hypot(C.x - d.x, C.z - d.z) < 1.4)) {
+    if (Math.hypot(d.x - HOME.x, d.z - HOME.z) > 0.08) { setPose(d, 'stand', 6); d.walkSpeed = 0.75; d.wagAmpT = 0.6; d.wagSpeedT = 12; await walkTo(tok, HOME.x, HOME.z); d.walkSpeed = 0.5; }
+    setPose(d, 'stand', 6); d.face = 'cam'; d.tgt.yawOff = 0; { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, camYaw())) < 0.2 || clock - t0 > 2); }
+    const f = toCamDir(), P = { x: d.x + f.x * 0.36, z: d.z + f.z * 0.36 };
+    { const [p, a] = kneelFor({ x: P.x - f.x * 0.12, z: P.z - f.z * 0.12 }, 1.2 * ph, 0.82 + 0.1 * (ph - 1), 0.18); camTo(p, a); }
+    // 1. 맨바닥을 내려다본다 (꼬리가 멈춘다)
+    d.lookFn = () => V3(d.x + f.x * 0.3, 0, d.z + f.z * 0.3); d.tgt.gaze = 1; d.earPerk = 0.3; d.wagAmpT = 0.08; d.wagSpeedT = 3; await wait(tok, 1.0);
+    bubble('…', headTop, 'small', 1.0); await wait(tok, 0.6);
+    // 2. 엄마를 보고 턱을 들고 조른다
+    d.lookFn = null; apChin(0.8); d.wagAmpT = 0.75; d.wagSpeedT = 17; d.tiltT = 0.12; mark('ap:ask:' + kind);
+    say(AP_ASK[kind], headTop, 'soft', 2.4); await wait(tok, 1.9);
+    bubble('네~ 공주님~', momSays, 'soft', 1.4, 0); await wait(tok, 0.4);
+    // 3. 엄마 두 손이 장밋빛 방석을 깔아 준다
+    Object.assign(C, { on: true, down: false, away: false, k: 1, x: P.x, z: P.z, yaw: Math.atan2(f.x, f.z) }); C.g.scale.setScalar(1);
+    d.lookFn = () => C.g.position.clone().add(V3(0, 0.05, 0)); d.earPerk = 0.8; d.tiltT = 0; apChin(0.2);
+    await apCarry(tok, C.g, P, C.yaw, AP_CUSH.half, 0.04, 1.2);
+    C.down = true; snd('sfx', 'flop_soft', { pos: [P.x, 0.03, P.z], gain: -1, force: 1, why: 'princess cushion down' }); bubble('폭', () => V3(P.x, 0.2, P.z), 'small', 0.9, 0);
+    await wait(tok, 0.3);
+  }
+  // 4. 방석 가운데로 사뿐 올라서서 엄마를 본다
+  mark('ap:cushion:' + kind); d.lookFn = null; d.tgt.gaze = 1; apChin(0.3); d.wagAmpT = 0.7; d.wagSpeedT = 14;
+  const fw = V3(Math.sin(C.yaw), 0, Math.cos(C.yaw)), back = kind === 'down' ? 0.12 : 0.06; let Q = { x: C.x - fw.x * back, z: C.z - fw.z * back }; // 앉으면 발이 몸 앞에 놓이니 몸을 조금 뒤로 (발이 다 방석 위에)
+  if (kind === 'roll') { const c = roomCam.position, l = Math.hypot(c.x - C.x, c.z - C.z) || 1, tx = (c.x - C.x) / l, tz = (c.z - C.z) / l; Q = { x: C.x + tz * 0.085 + tx * 0.04, z: C.z - tx * 0.085 + tz * 0.04 }; } // 드러누우면 몸이 옆으로 돌아 눕는다 (머리는 왼쪽 · 등은 저쪽): 누운 몸 가운데가 방석 가운데에
+  if (Math.hypot(d.x - Q.x, d.z - Q.z) > 0.05 || !apOnCush(d.x, d.z)) { setPose(d, 'stand', 6); d.walkSpeed = 0.38; await walkTo(tok, Q.x, Q.z); d.walkSpeed = 0.5; }
+  d.face = 'cam'; d.tgt.yawOff = 0; { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, camYaw())) < 0.15 || clock - t0 > 2); }
+  await wait(tok, 0.25);
+  if (kind === 'sit') { sitFront(5); await wait(tok, 0.8); }
+  else if (kind === 'down') { setPose(d, 'down', 4); d.tgt.headPitch = -0.1; await wait(tok, 1.0); }
+  else { // 방석 위에서만 사뿐히 뒹굴 (두 번)
+    setPose(d, 'side', 3.2); d.eyeOpen = 0.8; await wait(tok, 1.0); say('뒹굴', aboveHead, '', 1.2);
+    for (let i = 0; i < 2; i++) { setPose(d, 'belly', 3.6); d.paddle = 0.6; await wait(tok, 0.6); setPose(d, 'side', 3.6); await wait(tok, 0.55); }
+    setPose(d, 'belly', 3); d.paddle = 0.3; d.eyeOpen = 0.55; d.smile = 1; say('뒹굴뒹굴', aboveHead, '', 1.4); await wait(tok, 1.4); d.paddle = 0;
+    setPose(d, 'side', 3); await wait(tok, 0.7); setPose(d, 'down', 3); d.eyeOpen = 1; await wait(tok, 0.9);
+  }
+  // 5. 턱을 들고 새침하게 한마디 — 흐응~ (꼬리는 살랑살랑)
+  apChin(0.85); d.smile = 1; d.tiltT = 0.1; d.wagAmpT = 0.65; d.wagSpeedT = 11;
+  say(AP_ON[kind], kind === 'sit' ? headTop : aboveHead, 'soft', 2.3); heart();
+  await wait(tok, 2.4); apChin(0.3); d.tiltT = 0; d.smile = 0; d.wagAmpT = 0.4; d.wagSpeedT = 8;
+  await wait(tok, 1.0); camHome();
+}
+// ---------- 뽀뽀하기: 엄마가 쪼그려 앉아 "알팡아, 뽀뽀~" → 흐응~ 특별히 해 줄게~ → 사뿐사뿐 와서 엄마 무릎에 앞발을 척 올리고 몸을 쭉 → 고개를 쭉 빼서 코끝으로 쪽! (하트 퐁퐁)
+// → 내려와 앉아 새침하게 — 공주 뽀뽀는 귀한 거야~ ♥
+async function apKiss(tok) {
+  const d = pinky, L = UI.lap; mark('ap:kiss');
+  tok.cleanups.push(() => { L.visible = false; apChin(0); d.smile = 0; d.tgt.reach = 0; if (d.tgt.name === 'apUp') setPose(d, 'stand', 5); d.bounce = 0; d.ribbonFlutter = 0; });
+  const n = nearSpot(), Q = { x: n.x, z: n.z }, f = V3(CAM_POS.x - Q.x, 0, CAM_POS.z - Q.z).normalize(), ph = phoneK();
+  const CP = V3(Q.x + f.x * 1.2 * ph, 0.8 + 0.1 * (ph - 1), Q.z + f.z * 1.2 * ph), AIM = V3(Q.x + f.x * 0.12, 0.38, Q.z + f.z * 0.12);
+  camTo(CP, AIM, 2.2); // 엄마가 무릎을 꿇고 앉는다
+  bubble('알팡아, 뽀뽀~', momSays, 'soft', 1.5, 0); snd('sfx', 'kiss_call', { force: 1, gain: -6, why: 'mom asks for a kiss' });
+  d.earPerk = 0.9; d.smile = 1; d.lookFn = null; d.tgt.gaze = 1; d.wagAmpT = 0.85; d.wagSpeedT = 17; await wait(tok, 0.7);
+  say('흐응~ 특별히 해 줄게~', headTop, 'soft', 1.7);
+  if (Math.hypot(d.x - Q.x, d.z - Q.z) > 0.06) { setPose(d, 'stand', 6); Object.assign(d, { walkSpeed: 0.8, bounce: 0.009, ribbonFlutter: 0.6 }); await walkTo(tok, Q.x, Q.z); Object.assign(d, { walkSpeed: 0.5, bounce: 0, ribbonFlutter: 0 }); }
+  setPose(d, 'stand', 6); d.face = 'cam'; d.tgt.yawOff = 0; { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, camYaw())) < 0.1 || clock - t0 > 2); }
+  // 엄마 무릎 (회색 담요): 알팡이 바로 앞 · 앞발이 올라갈 높이
+  { const y = Math.atan2(-f.x, -f.z), k = rootW(0, 0.29, 0.335); L.position.set(k.x, 0.283, k.z); L.rotation.set(0, y, 0); L.visible = true; } // 앞발이 올라갈 자리가 다리 위
+  await wait(tok, 0.5);
+  // 앞발을 척 — 몸을 쭉 세운다
+  setPose(d, 'apUp', 3.2); d.wagAmpT = 0.95; d.wagSpeedT = 19; d.earPerk = 0.5; await wait(tok, 0.85);
+  snd('sfx', 'pat', { gain: 3, force: 1, why: 'paws on mom knee' }); bubble('척', () => L.position.clone().add(V3(0, 0.1, 0)), 'small', 0.8, 0);
+  await wait(tok, 0.4);
+  // 고개를 쭉 빼서 엄마 얼굴로 — 엄마도 얼굴을 가까이 → 코끝으로 쪽!
+  d.lookFn = () => roomCam.position; d.tgt.reach = 0.07; d.eyeOpen = 0.85; d.tgt.neck = POSES.apUp.neck - 0.15;
+  camTo(CP.clone().lerp(V3(AIM.x, 0.62, AIM.z), 0.42), AIM.clone().add(V3(0, 0.14, 0)), 2.6);
+  await wait(tok, 0.7);
+  d.eyeOpen = 0.18; say('쪽!', noseTip, '', 1.2, 0); apHearts(tok, 6); mark('ap:kiss:boop');
+  await wait(tok, 0.7); d.eyeOpen = 0.6;
+  // 내려와 앉아 새침하게
+  d.tgt.reach = 0; d.lookFn = null; setPose(d, 'stand', 4); await wait(tok, 0.6);
+  camTo(CP, AIM, 2.2); L.visible = false; sitFront(7); await wait(tok, 0.4);
+  d.lookFn = apAway(apSide(), 0.58); apChin(0.6); d.tiltT = 0.15; d.eyeOpen = 0.8; d.wagAmpT = 0.9; d.wagSpeedT = 17;
+  say('공주 뽀뽀는 귀한 거야~ ♥', headTop, 'soft', 2.4);
+  await wait(tok, 1.6); d.lookFn = null; d.eyeOpen = 1; d.tiltT = 0.2; heart(); await wait(tok, 1.1);
+  apChin(0); d.tiltT = 0; d.smile = 0; d.wagAmpT = 0.45; d.wagSpeedT = 9; camHome();
+}
+// ---------- 만져줘 (치대기): 엄마가 바닥에 앉으면 알팡이가 먼저 와서 엄마 무릎에 턱을 괴고 머리를 꾹 — 옆으로 올려다보며 애처롭게 '만져 줘~'
+// → 엄마 손이 머리 · 볼을 쓰다듬는다 → 손이 멈추면 턱을 더 꾹 누르고 코로 쿡 / 앞발로 톡 — '더 만져 줘잉~' (두 번) → 눈을 지그시 감고 꼬리를 천천히 — '흐응~ 좋아~'
+async function apLean(tok) {
+  const d = pinky, L = UI.lap; mark('ap:lean');
+  tok.cleanups.push(() => { L.visible = false; d.pawUp = null; d.smile = 0; d.tgt.headTilt = 0; if (d.tgt.name === 'apLean') setPose(d, 'stand', 5); });
+  const n = nearSpot(), Q = { x: lerp(n.x, CAM_POS.x, 0.08), z: Math.min(lerp(n.z, CAM_POS.z, 0.08), UI_NAV.z1) }, f = V3(CAM_POS.x - Q.x, 0, CAM_POS.z - Q.z).normalize(), ph = phoneK();
+  const tall = ph > 1, CP = V3(Q.x + f.x * (tall ? 1.05 : 1.2), tall ? 0.72 : 0.6, Q.z + f.z * (tall ? 1.05 : 1.2)), AIM = tall ? V3(Q.x + f.x * 0.12, 0.31, Q.z + f.z * 0.12) : V3(Q.x + f.x * 0.22, 0.24, Q.z + f.z * 0.22); // 세로 화면: 조금 높이서 내려다보며 얼굴을 가운데로 (무릎이 화면 아래 반)
+  camTo(CP, AIM, 2.0); bubble('알팡아~', momSays, 'soft', 1.2, 0); // 엄마가 바닥에 앉는다
+  { const y = Math.atan2(-f.x, -f.z); L.position.set(Q.x + f.x * 0.36, 0.2, Q.z + f.z * 0.36); L.rotation.set(0, y, 0); L.visible = true; }
+  d.earPerk = 0.6; d.lookFn = null; d.tgt.gaze = 1; d.wagAmpT = 0.6; d.wagSpeedT = 11; await wait(tok, 0.6);
+  if (Math.hypot(d.x - Q.x, d.z - Q.z) > 0.06) { setPose(d, 'stand', 6); d.walkSpeed = 0.62; await walkTo(tok, Q.x, Q.z); d.walkSpeed = 0.5; }
+  setPose(d, 'stand', 6); d.face = 'cam'; d.tgt.yawOff = 0; { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, camYaw())) < 0.1 || clock - t0 > 2); }
+  // 무릎에 턱을 괸다 (머리를 낮춰 앞으로) — 무릎은 턱 밑에
+  setPose(d, 'apLean', 2.6); d.wagAmpT = 0.35; d.wagSpeedT = 5; await wait(tok, 1.0);
+  const chin = () => mouthPt().add(V3(0, -0.024, 0));
+  { const c = chin(); L.position.set(c.x, c.y - 0.004, c.z); } // 다리 위가 턱 밑에
+  snd('sfx', 'pat', { gain: -2, force: 1, why: 'chin on lap' });
+  const up = (s = 1) => () => roomCam.position.clone().addScaledVector(camRight(), 0.3 * s).add(V3(0, 0.12, 0)); // 옆으로 올려다본다
+  const sxR = jrPetSide();
+  d.lookFn = up(sxR); d.tgt.gaze = 0.6; d.eyeOpen = 0.56; d.tiltT = 0.26 * sxR; d.earPerk = -0.35; d.tgt.headTilt = 0.08 * sxR;
+  await wait(tok, 0.5); say('만져 줘~', headTop, 'soft', 2.0); mark('ap:lean:ask'); await wait(tok, 1.6);
+  // 쓰다듬기: 엄마 손이 머리 옆 · 볼을 따라 (리본 매듭 · 무릎을 피해)
+  let s = 0, lift = 0; const pt = () => jrPetPt(s, false, sxR), upv = () => jrPetUp(false, sxR);
+  const stroke = async (n2) => { handR.want = { pos: () => pt().addScaledVector(upv(), 0.02 + lift), up: upv, curl: 0.12, rate: 10, shoulder: [0.36, -0.12, 0.05] }; for (let i = 0; i < n2; i++) { await tween(tok, 0.8, (k) => { s = ease(k); lift = 0; }); heart(); await tween(tok, 0.32, (k) => { lift = Math.sin(k * Math.PI) * 0.03; s = 1 - k; }); } };
+  const hover = () => { const h = pt().addScaledVector(upv(), 0.12); handR.want = { pos: () => h, up: upv, curl: 0.2, rate: 6, shoulder: [0.36, -0.12, 0.05] }; }; // 손이 머리 위에서 멈춘다
+  d.eyeOpen = 0.42; d.wagAmpT = 0.55; d.wagSpeedT = 6;
+  for (let round = 0; round < 2; round++) {
+    await stroke(2); hover(); d.eyeOpen = 0.6; await wait(tok, 0.6);
+    const hp0 = d.tgt.headPitch;
+    await tween(tok, 0.4, (k) => { d.tgt.headPitch = hp0 + 0.12 * ease(k); d.tgt.bodyZ = 0.012 * ease(k); }); // 턱을 꾹 (무릎에 머리를 더 누른다)
+    if (round === 0) { // 코로 손을 쿡
+      d.lookFn = () => handR.pos; d.tgt.gaze = 0.9;
+      for (let i = 0; i < 2; i++) { say('쿡', aboveHead, 'small', 0.7, (i ? 1 : -1) * 60); await tween(tok, 0.24, (k) => { d.tgt.reach = 0.05 + 0.03 * Math.sin(Math.PI * k); }); await wait(tok, 0.2); }
+    } else { // 앞발로 무릎을 톡톡 (손 쪽으로)
+      d.pawUp = { i: sxR > 0 ? 0 : 1, k: 0, y: 0.12, z: 0.1 };
+      for (let i = 0; i < 2; i++) { await tween(tok, 0.25, (k) => { d.pawUp.k = ease(k); }); await wait(tok, 0.12); await tween(tok, 0.22, (k) => { d.pawUp.k = 1 - ease(k); }); }
+      d.pawUp = null;
+    }
+    d.lookFn = up(sxR); d.tgt.gaze = 0.6; d.tgt.reach = POSES.apLean.reach; d.eyeOpen = 0.55; d.wagAmpT = 0.7; d.wagSpeedT = 9;
+    say('더 만져 줘잉~', headTop, 'soft', 1.9); mark('ap:lean:more'); await wait(tok, 1.4);
+    await tween(tok, 0.3, (k) => { d.tgt.headPitch = hp0 + 0.12 * (1 - k); d.tgt.bodyZ = 0.012 * (1 - k); });
+  }
+  // 오래 쓰다듬어 주면: 눈을 지그시 감고 꼬리를 천천히 — 흐응~ 좋아~
+  await stroke(2); { s = 0.55; const h = () => pt().addScaledVector(upv(), 0.015); handR.want = { pos: h, up: upv, curl: 0.12, rate: 6, shoulder: [0.36, -0.12, 0.05] }; } // 손은 머리에 얹은 채
+  d.eyeOpen = 0.06; d.wagAmpT = 0.8; d.wagSpeedT = 4.5; d.smile = 0.6; d.tiltT = 0.18 * sxR; d.lookFn = null; d.tgt.gaze = 0.2;
+  await tween(tok, 1.6, (k) => { d.sigh = Math.sin(Math.PI * k) ** 2; }); d.sigh = 0;
+  say('흐응~ 좋아~', headTop, 'soft', 2.4); apHearts(tok, 3); mark('ap:lean:bliss');
+  await wait(tok, 2.4);
+  handR.want = null; d.eyeOpen = 1; d.tiltT = 0; d.tgt.headTilt = 0; d.smile = 0; setPose(d, 'stand', 3.5); await wait(tok, 0.6);
+  L.visible = false; camHome(); sitFront(6); d.wagAmpT = 0.6; d.wagSpeedT = 11; await wait(tok, 1.0);
+}
+// ---------- 에르메스 상자: 엄마가 주황 선물 상자를 내려놓는다 → 어머! 킁킁 → 코와 앞발로 뚜껑을 톡 (뚜껑이 굴러떨어지고 리본이 풀린다) → 반짝! 아무거나 톡 튀어나온다
+// → 괴도 알팡 등장! 뭔지도 모르고 덥석 물고 → 비밀 보물 자리로 쏜살같이 (리본 끈이 펄럭펄럭) → 보물 더미에 툭 → 시치미 떼고 돌아와서 …공주는 아무것도 안 했어~
+async function apBox(tok) {
+  const d = pinky, B = UI.box, ph = phoneK(); mark('ap:box');
+  tok.cleanups.push(() => { apBoxOff(); apDropHeld(); Object.assign(d, { ribbonFlutter: 0, bounce: 0, smile: 0, pawUp: null }); UI.spark.sp.visible = false; jrUnlean(); });
+  if (Math.hypot(d.x - HOME.x, d.z - HOME.z) > 0.08) { setPose(d, 'stand', 6); d.walkSpeed = 0.75; await walkTo(tok, HOME.x, HOME.z); d.walkSpeed = 0.5; }
+  d.face = 'cam'; const f = toCamDir(), rt = camRight(), P = { x: HOME.x + rt.x * 0.42 + f.x * 0.14, z: HOME.z + rt.z * 0.42 + f.z * 0.14 };
+  { const k = ph > 1 ? 0.72 : 0.5, [p, a] = kneelFor({ x: lerp(HOME.x, P.x, k) - 0.05, z: lerp(HOME.z, P.z, k) }, 1.3 * ph, 0.82 + 0.12 * (ph - 1), 0.16); camTo(p, a); } // 세로 화면은 상자 쪽으로 (상자 · 알팡이가 함께 보이게)
+  // 1. 엄마 두 손이 주황 상자를 내려놓는다
+  apBoxOff(); B.on = true; bubble('알팡아, 선물이야~', momSays, 'soft', 1.4, 0);
+  d.lookFn = () => B.g.position.clone().add(V3(0, 0.08, 0)); d.earPerk = 1; d.eyeOpen = 1.1; d.wagAmpT = 0.9; d.wagSpeedT = 19;
+  await apCarry(tok, B.g, P, Math.atan2(f.x, f.z), B.W / 2, 0.055, 1.1);
+  snd('sfx', 'bowl_tick', { pos: [P.x, 0.03, P.z], gain: -6, rate: 0.6, force: 1, why: 'gift box down' }); bubble('톡', () => V3(P.x, 0.2, P.z), 'small', 0.8, 0);
+  say('어머! 상자다~', headTop, 'soft', 1.5); await wait(tok, 1.0);
+  // 2. 상자 앞으로 가서 킁킁
+  const to = V3(P.x - d.x, 0, P.z - d.z).normalize(), S = { x: P.x - to.x * 0.3, z: P.z - to.z * 0.3 };
+  setPose(d, 'stand', 6); d.walkSpeed = 0.45; await walkTo(tok, S.x, S.z); d.walkSpeed = 0.5; d.face = { x: P.x, z: P.z };
+  { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, Math.atan2(P.x - d.x, P.z - d.z))) < 0.12 || clock - t0 > 1.5); }
+  setPose(d, 'eat', 5); d.tgt.headPitch -= 0.25; d.lookFn = null; d.sniff = 1; say('킁킁', noseTip, 'small', 1.0); await wait(tok, 0.9); say('킁킁', noseTip, 'small', 1.0); await wait(tok, 0.6); d.sniff = 0;
+  // 3. 앞발로 뚜껑을 톡 · 코로 쓱 밀어 — 뚜껑이 굴러떨어지고 리본이 풀린다
+  setPose(d, 'stand', 6); d.pawUp = { i: 0, k: 0, y: 0.11, z: 0.12 };
+  await tween(tok, 0.3, (k) => { d.pawUp.k = ease(k); }); snd('sfx', 'pat', { gain: 2, force: 1, why: 'paw on lid' }); await wait(tok, 0.15);
+  await tween(tok, 0.25, (k) => { d.pawUp.k = 1 - ease(k); }); d.pawUp = null;
+  setPose(d, 'eat', 7); d.tgt.headPitch -= 0.15; await wait(tok, 0.3);
+  const side = rt.clone().multiplyScalar(0.18).add(f.clone().multiplyScalar(0.06)), lid0 = B.lid.position.clone(), sideL = B.g.worldToLocal(B.g.getWorldPosition(V3()).add(side));
+  snd('sfx', 'ap_box', { pos: [P.x, 0.1, P.z], force: 1, why: 'lid off' }); say('짠~', headTop, 'small', 1.0);
+  await tween(tok, 0.55, (q) => { const e = ease(q); B.lid.position.set(lerp(lid0.x, sideL.x, e), lerp(lid0.y, 0.012, e) + 0.09 * Math.sin(Math.PI * q), lerp(lid0.z, sideL.z, e)); B.lid.rotation.set(0, 0, -2.6 * e); }); // 뚜껑이 옆으로 굴러 뒤집힌다
+  B.loose.visible = true; B.loose.position.copy(B.g.localToWorld(V3(-0.05, 0, -0.16))); B.loose.rotation.set(0, B.g.rotation.y + 0.4, 0); // 풀린 리본
+  setPose(d, 'stand', 6); d.earPerk = 1; d.lookFn = () => B.g.position.clone().add(V3(0, 0.1, 0)); d.tgt.gaze = 1; await wait(tok, 0.35);
+  // 4. 반짝! 아무거나 톡 튀어나온다 (같은 것이 두 번 잇달아 나오지는 않는다)
+  let k = Math.floor(Math.random() * UI.loot.length); if (k === UI.lastLoot) k = (k + 1 + Math.floor(Math.random() * (UI.loot.length - 1))) % UI.loot.length;
+  UI.lastLoot = k; UI.lootN++; const T = UI.loot[k], it = { name: T.name, g: T.g.clone(), hang: T.hang, rest: T.rest }; it.inner = it.g.children[0]; uiG.add(it.g); mark('ap:loot:' + T.name);
+  const a0 = B.g.localToWorld(V3(0, B.H * 0.5, 0)), landY = Math.atan2(f.x, f.z) + (Math.random() - 0.5), a1 = V3(P.x + f.x * 0.2 + rt.x * 0.03, 0, P.z + f.z * 0.2 + rt.z * 0.03); // 상자 앞(엄마 쪽)에 내려앉는다
+  it.g.visible = true; it.g.rotation.set(0, landY, 0); it.inner.rotation.set(...it.rest.r);
+  { const sp = UI.spark; sp.sp.visible = true; tween(tok, 0.7, (q) => { for (let i = 0; i < sp.dirs.length; i++) { const r = 0.02 + 0.2 * ease(q); sp.P.set([a0.x + sp.dirs[i].x * r, a0.y + 0.08 + sp.dirs[i].y * r, a0.z + sp.dirs[i].z * r], i * 3); } sp.sp.geometry.attributes.position.needsUpdate = true; sp.sp.material.opacity = 1 - q; }).then(() => { sp.sp.visible = false; }, () => {}); }
+  bubble('반짝!', () => a0.clone().add(V3(0, 0.25, 0)), 'small', 1.0, 0); snd('sfx', 'ap_sparkle', { pos: a0.toArray(), force: 1, why: 'loot pops out' });
+  await tween(tok, 0.6, (q) => { it.g.position.set(lerp(a0.x, a1.x, q), lerp(a0.y, it.rest.y, q) + 0.2 * Math.sin(Math.PI * q), lerp(a0.z, a1.z, q)); });
+  snd('sfx', 'ap_rustle', { pos: a1.toArray(), gain: -4, force: 1, why: 'loot lands' });
+  // 5. 괴도 알팡 등장! 뭔지도 모르고 덥석
+  d.lookFn = () => it.g.position; d.eyeOpen = 1.12; d.smile = 1; d.wagAmpT = 1.0; d.wagSpeedT = 22; say('괴도 알팡 등장!', headTop, 'soft', 1.6); await wait(tok, 0.9);
+  { const dir = V3(a1.x - d.x, 0, a1.z - d.z), l = dir.length() || 1; if (l > NOSE_R0 + 0.04) { const g2 = { x: a1.x - (dir.x / l) * NOSE_R0, z: a1.z - (dir.z / l) * NOSE_R0 }; setPose(d, 'stand', 6); d.walkSpeed = 0.55; await walkTo(tok, g2.x, g2.z); d.walkSpeed = 0.5; } }
+  d.face = { x: a1.x, z: a1.z }; { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, Math.atan2(a1.x - d.x, a1.z - d.z))) < 0.12 || clock - t0 > 1.2); }
+  setPose(d, 'eat', 6); d.tgt.headPitch += 0.3; d.tgt.pitch += 0.12; d.tgt.bodyY -= 0.02; d.lookFn = null; await wait(tok, 0.5); d.jawOpen = 0.24; await wait(tok, 0.15); // 코끝이 바닥의 보물에 닿게
+  d.root.updateMatrixWorld(true); UI.held = { it, jl: d.jaw.worldToLocal(mouthPt().add(V3(0, -0.008, 0))) }; it.inner.rotation.set(...it.hang); apHeldPlace(d); d.jawOpen = toy.rest = 0.1;
+  say('앙', headTop, 'small', 0.8); snd('sfx', 'ap_rustle', { gain: -2, force: 1, why: 'grab loot' }); mark('ap:grab');
+  setPose(d, 'stand', 5); d.tgt.headPitch = -0.22; await wait(tok, 0.4);
+  say('뭔지 몰라도 이건 공주 거야~', headTop, 'soft', 1.9); await wait(tok, 1.2);
+  // 6. 비밀 보물 자리로 쏜살같이 (깡총깡총 · 귀와 리본 끈이 펄럭펄럭) — 엄마 눈길이 따라간다
+  const ST = UI_STASH, slot = UI.stash.length % 5, so = [[0, 0], [0.13, 0.07], [-0.11, 0.09], [0.06, -0.12], [-0.08, -0.06]][slot], spot = { x: ST.x + so[0], z: ST.z + so[1] };
+  const A = { x: spot.x + 0.36, z: spot.z + 0.1 }; collide(A);
+  Object.assign(d, { walkSpeed: 1.6, bounce: 0.012, ribbonFlutter: 1.3, wagAmpT: 0.9, wagSpeedT: 18, face: null, earPerk: -0.2 }); mark('ap:dash');
+  { const fx = ph > 1 ? 0.75 : 0.45; jrLean(V3(lerp(d.x, A.x, fx) + 0.2, 1.05 + 0.25 * (ph - 1), Math.max(d.z, A.z) + 2.3 + 0.6 * (ph - 1)), V3(lerp(d.x, A.x, fx) - 0.15, 0.2, lerp(d.z, A.z, fx) - 0.2), 0.75, 0.85, 2.2); } // 엄마 눈길이 비밀 보물 자리 쪽으로 (세로 화면은 더)
+  await walkTo(tok, A.x, A.z);
+  Object.assign(d, { walkSpeed: 0.5, bounce: 0, ribbonFlutter: 0.3 });
+  d.face = { x: spot.x, z: spot.z }; { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, Math.atan2(spot.x - d.x, spot.z - d.z))) < 0.15 || clock - t0 > 1.2); }
+  setPose(d, 'eat', 6); d.tgt.headPitch += 0.2; d.tgt.pitch += 0.08; await wait(tok, 0.45); d.jawOpen = 0.24;
+  { const h = UI.held; UI.held = null; apRestAt(h.it, spot.x, spot.z, Math.random() * 6.28); UI.stash.push(h.it); apStashCap(); } // 보물 더미에 툭
+  snd('sfx', 'ap_rustle', { pos: [spot.x, 0.05, spot.z], gain: -2, force: 1, why: 'loot on the pile' }); bubble('톡', () => V3(spot.x, 0.18, spot.z), 'small', 0.8, 0); mark('ap:stash');
+  await wait(tok, 0.15); d.jawOpen = toy.rest = 0; d.ribbonFlutter = 0;
+  // 7. 시치미 떼고 돌아온다 (엄마 손은 빈 상자를 치운다) — …공주는 아무것도 안 했어~
+  setPose(d, 'stand', 5); jrUnlean();
+  { const bp = () => B.g.localToWorld(V3(0, B.H + 0.035, 0)); handR.want = { pos: bp, up: () => V3(0, 1, 0), curl: 0.6, rate: 5 }; wait(tok, 1.0).then(() => { B.g.visible = false; B.loose.visible = false; B.on = false; handR.want = null; }, () => {}); }
+  const n = nearSpot(); d.walkSpeed = 0.55; d.wagAmpT = 0.3; d.wagSpeedT = 6; d.smile = 0; await walkTo(tok, n.x, n.z); d.walkSpeed = 0.5;
+  sitFront(7); d.lookFn = apAway(apSide(), 0.7); d.eyeOpen = 0.7; d.earPerk = 0.1; d.tiltT = 0.1; await wait(tok, 0.5);
+  say('…공주는 아무것도 안 했어~', headTop, 'soft', 2.4); await wait(tok, 2.0);
+  d.lookFn = null; d.eyeOpen = 1; d.tiltT = 0.2; d.smile = 1; d.wagAmpT = 0.9; d.wagSpeedT = 17; bubble('…', headTop, 'small', 0.9, 40); await wait(tok, 1.2); // 슬쩍 엄마를 보고 꼬리는 붕붕
+  d.tiltT = 0; d.smile = 0; d.wagAmpT = 0.45; d.wagSpeedT = 9; apBoxOff(); camHome();
+}
+// ---------- 간식: 크로와상(엄마 손에 든 채로 끝부터 바삭바삭 조금씩) · 치즈케이크(하얀 접시 · 작은 포크 — 바닥에 놓아 주면 얌전히 먹고 접시까지 할짝)
+function apTreat(tok, kind) {
+  if (!['croissant', 'cheesecake'].includes(kind)) kind = rot('aptreat', ['croissant', 'cheesecake']);
+  return kind === 'cheesecake' ? apCake(tok) : apCroissant(tok);
+}
+async function apCroissant(tok) {
+  const d = pinky, Cr = UI.croissant, ph = phoneK(); mark('treat:croissant');
+  toy.tok = tok; tok.cleanups.push(() => { Cr.g.visible = false; uiG.add(Cr.g); for (const m of Cr.parts) m.visible = true; d.chew = false; d.smile = 0; apChin(0); });
+  for (const m of Cr.parts) m.visible = true;
+  handR.rig.inner.add(Cr.g); Cr.g.position.set(0.0, -0.03, 0.075); Cr.g.rotation.set(0, 0, 0); Cr.g.scale.setScalar(1.15); Cr.g.visible = true; // 엄마 손끝에 크로와상 한쪽 끝을 가로로 쥐고
+  const tip = () => { let j = Cr.parts.length - 1; while (j > 0 && !Cr.parts[j].visible) j--; return Cr.parts[j].getWorldPosition(V3()); };
+  let target = () => roomCam.localToWorld(ph > 1 ? V3(0.05, -0.06, -0.5) : V3(0.13, -0.08, -0.46));
+  handR.want = { pos: () => target(), up: () => V3(0, 1, 0), curl: 0.6, rate: 5 };
+  d.lookFn = () => Cr.g.getWorldPosition(V3()); await wait(tok, 0.5);
+  d.earPerk = 1; d.eyeOpen = 1.1; d.wagAmpT = 0.95; d.wagSpeedT = 20; d.smile = 1; say('어머, 크로와상~!', headTop, 'soft', 1.5); await wait(tok, 0.6);
+  if (Math.hypot(d.x - HOME.x, d.z - HOME.z) > 0.08) { setPose(d, 'stand', 7); d.walkSpeed = 0.7; await walkTo(tok, HOME.x, HOME.z); d.walkSpeed = 0.5; }
+  await sitAs(tok, 'front', 8); d.lookFn = tip; { const [p, a] = kneelFor(HOME, 0.95 * ph, 0.58, 0.36); camTo(p, a); } apChin(0.3); await wait(tok, 0.5);
+  // 끝부터 조금씩 — 바삭 (부스러기가 떨어진다)
+  const m0 = () => mouthPt(), dC = toCamDir();
+  for (let i = 0; i < 3; i++) {
+    let push = 0; target = () => m0().addScaledVector(dC, 0.045 - push).add(V3(0, -0.012, 0)).sub(tip().sub(handR.pos)); handR.want.rate = 6;
+    await wait(tok, 0.55); d.jawOpen = 0.22; await tween(tok, 0.18, (q) => { push = 0.03 * q; });
+    d.jawOpen = 0.04; const hide = Cr.parts.filter((m) => m.visible); for (const m of hide.slice(-2)) m.visible = false; if (i === 2) for (const m of Cr.parts) m.visible = false;
+    say('바삭', headTop, '', 1.0, (i % 2 ? 1 : -1) * 75); spawnCrumbs(mouthPt(), 4, UI.flake);
+    target = () => m0().addScaledVector(dC, 0.13).add(V3(0, -0.03, 0)).sub(tip().sub(handR.pos)); // 손은 조금 물러난다
+    d.chew = true; await wait(tok, 0.75); d.chew = false;
+  }
+  handR.want = null; Cr.g.visible = false; uiG.add(Cr.g); for (const m of Cr.parts) m.visible = true;
+  d.lick = 1; say('쩝쩝', headTop, '', 1.0, 80); await wait(tok, 0.8); d.lick = 0;
+  apChin(0.8); d.eyeOpen = 0.6; d.tiltT = 0.15; d.wagAmpT = 0.8; d.wagSpeedT = 15;
+  say('바삭~ 버터 향~', headTop, 'soft', 2.1); heart();
+  await wait(tok, 2.0); d.eyeOpen = 1; d.tiltT = 0; apChin(0); d.smile = 0; toyOff(); camHome();
+}
+async function apCake(tok) {
+  const d = pinky, K = UI.cake, ph = phoneK(); mark('treat:cheesecake');
+  toy.tok = tok; tok.cleanups.push(() => { K.g.visible = false; uiG.add(K.g); K.slice.scale.set(1, 1, 1); K.slice.visible = true; toyOff(); d.smile = 0; apChin(0); });
+  if (Math.hypot(d.x - HOME.x, d.z - HOME.z) > 0.08) { setPose(d, 'stand', 7); d.walkSpeed = 0.7; await walkTo(tok, HOME.x, HOME.z); d.walkSpeed = 0.5; }
+  await sitAs(tok, 'front', 8);
+  const f = toCamDir(), P = V3(HOME.x + f.x * 0.3, 0, HOME.z + f.z * 0.3), Q = { x: P.x - f.x * 0.27, z: P.z - f.z * 0.27 };
+  { const [p, a] = kneelFor({ x: (HOME.x + P.x) / 2, z: (HOME.z + P.z) / 2 }, 1.05 * ph, 0.78 + 0.1 * (ph - 1), 0.12); camTo(p, a); }
+  // 1. 엄마 손바닥 위의 접시를 알팡이 앞 바닥에 내려놓는다
+  K.slice.scale.set(1, 1, 1); K.slice.visible = true; K.g.visible = true; handR.rig.inner.add(K.g); K.g.position.set(0, -0.018, 0.035); K.g.rotation.set(0, Math.PI, Math.PI); K.g.scale.setScalar(1.2);
+  let drop = 0.26; const plateAt = () => K.g.getWorldPosition(V3());
+  handR.want = { pos: () => P.clone().add(V3(0, drop, 0)).sub(plateAt().sub(handR.pos)), up: () => V3(0, -1, 0), curl: 0.08, rate: 4.5 };
+  d.lookFn = plateAt; d.earPerk = 0.9; d.eyeOpen = 1.12; d.wagAmpT = 0.95; d.wagSpeedT = 21; d.smile = 1; await wait(tok, 0.7);
+  say('치즈케이크~?!', headTop, 'soft', 1.5); await wait(tok, 0.8);
+  await tween(tok, 0.6, (q) => { drop = 0.26 * (1 - ease(q)) + 0.012; });
+  uiG.attach(K.g); K.g.position.set(P.x, 0, P.z); K.g.rotation.set(0, Math.atan2(-f.x, -f.z), 0); handR.want = null; // 조각의 뾰족한 끝이 알팡이 쪽
+  snd('sfx', 'ap_clink', { pos: P.toArray(), force: 1, why: 'plate down' }); bubble('달그락', () => P.clone().add(V3(0, 0.15, 0)), 'small', 0.8, 0); mark('ap:plate');
+  apChin(0.5); await wait(tok, 0.6); apChin(0);
+  // 2. 얌전히 한 입씩 (조각이 점점 짧아진다)
+  setPose(d, 'stand', 6); d.walkSpeed = 0.35; await walkTo(tok, Q.x, Q.z); d.walkSpeed = 0.5;
+  d.face = { x: P.x, z: P.z }; { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, Math.atan2(P.x - d.x, P.z - d.z))) < 0.1 || clock - t0 > 1.5); }
+  { const fd = V3(P.x - Q.x, 0, P.z - Q.z).normalize().applyAxisAngle(_yAx, ph > 1 ? -0.6 : -0.9); camTo(P.clone().addScaledVector(fd, ph > 1 ? 1.2 : 0.92).add(V3(0, ph > 1 ? 0.5 : 0.34, 0)), P.clone().add(V3(0, 0.1, 0)), 1.8); } // 비스듬히 옆에서 낮게: 접시에 댄 주둥이 · 조각이 줄어드는 것이 보이게
+  setPose(d, 'eat', 5); d.lookFn = null; d.tgt.gaze = 0; d.eyeOpen = 0.75; d.wagAmpT = 0.7; d.wagSpeedT = 12; await wait(tok, 0.5);
+  const crumb = M(0xfff0cc, { roughness: 0.7 }), words = ['냠', '냠냠', '냠', '냠냠'];
+  for (let i = 0; i < words.length; i++) {
+    d.chew = true; sideSay(words[i], i); const s0 = K.slice.scale.z, s1 = lerp(1, 0.02, (i + 1) / words.length);
+    await tween(tok, 0.85, (q) => { K.slice.scale.z = lerp(s0, s1, ease(q)); }); spawnCrumbs(mouthPt(), 2, crumb);
+  }
+  d.chew = false; K.slice.visible = false; await wait(tok, 0.3);
+  // 3. 접시까지 할짝할짝 (달그락)
+  toy.lap = 1; toy.lapKind = 'yogurt'; sideSay('할짝할짝', 0); await wait(tok, 1.0); snd('sfx', 'ap_clink', { pos: P.toArray(), gain: -6, force: 1, why: 'plate licked' }); sideSay('할짝', 1); await wait(tok, 0.7); toy.lap = 0;
+  // 4. 공주님 한마디 · 엄마가 접시를 치운다
+  setPose(d, 'stand', 5); d.face = 'cam'; d.tgt.gaze = 1; d.eyeOpen = 1; d.lick = 1; camHome(); await wait(tok, 0.7); d.lick = 0;
+  sitFront(7); apChin(0.85); d.smile = 1; d.tiltT = 0.1; d.wagAmpT = 0.85; d.wagSpeedT = 15;
+  say('공주 입맛엔 이 정도는 돼야지~', headTop, 'soft', 2.3); heart();
+  let lift = 0; handR.want = { pos: () => K.g.position.clone().add(V3(0, 0.07 + lift, 0.0)), up: () => V3(0, 1, 0), curl: 0.55, rate: 5 };
+  await wait(tok, 1.1); handR.rig.inner.attach(K.g); await tween(tok, 0.4, (q) => { lift = 0.25 * ease(q); }); handR.want = null;
+  await wait(tok, 0.9); K.g.visible = false; uiG.add(K.g); K.slice.scale.set(1, 1, 1); K.slice.visible = true; apChin(0); d.tiltT = 0; d.smile = 0; toyOff(); camHome();
+}
+// ---------- 공주님 포즈 (혼자 있을 때): 테라스 한쪽에 사뿐히 앉아 턱을 들고 사진 찍을 때처럼 — 엄마가 하나, 둘, 셋~ 찰칵! (번쩍) → 반대쪽으로 한 번 더 → 흐응~ 잘 나왔지?
+const AP_POSE_AT = [{ x: -0.9, z: 0.3 }, { x: 0.95, z: 0.5 }, { x: -0.15, z: -0.55 }];
+async function apPose(tok) {
+  const d = pinky, w = rot('apPoseAt', AP_POSE_AT); mark('pose');
+  tok.cleanups.push(() => { jrUnlean(); apChin(0); d.smile = 0; UI.flash = 0; UI.hemi.intensity = UI.hemiI; });
+  setPose(d, 'stand', 5); d.walkSpeed = 0.5; d.wagAmpT = 0.45; d.wagSpeedT = 9;
+  if (Math.hypot(d.x - w.x, d.z - w.z) > 0.1) await walkTo(tok, w.x, w.z);
+  d.face = 'cam'; await sitAs(tok, 'front', 6);
+  jrLean(V3(d.x * 0.85, 0.78, d.z + 1.5 * phoneK()), V3(d.x, 0.32, d.z), 0.85, 0.9, 1.0); // 엄마가 사진을 찍으러 다가가 쪼그려 앉는다
+  const s = apSide(), turn = (k) => { const c = roomCam.position, r = camRight(); d.face = { x: c.x + r.x * k * 2.2, z: c.z + r.z * k * 2.2 }; }; // 몸은 비스듬히 (고개는 엄마 쪽)
+  turn(s); apChin(1); d.smile = 1; d.lookFn = null; d.tgt.gaze = 1; d.wagAmpT = 0.3; d.wagSpeedT = 5; // 비스듬히 앉아 턱을 든다
+  await wait(tok, 0.8); say('공주 예쁘게 찍어 줘~', headTop, 'soft', 1.9); await wait(tok, 2.0);
+  const snap = async () => { bubble('하나, 둘, 셋~', momLow, 'soft', 1.1, 0); await wait(tok, 1.1); UI.flash = 1; snd('sfx', 'ap_shutter', { force: 1, why: 'mom takes a photo' }); bubble('찰칵!', momLow, 'small', 0.9, 0); mark('ap:snap'); await wait(tok, 1.0); };
+  await snap();
+  turn(-s); d.tiltT = 0.12 * s; await wait(tok, 0.9); await snap(); // 반대쪽 옆얼굴도
+  d.face = 'cam'; d.tiltT = 0.18; apChin(0.5); say('흐응~ 잘 나왔지?', headTop, 'soft', 1.9); heart();
+  await wait(tok, 1.9); d.tiltT = 0; apChin(0); d.smile = 0; jrUnlean(); setPose(d, 'stand', 4); await wait(tok, 0.5);
+}
+// ---------- 매장 구경 (혼자 있을 때 가끔): 잔디밭 끝에 가서 유리 매장을 보고 앉는다 — …저거 공주 거 같은데~ → 어깨 너머로 엄마를 보며 엄마, 저거 사 줘~ → 다시 매장을 본다
+const AP_SHOP_AT = [{ x: -1.75, z: -5.75, tx: -3.7, tz: -21.5 }, { x: 1.15, z: -5.85, tx: 4.5, tz: -23.2 }];
+async function apShop(tok) {
+  const d = pinky, w = rot('apShopAt', AP_SHOP_AT); mark('shop');
+  tok.cleanups.push(() => { jrUnlean(); apChin(0); d.smile = 0; });
+  setPose(d, 'stand', 5); d.walkSpeed = 0.55; d.wagAmpT = 0.5; d.wagSpeedT = 10; d.ribbonFlutter = 0.3;
+  if (Math.hypot(d.x - w.x, d.z - w.z) > 0.12) await walkTo(tok, w.x, w.z);
+  d.ribbonFlutter = 0; const shop = { x: w.tx, z: w.tz }; d.face = shop; await wait(tok, 0.7);
+  setPose(d, 'sit', 4); d.lookFn = () => V3(w.tx, 3.2, w.tz); d.wagAmpT = 0.35; d.wagSpeedT = 4; apChin(0.4);
+  jrLean(V3(d.x + 0.7, 1.05, d.z + 2.0), V3(d.x - 0.3, 1.0, d.z - 4), 0.78, 0.85, 0.8); // 엄마도 다가가 같은 매장을 본다
+  await wait(tok, 2.4); say('…저거 공주 거 같은데~', headTop, 'soft', 2.2); await wait(tok, 2.4);
+  const toCam = Math.atan2(roomCam.position.x - d.x, roomCam.position.z - d.z), s = angDiff(d.yaw, toCam) > 0 ? 1 : -1, y0 = d.yaw;
+  d.face = { x: d.x + Math.sin(y0 + s * 0.5) * 3, z: d.z + Math.cos(y0 + s * 0.5) * 3 }; d.lookFn = () => V3(d.x + Math.sin(d.yaw + s * 1.05) * 2, 0.6, d.z + Math.cos(d.yaw + s * 1.05) * 2); d.wagAmpT = 0.8; d.wagSpeedT = 14; d.smile = 1; // 어깨 너머로 엄마를
+  await wait(tok, 0.5); say(`${AP_CALL}, 저거 사 줘~`, headTop, 'soft', 1.9, -s * 40); await wait(tok, 1.9);
+  d.face = shop; d.lookFn = () => V3(w.tx, 3.2, w.tz); d.wagAmpT = 0.35; d.wagSpeedT = 4; d.smile = 0; bubble('흐응~', headTop, 'small', 1.2);
+  await wait(tok, 1.6); apChin(0); d.lookFn = null; jrUnlean(); setPose(d, 'stand', 4); await wait(tok, 0.6);
+}
+// ---------- 사뿐사뿐 산책 (혼자 놀 때): 잔디밭을 깡총깡총 몇 걸음씩 (리본 끈이 나풀나풀 · 활짝 웃는다) → 멈춰 서서 턱을 들고 한마디
+const AP_PRANCE = [[0.9, -1.4], [-0.7, -2.2], [1.2, -3.0], [-1.3, -1.0], [0.2, -2.6], [-0.4, -0.6], [1.5, -0.4]];
+async function apPrance(tok) {
+  const d = pinky; mark('prance');
+  tok.cleanups.push(() => { Object.assign(d, { bounce: 0, ribbonFlutter: 0, smile: 0 }); apChin(0); });
+  setPose(d, 'stand', 6); Object.assign(d, { walkSpeed: 0.95, bounce: 0.012, ribbonFlutter: 0.9, smile: 1, wagAmpT: 0.85, wagSpeedT: 16, earPerk: 0.3 });
+  say(rot('prance', ['랄랄라~', '공주 산책 중~', '사뿐사뿐~']), headTop, 'soft', 1.6);
+  const pts = AP_PRANCE.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+  for (const [x, z] of pts) await walkTo(tok, x, z);
+  Object.assign(d, { walkSpeed: 0.5, bounce: 0, ribbonFlutter: 0 }); d.face = 'cam'; await wait(tok, 0.5);
+  apChin(0.8); d.wagAmpT = 0.7; d.wagSpeedT = 13; say(rot('pranceEnd', ['흐응~ 공주 오늘 예쁘지?', '어머, 바람 좋다~', '흐응~ 산책 끝~']), headTop, 'soft', 1.9);
+  await wait(tok, 2.0); apChin(0); d.smile = 0; d.wagAmpT = 0.4; d.wagSpeedT = 8;
+}
+
+// ================================================================
 // 방 들어가기 · 매 프레임
 // ================================================================
 let greetTimer = 0;
@@ -8240,3 +9190,4 @@ if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCom
 if (location.hostname === 'localhost') Object.assign(window.__dbg, { makeJaerong, updateDog, napPost, THREE }); // 재롱 모델 디버그
 if (location.hostname === 'localhost') Object.defineProperties(window.__dbg, Object.getOwnPropertyDescriptors({ get jaerong() { return JAERONG; }, get GW() { return GW; }, ROOM_GWACHEON, GW_MAT, GW_SIT, GW_SHU, GW_PEN, gwGround, gwZMin, jrMagpie, jrWatch, jrLake, jrSheep, jrCuddle, jrGreet, jrMat, jrRun, jrRelease, magStep, magFly, jrGo: () => startSpecial('magpie', jrMagpie), JR_TALK, jaerongTalk, momQuick, ballToWorld, aboveHead, headTop, mouthPt, noseTip, selDogs, DOGS, treat, jrTopLocal, shuNest, JR_FAR, nearSpot })); // 재롱 방 디버그 (게터는 그대로 옮긴다)
 if (location.hostname === 'localhost') Object.assign(window.__dbg, { makeAlpang }); // 알팡 모델 디버그
+if (location.hostname === 'localhost') Object.defineProperties(window.__dbg, Object.getOwnPropertyDescriptors({ get alpang() { return ALPANG; }, get UI() { return UI; }, ROOM_UIWANG, UI_NAV, UI_DECK, UI_SHOPS, UI_CANOPY, UI_ROCKS, UI_STASH, UI_PLANTER, UI_TABLE, AP_CALL, AP_TALK, alpangTalk, AP_CUSH, apOnCush, apGreet, apPose, apShop, apPrance, apRelease, apEnter, apKiss, apLean, apBox, apPaw, apOnCushion, apTreat, uiSurf, uiOnPath })); // 알팡 방 디버그 (게터는 그대로 옮긴다)
