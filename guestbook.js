@@ -1,5 +1,6 @@
-// 방명록 — 식구 넷이 강아지들에게 남기는 글 (Supabase · PostgREST RPC만 부른다)
-// main.js와는 DOM으로만 이어진다: 어느 방에 있는지는 #roomUI 제목에서 읽고, 열려 있는 동안 키 · 포인터는 3D 쪽으로 보내지 않는다.
+// 방명록 — 식구 넷이 강아지마다 따로 남기는 글 (Supabase · PostgREST RPC만 부른다)
+// 강아지 방마다 그 강아지의 방명록 책이 놓여 있다: main.js가 책을 누르면 window에 'gb:open' 이벤트({ dog })를 보내고, 여기서 그 강아지의 방명록을 연다.
+// 키보드로는 방 머리줄의 숨은 단추(#gbKey)로 연다 (어느 방인지는 #roomUI 제목에서 읽는다). 열려 있는 동안 키 · 포인터는 3D 쪽으로 보내지 않는다.
 // 남이 쓴 글은 textContent로만 그린다 (innerHTML을 쓰지 않는다). Math.random · requestAnimationFrame도 쓰지 않는다 (점검 스크립트의 씨앗 흐름을 건드리지 않게).
 
 const GB_URL = ''; // Supabase 프로젝트 주소 (예: https://abcd1234.supabase.co)
@@ -13,9 +14,9 @@ const READY = !!(API && KEY);
 const TOKEN_KEY = 'gb_token', NAME_KEY = 'gb_name';
 const MAX = 500, PAGE = 20;
 const MEMBERS = [{ name: '재롱맘' }, { name: '푸맘' }, { name: '규시기', admin: true }, { name: '담온니' }];
-// id · 짧은 이름 (칩) · "~에게"
-const DOGS = [['pinky', '핑키', '핑키에게'], ['dami', '담이', '담이에게'], ['pupu', '푸푸', '푸푸에게'], ['jaerong', '재롱', '재롱이에게'], ['alpang', '알팡', '알팡이에게']];
-const TO = { all: '모두에게' }; for (const [id, , to] of DOGS) TO[id] = to;
+// id · 이름 (방 제목과 같다) · "~에게" · 장소
+const DOGS = [['pinky', '핑키', '핑키에게', '푸맘네 집'], ['dami', '담이', '담이에게', '동네 놀이터'], ['pupu', '푸푸', '푸푸에게', '남산 산책길'], ['jaerong', '재롱', '재롱이에게', '과천 호숫가 잔디밭'], ['alpang', '알팡', '알팡이에게', '의왕 아울렛']];
+const DOG = {}; for (const [id, name, to, place] of DOGS) DOG[id] = { name, to, place };
 const ROOM_DOG = {}; for (const [id, name] of DOGS) ROOM_DOG[name] = id; // 방 제목의 이름 → id
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -28,12 +29,13 @@ function setup() {
   const meBox = $('#gbMe'), meName = $('#gbMeName');
   const namesEl = $('#gbNames'), pass = $('#gbPass'), peek = $('#gbPeek'), loginErr = $('#gbLoginErr'), enterBtn = $('#gbEnter');
   const waitMsg = $('#gbWaitMsg'), retryBtn = $('#gbRetry');
-  const toEl = $('#gbTo'), text = $('#gbText'), count = $('#gbCount'), sendBtn = $('#gbSend'), sendMsg = $('#gbSendMsg');
-  const filterEl = $('#gbFilter'), list = $('#gbList'), empty = $('#gbEmpty'), more = $('#gbMore'), listMsg = $('#gbListMsg');
+  const text = $('#gbText'), count = $('#gbCount'), sendBtn = $('#gbSend'), sendMsg = $('#gbSendMsg');
+  const list = $('#gbList'), empty = $('#gbEmpty'), more = $('#gbMore'), listMsg = $('#gbListMsg');
+  const titleEl = $('#gbTitle'), placeEl = $('#gbPlace'), leadEl = $('#gbLoginLead');
 
   const S = {
     open: false, opener: null, token: null, me: null, pick: null, busy: false,
-    target: 'all', filter: null, notes: [], more: false, loading: false, seq: 0,
+    dog: null, notes: [], more: false, loading: false, seq: 0, // dog: 지금 펼친 방명록의 강아지 (목록도 글도 이 강아지 것만)
     editing: null, confirming: null, clock: 0, downOnBack: false,
   };
   const store = {
@@ -119,11 +121,10 @@ function setup() {
     const n = $('#roomUI .title .name');
     return (n && ROOM_DOG[n.textContent.trim()]) || null;
   }
-  function openBook(opener) {
-    if (S.open) return;
-    S.open = true; S.opener = opener || document.activeElement;
-    S.target = roomDog() || 'all'; // 방에서 열면 그 강아지에게
-    paintTo();
+  function openBook(opener, dog) {
+    if (S.open || !DOG[dog]) return; // 방명록은 강아지마다 하나 (어느 강아지 것인지 모르면 열지 않는다)
+    S.open = true; S.opener = opener || null; // 책을 눌러 열었으면 닫을 때 돌려줄 단추가 없다
+    paintDog(dog);
     for (const id of ['selectUI', 'roomUI']) { const el = document.getElementById(id); if (el) el.inert = true; }
     root.hidden = false;
     for (const b of document.querySelectorAll('.gb-open')) b.setAttribute('aria-expanded', 'true');
@@ -144,6 +145,20 @@ function setup() {
     for (const b of document.querySelectorAll('.gb-open')) b.setAttribute('aria-expanded', 'false');
     const o = S.opener; S.opener = null;
     if (o && o.isConnected && typeof o.focus === 'function') o.focus({ preventScroll: true });
+    else if (document.activeElement && root.contains(document.activeElement)) document.activeElement.blur(); // 책을 눌러 열었으면 초점은 3D 화면(문서)으로
+  }
+  // 어느 강아지의 방명록인지: 제목 · 장소 · 들어가기 안내 · 쓰기 칸 안내. 다른 강아지 방명록을 펼치면 쓰던 글과 지난 목록은 비운다
+  function paintDog(dog) {
+    const d = DOG[dog], changed = S.dog !== dog;
+    S.dog = dog;
+    titleEl.textContent = `${d.name} 방명록`;
+    placeEl.textContent = d.place;
+    leadEl.textContent = `${d.to} 추억을 남겨 주세요`;
+    text.placeholder = `${d.to} 한마디 남겨 주세요`;
+    text.setAttribute('aria-label', `${d.to} 남길 글`);
+    if (!changed) return;
+    text.value = ''; setSend('', ''); paintCount();
+    S.seq++; S.loading = false; S.notes = []; S.more = false; S.editing = S.confirming = null; list.replaceChildren(); empty.hidden = true; more.hidden = true; listMsg.hidden = true;
   }
   // 폰 자판이 올라오면 보이는 높이에 맞춘다 (글 쓰는 칸이 자판 뒤로 숨지 않게)
   function fitViewport() {
@@ -226,22 +241,10 @@ function setup() {
   // ---------------- 방명록 ----------------
   function enterBook() {
     meName.replaceChildren(...[h('span', null, `${S.me.name}님`), S.me.admin ? god() : null].filter(Boolean)); // replaceChildren(null)은 "null" 글자가 된다
-    S.filter = null; paintFilter(); paintTo(); paintCount();
+    paintCount();
     show('book');
     panel.focus({ preventScroll: true });
     loadList(true);
-  }
-  function paintTo() {
-    toEl.replaceChildren(...[['all', '모두에게'], ...DOGS.map(([id, n]) => [id, n])].map(([id, label]) => h('button', {
-      type: 'button', class: 'gb-chip', role: 'radio', 'aria-checked': String(S.target === id), 'data-dog': id,
-      on: { click: () => { S.target = id; paintTo(); } },
-    }, label)));
-  }
-  function paintFilter() {
-    filterEl.replaceChildren(...[[null, '전체'], ...DOGS.map(([id, n]) => [id, n])].map(([id, label]) => h('button', {
-      type: 'button', class: 'gb-chip', 'aria-pressed': String(S.filter === id), 'data-dog': id || '',
-      on: { click: () => { if (S.filter === id) return; S.filter = id; paintFilter(); loadList(true); } },
-    }, label)));
   }
   function setSend(kind, msg) { sendMsg.dataset.kind = kind; sendMsg.textContent = msg; sendMsg.className = `gb-msg ${kind === 'ok' ? 'ok' : 'err'}`; }
   function paintCount() {
@@ -262,8 +265,8 @@ function setup() {
     if (reset) { S.notes = []; S.more = false; S.editing = S.confirming = null; list.replaceChildren(); empty.hidden = true; }
     more.hidden = true; listMsg.hidden = false; listMsg.replaceChildren('불러오는 중…');
     const before = reset || !S.notes.length ? null : S.notes[S.notes.length - 1].id;
-    const r = await rpc('gb_list', { p_token: S.token, p_dog: S.filter, p_before: before, p_limit: PAGE });
-    if (seq !== S.seq || !S.open) return; // 그사이 다른 걸 눌렀다
+    const r = await rpc('gb_list', { p_token: S.token, p_dog: S.dog, p_before: before, p_limit: PAGE });
+    if (seq !== S.seq || !S.open) { if (seq === S.seq) S.loading = false; return; } // 그사이 다른 걸 눌렀다 (더 새 목록을 부르는 중이면 그쪽이 loading을 푼다)
     S.loading = false;
     if (!r.ok) {
       if (r.error === 'auth') { authLost(); return; }
@@ -280,7 +283,7 @@ function setup() {
   }
   function paintEmpty() {
     empty.hidden = S.notes.length > 0;
-    if (!empty.hidden) empty.textContent = S.filter ? `아직 ${TO[S.filter]} 남긴 글이 없어요. 첫 글을 남겨 주세요` : '아직 남긴 글이 없어요. 첫 글을 남겨 주세요';
+    if (!empty.hidden) empty.textContent = `아직 ${DOG[S.dog].to} 남긴 글이 없어요. 첫 글을 남겨 주세요`;
   }
   more.addEventListener('click', () => { if (!S.loading) loadList(false); });
 
@@ -292,7 +295,6 @@ function setup() {
   function fillCard(li, n) {
     const top = h('div', { class: 'gb-note-top' },
       h('span', { class: 'gb-author' }, n.author), n.admin_author ? god() : null,
-      h('span', { class: `gb-to${n.dog === 'all' ? ' all' : ''}` }, TO[n.dog] || ''),
       h('time', { class: 'gb-time', datetime: n.created_at, title: fullDate(n.created_at), 'data-t': n.created_at, 'data-e': n.edited_at ? '1' : null }, when(n.created_at) + (n.edited_at ? ' · 고침' : '')));
     const kids = [top];
     if (S.editing === n.id) kids.push(editForm(li, n));
@@ -373,18 +375,19 @@ function setup() {
     const n = chars(text.value);
     if (!n) { setSend('err', '내용을 써 주세요.'); return; }
     S.busy = true; sendBtn.disabled = true; sendBtn.textContent = '남기는 중…';
-    const r = await rpc('gb_post', { p_token: S.token, p_dog: S.target, p_body: sendable(text.value) });
+    const dog = S.dog;
+    const r = await rpc('gb_post', { p_token: S.token, p_dog: dog, p_body: sendable(text.value) });
     S.busy = false; sendBtn.textContent = '남기기';
     if (r.ok && r.note) {
+      if (S.dog !== dog) { paintCount(); return; } // 그사이 닫고 다른 강아지 방명록을 펼쳤다
       text.value = ''; paintCount();
-      setSend('ok', `${TO[r.note.dog]} 남겼어요 ♥`);
-      if (S.filter && S.filter !== r.note.dog) { S.filter = null; paintFilter(); loadList(true); return; }
-      if (!S.notes.some((o) => o.id === r.note.id)) { S.notes.unshift(r.note); list.prepend(card(r.note)); paintEmpty(); }
+      setSend('ok', `${DOG[r.note.dog] ? DOG[r.note.dog].to : ''} 남겼어요 ♥`);
+      if (r.note.dog === S.dog && !S.notes.some((o) => o.id === r.note.id)) { S.notes.unshift(r.note); list.prepend(card(r.note)); paintEmpty(); }
       return;
     }
     paintCount();
     if (r.error === 'auth') { authLost(); return; }
-    const msg = { slow: `조금만 천천히요. ${r.wait || 5}초 뒤에 다시 남겨 주세요.`, daily: '오늘은 여기까지 남길 수 있어요. 내일 또 남겨 주세요.', empty: '내용을 써 주세요.', long: `${MAX}자까지 쓸 수 있어요.`, dog: '누구에게 남길지 골라 주세요.' }[r.error] || failText(r);
+    const msg = { slow: `조금만 천천히요. ${r.wait || 5}초 뒤에 다시 남겨 주세요.`, daily: '오늘은 여기까지 남길 수 있어요. 내일 또 남겨 주세요.', empty: '내용을 써 주세요.', long: `${MAX}자까지 쓸 수 있어요.` }[r.error] || failText(r);
     setSend('err', msg);
   });
 
@@ -396,8 +399,10 @@ function setup() {
     if (t) await rpc('gb_logout', { p_token: t });
   });
 
-  // ---------------- 버튼 · 닫기 ----------------
-  for (const b of document.querySelectorAll('.gb-open')) b.addEventListener('click', () => openBook(b));
+  // ---------------- 열기 · 닫기 ----------------
+  // 방 안의 책을 누르면 main.js가 보낸다: window.dispatchEvent(new CustomEvent('gb:open', { detail: { dog } }))
+  window.addEventListener('gb:open', (e) => { const dog = e && e.detail && e.detail.dog; if (typeof dog === 'string') openBook(null, dog); });
+  for (const b of document.querySelectorAll('.gb-open')) b.addEventListener('click', () => openBook(b, roomDog())); // 키보드 · 화면 읽기용 숨은 단추: 지금 방의 강아지
   for (const b of root.querySelectorAll('[data-gb-close]')) b.addEventListener('click', closeBook);
   back.addEventListener('click', () => { if (S.downOnBack) closeBook(); S.downOnBack = false; });
 
@@ -427,8 +432,8 @@ function setup() {
     if (t && t.getAttribute && t.getAttribute('role') === 'radio' && /^Arrow(Left|Right|Up|Down)$/.test(e.key)) {
       e.preventDefault();
       const box = t.parentElement, radios = [...box.querySelectorAll('[role="radio"]')], i = radios.indexOf(t), d = /Right|Down/.test(e.key) ? 1 : -1;
-      const nb = radios[(i + d + radios.length) % radios.length], sel = nb.dataset.name ? `[data-name="${nb.dataset.name}"]` : `[data-dog="${nb.dataset.dog}"]`;
-      nb.click(); // 칩을 다시 그리므로 새로 그린 칩을 찾아 초점을 둔다
+      const nb = radios[(i + d + radios.length) % radios.length], sel = `[data-name="${nb.dataset.name}"]`;
+      nb.click(); // 이름 단추를 다시 그리므로 새로 그린 단추를 찾아 초점을 둔다
       (box.querySelector(sel) || nb).focus();
     }
   }, true);

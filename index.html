@@ -29,7 +29,6 @@
     </div>
     <div class="chips" id="chips" role="tablist" aria-label="강아지 목록"></div>
   </div>
-  <button id="gbBtnSel" class="gb-open sel-gb glass" type="button" aria-haspopup="dialog" aria-controls="gb" aria-expanded="false" aria-label="방명록"><span class="gb-ic" aria-hidden="true">📖</span><span class="gb-lb" aria-hidden="true">방명록</span></button>
   <button id="sndBtnSel" class="snd sel-snd glass" type="button" aria-pressed="true" aria-label="소리" title="소리 끄기">🔊</button>
   <button class="arrow left glass" id="prevBtn" type="button" aria-label="이전 강아지">‹</button>
   <button class="arrow right glass" id="nextBtn" type="button" aria-label="다음 강아지">›</button>
@@ -40,7 +39,8 @@
   <header class="room-head">
     <button id="backBtn" class="back glass" type="button">‹ 친구들</button>
     <div class="title"><span class="name">핑키</span><span class="place">푸맘네 집 · 이태원동</span></div>
-    <button id="gbBtnRoom" class="gb-open room-gb glass" type="button" aria-haspopup="dialog" aria-controls="gb" aria-expanded="false" aria-label="방명록"><span class="gb-ic" aria-hidden="true">📖</span><span class="gb-lb" aria-hidden="true">방명록</span></button>
+    <!-- 방명록은 방 안의 책을 눌러 연다. 이 단추는 키보드 · 화면 읽기용 (탭으로 왔을 때만 보인다) -->
+    <button id="gbKey" class="gb-open gb-skip glass" type="button" aria-haspopup="dialog" aria-controls="gb" aria-expanded="false"><span aria-hidden="true">📖</span> 방명록 열기</button>
     <button id="sndBtn" class="snd glass" type="button" aria-pressed="true" aria-label="소리" title="소리 끄기">🔊</button>
   </header>
   <div class="room-bottom">
@@ -79,7 +79,7 @@
   <section class="gb-panel" id="gbPanel" role="dialog" aria-modal="true" aria-labelledby="gbTitle" tabindex="-1">
     <header class="gb-head">
       <div class="gb-titles">
-        <p class="gb-eyebrow">다섯 강아지에게</p>
+        <p class="gb-eyebrow" id="gbPlace">추억의 장소</p>
         <h2 id="gbTitle">방명록</h2>
       </div>
       <div class="gb-me" id="gbMe" hidden>
@@ -96,7 +96,7 @@
         <button type="button" class="gb-btn" data-gb-close>닫기</button>
       </div>
       <form class="gb-screen gb-login" id="gbLogin" hidden autocomplete="off" novalidate>
-        <p class="gb-lead">추억을 남겨 주세요</p>
+        <p class="gb-lead" id="gbLoginLead">추억을 남겨 주세요</p>
         <p class="gb-soft">식구만 들어올 수 있어요</p>
         <p class="gb-label" id="gbWhoLbl">누구세요?</p>
         <div class="gb-names" id="gbNames" role="radiogroup" aria-labelledby="gbWhoLbl"></div>
@@ -114,8 +114,6 @@
       </div>
       <div class="gb-screen gb-book" id="gbBook" hidden>
         <form class="gb-compose" novalidate>
-          <p class="gb-label" id="gbToLbl">누구에게</p>
-          <div class="gb-chips" id="gbTo" role="radiogroup" aria-labelledby="gbToLbl"></div>
           <textarea id="gbText" class="gb-input gb-text-in" rows="4" maxlength="2000" placeholder="따뜻한 한마디를 남겨 주세요" aria-label="남길 글"></textarea>
           <div class="gb-row">
             <span class="gb-count" id="gbCount">0/500</span>
@@ -123,7 +121,6 @@
             <button type="submit" class="gb-btn primary" id="gbSend" disabled>남기기</button>
           </div>
         </form>
-        <div class="gb-chips gb-filter" id="gbFilter" role="group" aria-label="강아지별로 보기"></div>
         <ol class="gb-list" id="gbList"></ol>
         <p class="gb-soft gb-listmsg" id="gbListMsg" role="status" hidden></p>
         <p class="gb-empty" id="gbEmpty" hidden></p>

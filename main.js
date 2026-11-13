@@ -5445,7 +5445,7 @@ function brainEnter() { // 방에 들어설 때: 저쪽에서 냄새를 맡고 �
   if (pinky === ALPANG) apEnter();
 }
 // 한참 조용하다가 다시 만질 때 · 다른 창에 갔다가 돌아올 때
-document.addEventListener('pointerdown', (e) => { if (mode !== 'room') return; const q = clock - brain.lastInput; brain.lastInput = clock; if (q > BRAIN.quiet) brainPoke('quiet', e.target === canvas); }, true);
+document.addEventListener('pointerdown', (e) => { if (mode !== 'room') return; const q = clock - brain.lastInput; brain.lastInput = clock; if (q > BRAIN.quiet) brainPoke('quiet', e.target === canvas && !bookAt(e.clientX, e.clientY)); }, true); // 방명록 책을 누른 것은 강아지를 부른 것이 아니다
 document.addEventListener('keydown', () => { if (mode === 'room') brain.lastInput = clock; }, true);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { brain.hiddenAt = Date.now(); return; }
@@ -5475,6 +5475,172 @@ function stepTouch(dt) {
   touch.heartT -= dt;
   if (touch.moved > 0.12 || touch.heartT <= 0) { touch.moved = 0; touch.heartT = 1.1; heart(); }
 }
+
+// ================================================================
+// 방명록 책 — 강아지 방마다 그 강아지의 방명록이 펼쳐져 있다. 누르면(손을 뗄 때) guestbook.js가 그 강아지의 방명록을 연다: window 'gb:open' { dog }
+// 사람이 방명록을 둘 만한 자리, 강아지 · 공 · 새가 다니지 않는 곳에만 둔다 (장애물에 넣지 않는다: 길 찾기와 점검 스크립트가 그대로).
+// 책 · 받침 · 리본 · 펜(호숫가는 바위까지)은 재질 하나로 합친 한 덩어리, 위에 떠 있는 이름표 하나 (그리기 호출 둘 · 바깥은 그림자 하나 더). 손가락으로 누르기 쉽게 조금 큰 보이지 않는 상자로 맞힌다
+// ================================================================
+const BOOK_SPOTS = { // 방 → 강아지 · 받침(desk: 가구 위 작은 책 받침 · stand: 바닥에 서는 나무 방명록대) · 자리 · 크기 · 색 (가죽 표지 · 나무) · lx: 이름표를 책 가운데에서 옆으로 비켜 띄우는 거리 · grow: 이름표가 폰에서 커질 수 있는 한도 (배)
+  home: { dog: 'pinky', kind: 'desk', at: [1.37, 0.55, -2.62], face: [0, 3.0], w: 0.44, d: 0.27, tilt: 0.5, label: 0.22, lift: 0.022, grow: 1.05, cover: [0.62, 0.24, 0.26], wood: [0.62, 0.42, 0.3], shadow: false }, // 거실 붙박이 선반 아랫단 위 · 스탠드 불빛 밑 (방석 뒤 — 강아지는 선반에 오르지 않는다 · 이름표는 선반 칸막이에 걸리지 않을 만큼만 커진다)
+  park: { dog: 'dami', kind: 'stand', at: [0.3, 0, -5.58], face: [0, 3.0], w: 0.58, d: 0.32, tilt: 0.42, h: 0.86, label: 0.3, cover: [0.22, 0.29, 0.46], wood: [0.78, 0.6, 0.44] }, // 모래밭 뒤 울타리 앞 잔디 (모래밭 · 공이 닿는 곳 밖, 동네 친구는 울타리 너머로 지나간다)
+  namsan: { dog: 'pupu', kind: 'stand', at: [-1.95, 0, -4.7], ground: (x, z) => nsGround(x, z), face: [0.3, 3.45], w: 0.56, d: 0.32, tilt: 0.42, h: 0.88, label: 0.31, lx: 0.16, cover: [0.55, 0.2, 0.18], wood: [0.55, 0.42, 0.3] }, // 길 왼쪽 경계석과 울타리 사이 풀밭, 푸푸가 다니는 곳보다 한참 안쪽 (길가 방명록대 · 까치는 왼쪽 앞으로 날아간다). 세로 폰 화면 왼쪽 끝에 걸리지 않게 이름표는 길 쪽(오른쪽 쪽 위)으로 조금 비켜 띄운다 (더 안쪽은 뒤의 나무 잎이 이름표를 가린다)
+  gwacheon: { dog: 'jaerong', kind: 'desk', rock: 0.3, at: [1.0, -0.06, -4.0], face: [0, 3.15], w: 0.55, d: 0.32, tilt: 0.55, label: 0.27, cover: [0.2, 0.27, 0.44], wood: [0.6, 0.44, 0.32] }, // 호숫가 너럭바위 위 (잔디밭 밖 물가 · 까치가 날아오르는 길보다 낮다)
+  uiwang: { dog: 'alpang', kind: 'stand', at: [-0.1, 0, -6.9], face: [0, 3.3], w: 0.66, d: 0.35, tilt: 0.4, h: 0.98, label: 0.37, cover: [0.86, 0.52, 0.58], wood: [0.7, 0.5, 0.34] }, // 잔디밭 끝 산책길 옆, 매장 가는 길목 (알팡이가 다니는 잔디밭 · 공이 닿는 곳 밖 · 가장 멀어서 큰 야외용 방명록대)
+};
+const BOOKS = {}; // 방 id → { g, mesh, label, hit, solid, dog }
+const BOOK_PX = [24, 42], _lp = new THREE.Vector3(); // 이름표 높이 (화면 CSS px · 글자는 그 0.6쯤 = 15 ~ 26px)
+let BOOK_TEX = null;
+const BK_LEATHER = [0, 0.25, 0.5, 0.5], BK_WOOD = [0.5, 0.25, 1, 0.5], BK_WHITE = [0.5, 0, 1, 0.25]; // 한 장짜리 텍스처의 자리 (u0, v0, u1, v1) · 펼친 쪽(위 반쪽)과 종이 단면(아래 왼쪽)은 책장 모양에서 바로 고른다
+function bookAtlas() { // 1024²: 위 반쪽 = 펼친 두 쪽(옅은 줄 · 몇 줄의 손글씨) · 아래 = 가죽 · 나무 · 종이 단면 · 흰 칸(리본 · 펜은 꼭짓점 색으로)
+  if (BOOK_TEX) return BOOK_TEX;
+  BOOK_TEX = canvasTex(1024, 1024, (x) => {
+    const r = rng(41);
+    let g = x.createLinearGradient(0, 0, 1024, 0);
+    for (const [k, c] of [[0, '#e8dbc0'], [0.07, '#f6ecd8'], [0.4, '#faf3e4'], [0.485, '#e6d7bb'], [0.5, '#cdbb9b'], [0.515, '#e6d7bb'], [0.6, '#faf3e4'], [0.93, '#f6ecd8'], [1, '#e8dbc0']]) g.addColorStop(k, c);
+    x.fillStyle = g; x.fillRect(0, 0, 1024, 512);
+    x.strokeStyle = 'rgba(140,112,84,.32)'; x.lineWidth = 2;
+    for (let i = 0; i < 9; i++) for (const [a, b] of [[58, 466], [558, 966]]) { x.beginPath(); x.moveTo(a, 86 + i * 46); x.lineTo(b, 86 + i * 46); x.stroke(); }
+    x.lineCap = 'round'; x.lineJoin = 'round';
+    for (const [a, b, n] of [[66, 452, 7], [566, 940, 4]]) for (let i = 0; i < n; i++) { // 손글씨 (낱말마다 끊어 쓴 물결 줄 · 줄 끝에 이름)
+      x.strokeStyle = r() < 0.25 ? 'rgba(52,64,108,.78)' : 'rgba(44,34,30,.8)'; x.lineWidth = 2.6;
+      let px = a + r() * 14; const base = 78 + i * 46, end = b - (i === n - 1 ? 120 + r() * 120 : r() * 60);
+      while (px < end) {
+        const len = 26 + r() * 64; x.beginPath(); x.moveTo(px, base);
+        for (let q = 4; q <= len; q += 4) x.lineTo(px + q, base - 5 - Math.sin(q * 0.42 + r() * 1.5) * (5 + r() * 4) - (r() < 0.12 ? 7 : 0));
+        x.stroke(); px += len + 10 + r() * 12;
+      }
+    }
+    x.strokeStyle = 'rgba(176,72,82,.75)'; x.lineWidth = 3; x.beginPath(); x.moveTo(470 - 60, 390); x.bezierCurveTo(470 - 74, 370, 470 - 46, 362, 470 - 60, 382); x.bezierCurveTo(470 - 74, 362, 470 - 46, 370, 470 - 60, 390); x.stroke(); // 작은 하트
+    x.fillStyle = '#cbb7a6'; x.fillRect(0, 512, 512, 256); // 가죽 (색은 꼭짓점 색으로 입힌다)
+    for (let i = 0; i < 2600; i++) { x.fillStyle = r() < 0.5 ? 'rgba(255,245,235,.10)' : 'rgba(60,40,30,.12)'; x.fillRect(r() * 512, 512 + r() * 256, 2 + r() * 3, 2); }
+    x.strokeStyle = 'rgba(232,196,128,.85)'; x.lineWidth = 4; x.strokeRect(22, 534, 468, 212); // 금박 테두리
+    x.fillStyle = '#d2b08a'; x.fillRect(512, 512, 512, 256); // 나무 결
+    for (let i = 0; i < 46; i++) { const y = 512 + r() * 256; x.strokeStyle = r() < 0.5 ? 'rgba(96,58,30,.22)' : 'rgba(255,228,190,.18)'; x.lineWidth = 1 + r() * 2.5; x.beginPath(); x.moveTo(512, y); x.bezierCurveTo(680, y + (r() - 0.5) * 16, 850, y + (r() - 0.5) * 16, 1024, y + (r() - 0.5) * 10); x.stroke(); }
+    x.fillStyle = '#f1e6cf'; x.fillRect(0, 768, 512, 256); // 종이 단면 (얇은 줄무늬)
+    for (let y = 772; y < 1024; y += 5) { x.fillStyle = 'rgba(150,124,92,.28)'; x.fillRect(0, y, 512, 1.5); }
+    x.fillStyle = '#ffffff'; x.fillRect(512, 768, 512, 256);
+  });
+  return BOOK_TEX;
+}
+const _bo = new THREE.Object3D();
+function bookM(p, r, s, parent) { _bo.position.set(p[0], p[1], p[2]); _bo.rotation.set(r ? r[0] : 0, r ? r[1] : 0, r ? r[2] : 0); _bo.scale.set(1, 1, 1); if (s) _bo.scale.set(s[0], s[1], s[2]); _bo.updateMatrix(); return parent ? parent.clone().multiply(_bo.matrix) : _bo.matrix.clone(); }
+function buildGuestBook(id) {
+  const S = BOOK_SPOTS[id], parent = id === 'home' ? roomScene : id === 'park' ? parkG : id === 'namsan' ? nsG : id === 'gwacheon' ? gwG : uiG;
+  if (!S || !parent) return null;
+  const W = S.w, Dp = S.d, th = S.tilt, T = 0.014, L = Dp + 0.05, Wb = W + 0.05, stand = S.kind === 'stand', Hs = stand ? S.h || 0.84 : S.rock || 0, yb = 0.03;
+  const parts = [], ONE = [1, 1, 1], put = (geo, m, reg, col = ONE) => parts.push([geo, m, reg, col]);
+  const zf = (L * Math.cos(th)) / 2, top = Hs + yb + L * Math.sin(th); // 받침 앞(아래) 끝 z · 뒤(위) 끝 높이
+  const MB = bookM([0, Hs + yb + (L / 2) * Math.sin(th), 0], [th, 0, 0]); // 책 좌표: 받침 판 윗면 가운데, +z = 아래쪽(보는 사람 쪽), +y = 판에서 위
+  const wood = S.wood, dark = wood.map((c) => c * 0.62);
+  put(box(Wb, 0.012, L), bookM([0, -0.006, 0], null, null, MB), BK_WOOD, wood); // 기울어진 받침 판
+  put(box(Wb, 0.03, 0.012), bookM([0, 0.015, L / 2 - 0.006], null, null, MB), BK_WOOD, wood); // 책이 미끄러지지 않게 받치는 턱
+  if (stand) { // 바닥에 서는 방명록대: 기둥 · 십자 발 · 판 밑 받침
+    put(box(0.065, Hs + 0.05, 0.065), bookM([0, (Hs + 0.05) / 2, 0]), BK_WOOD, dark);
+    put(box(0.4, 0.04, 0.075), bookM([0, 0.02, 0]), BK_WOOD, dark); put(box(0.075, 0.04, 0.36), bookM([0, 0.02, 0]), BK_WOOD, dark);
+    put(box(Wb * 0.55, 0.035, 0.16), bookM([0, -0.03, 0], null, null, MB), BK_WOOD, dark);
+  } else { // 가구(또는 바위) 위 작은 책 받침: 앞 받침대 · 뒤 버팀판
+    put(box(Wb, yb, 0.035), bookM([0, Hs + yb / 2, zf - 0.02]), BK_WOOD, dark);
+    put(box(Wb * 0.7, top - Hs - 0.03, 0.012), bookM([0, Hs + (top - Hs - 0.03) / 2, -zf + 0.035]), BK_WOOD, dark);
+  }
+  if (S.rock) { // 너럭바위: 윗면이 평평한 회갈색 바위 (반쯤 묻혀 있다)
+    const rg = new THREE.IcosahedronGeometry(1, 1), rp = rg.attributes.position, rr = rng(43);
+    for (let i = 0; i < rp.count; i++) { const k = 0.88 + rr() * 0.2; rp.setXYZ(i, rp.getX(i) * k, Math.min(rp.getY(i) * k, 0.6), rp.getZ(i) * k); }
+    const fg = rg.toNonIndexed(); fg.computeVertexNormals();
+    put(fg, bookM([0, Hs * 0.2, 0], null, [Wb * 0.62 + 0.06, Hs * 1.33, zf + 0.15]), BK_WHITE, [0.46, 0.44, 0.41]);
+  }
+  const zc = L / 2 - 0.012 - (Dp + 0.02) / 2 - 0.002, MP = bookM([0, 0, zc], null, null, MB); // 책 (턱에 기대어 놓였다)
+  put(box(W + 0.02, 0.006, Dp + 0.02), bookM([0, 0.003, 0], null, null, MP), BK_LEATHER, S.cover); // 가죽 표지
+  { // 펼친 두 쪽: 가운데 접힌 골에서 솟았다가 바깥으로 완만하게 (종이 묶음 두께 T)
+    const U = [0, 0.03, 0.08, 0.16, 0.3, 0.5, 0.75, 1], Y = [0.12, 0.55, 0.8, 0.95, 1, 0.97, 0.92, 0.86], pos = [], uv = [], idx = [];
+    const v = (x, y, z, a, b) => { pos.push(x, y, z); uv.push(a, b); return pos.length / 3 - 1; };
+    for (const s of [-1, 1]) {
+      const tp = [], fr = [], bk = [], fl = (a, b, c, d) => (s > 0 ? idx.push(a, b, c, a, c, d) : idx.push(a, c, b, a, d, c));
+      U.forEach((u, i) => { const x = (s * u * W) / 2, y = 0.006 + Y[i] * T, a = 0.5 + s * 0.47 * u; tp.push([v(x, y, -Dp / 2, a, 0.992), v(x, y, Dp / 2, a, 0.508)]); fr.push([v(x, 0.006, Dp / 2, 0.02 + 0.46 * u, 0.02), v(x, y, Dp / 2, 0.02 + 0.46 * u, 0.02 + 0.2 * Y[i])]); bk.push([v(x, 0.006, -Dp / 2, 0.02 + 0.46 * u, 0.02), v(x, y, -Dp / 2, 0.02 + 0.46 * u, 0.02 + 0.2 * Y[i])]); });
+      for (let i = 0; i < U.length - 1; i++) { fl(tp[i][0], tp[i][1], tp[i + 1][1], tp[i + 1][0]); fl(fr[i][0], fr[i + 1][0], fr[i + 1][1], fr[i][1]); fl(bk[i][1], bk[i + 1][1], bk[i + 1][0], bk[i][0]); }
+      const n = U.length - 1, y = 0.006 + Y[n] * T, ox = (s * W) / 2; // 바깥 단면
+      fl(v(ox, 0.006, Dp / 2, 0.48, 0.02), v(ox, 0.006, -Dp / 2, 0.02, 0.02), v(ox, y, -Dp / 2, 0.02, 0.22), v(ox, y, Dp / 2, 0.48, 0.22));
+    }
+    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); pg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); pg.setIndex(idx); pg.computeVertexNormals();
+    put(pg, MP, [0, 0, 1, 1]);
+  }
+  const yr = 0.006 + 0.95 * T + 0.0012; // 리본 (오른쪽 쪽 위로 내려와 아래 끝에서 늘어진다) · 펜 (오른쪽 쪽 위에 비스듬히)
+  put(box(0.013, 0.0016, Dp + 0.02), bookM([0.045, yr, -0.006], null, null, MP), BK_WHITE, [0.55, 0.08, 0.13]);
+  put(box(0.013, 0.0016, 0.06), bookM([0.045, yr - 0.026, Dp / 2 + 0.008], [-1.2, 0, 0], null, MP), BK_WHITE, [0.5, 0.07, 0.12]);
+  const MPen = bookM([W * 0.25, 0.006 + T + 0.006, Dp * 0.18], [0, 0.45, Math.PI / 2], null, MP);
+  put(cyl(0.0055, 0.0055, 0.13, 8), MPen, BK_WHITE, [0.05, 0.05, 0.06]);
+  put(cyl(0.006, 0.006, 0.012, 8), bookM([0, 0.04, 0], null, null, MPen), BK_WHITE, [0.86, 0.66, 0.34]);
+  put(new THREE.ConeGeometry(0.0055, 0.016, 8), bookM([0, -0.073, 0], [Math.PI, 0, 0], null, MPen), BK_WHITE, [0.86, 0.66, 0.34]);
+  // 한 덩어리로 합친다 (위치 · 법선 · 텍스처 자리 · 꼭짓점 색)
+  const geos = parts.map(([g0, m, reg, col]) => { const g = g0.index ? g0.toNonIndexed() : g0.clone(); g.applyMatrix4(m); return [g, reg, col]; });
+  const n = geos.reduce((a, [g]) => a + g.attributes.position.count, 0), P = new Float32Array(n * 3), N = new Float32Array(n * 3), UV = new Float32Array(n * 2), C = new Float32Array(n * 3);
+  let k = 0;
+  for (const [g, reg, col] of geos) {
+    const p = g.attributes.position, nm = g.attributes.normal, t = g.attributes.uv, du = reg[2] - reg[0], dv = reg[3] - reg[1], iu = du * 0.02, iv = dv * 0.02;
+    for (let i = 0; i < p.count; i++, k++) {
+      P[k * 3] = p.getX(i); P[k * 3 + 1] = p.getY(i); P[k * 3 + 2] = p.getZ(i); N[k * 3] = nm.getX(i); N[k * 3 + 1] = nm.getY(i); N[k * 3 + 2] = nm.getZ(i);
+      UV[k * 2] = reg[0] + iu + t.getX(i) * (du - 2 * iu); UV[k * 2 + 1] = reg[1] + iv + t.getY(i) * (dv - 2 * iv); C[k * 3] = col[0]; C[k * 3 + 1] = col[1]; C[k * 3 + 2] = col[2];
+    }
+    g.dispose();
+  }
+  const bg = new THREE.BufferGeometry();
+  bg.setAttribute('position', new THREE.BufferAttribute(P, 3)); bg.setAttribute('normal', new THREE.BufferAttribute(N, 3)); bg.setAttribute('uv', new THREE.BufferAttribute(UV, 2)); bg.setAttribute('color', new THREE.BufferAttribute(C, 3)); bg.computeBoundingSphere();
+  const G = new THREE.Group(), [ax, , az] = S.at, ay = S.ground ? S.ground(ax, az) : S.at[1];
+  G.position.set(ax, ay, az); G.rotation.y = Math.atan2(S.face[0] - ax, S.face[1] - az); parent.add(G);
+  const mesh = new THREE.Mesh(bg, new THREE.MeshStandardMaterial({ map: bookAtlas(), vertexColors: true, roughness: 0.78, emissive: 0xffffff, emissiveMap: bookAtlas(), emissiveIntensity: S.glow || 0.05 }));
+  mesh.castShadow = S.shadow !== false; mesh.receiveShadow = true; G.add(mesh);
+  // 이름표: 따뜻한 작은 명패 (책 위에 떠 있다 · 강아지가 앞을 지나가면 가려진다). 글자가 명패 높이의 0.6을 차지한다 (폰에서도 12px 넘게). 글꼴이 늦게 오면 다시 그린다
+  const LW = 440, LH = 150, lc = document.createElement('canvas'); lc.width = LW; lc.height = LH;
+  const lt = new THREE.CanvasTexture(lc); lt.colorSpace = THREE.SRGBColorSpace; lt.anisotropy = 4;
+  const FONT = '700 92px "Gowun Batang", "Noto Serif KR", "Nanum Myeongjo", serif';
+  const drawLabel = () => {
+    const x = lc.getContext('2d'); x.clearRect(0, 0, LW, LH);
+    const pill = (i) => { x.beginPath(); if (x.roundRect) x.roundRect(10 + i, 9 + i, LW - 20 - 2 * i, LH - 18 - 2 * i, (LH - 18) / 2 - i); else x.rect(10 + i, 9 + i, LW - 20 - 2 * i, LH - 18 - 2 * i); };
+    x.save(); x.shadowColor = 'rgba(255,196,120,.6)'; x.shadowBlur = 10; pill(0); x.fillStyle = 'rgba(42,27,17,.84)'; x.fill(); x.restore();
+    x.lineWidth = 3; x.strokeStyle = 'rgba(240,198,132,.8)'; pill(1.5); x.stroke();
+    x.strokeStyle = '#f2cf96'; x.lineWidth = 6; x.lineJoin = 'round'; x.lineCap = 'round'; // 펼친 책 그림
+    x.beginPath(); x.moveTo(78, 56); x.quadraticCurveTo(60, 46, 38, 50); x.lineTo(38, 96); x.quadraticCurveTo(60, 92, 78, 102); x.quadraticCurveTo(96, 92, 118, 96); x.lineTo(118, 50); x.quadraticCurveTo(96, 46, 78, 56); x.lineTo(78, 102); x.stroke();
+    x.font = FONT; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillStyle = '#fdf3e1';
+    x.shadowColor = 'rgba(0,0,0,.4)'; x.shadowBlur = 3; x.fillText('방명록', 134, 79, LW - 134 - 28);
+    lt.needsUpdate = true;
+  };
+  drawLabel();
+  if (document.fonts && document.fonts.load) document.fonts.load('700 84px "Gowun Batang"', '방명록').then(drawLabel, () => {}); // 글꼴이 오면 다시 그린다 (못 오면 바탕 글꼴 그대로)
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawLabel, () => {});
+  const lm = new THREE.SpriteMaterial({ map: lt, transparent: true, depthWrite: false, fog: false });
+  const label = new THREE.Sprite(lm), lh = S.label, lw = (lh * LW) / LH;
+  label.center.set(0.5, 0); label.scale.set(lw, lh, 1); label.position.set(S.lx || 0, top + (S.lift || 0.05), -zf + 0.04); label.renderOrder = 3; G.add(label);
+  label.onBeforeRender = (r, s, cam) => {
+    if (!reduceMotion) lm.opacity = 0.88 + 0.12 * Math.sin(performance.now() * 0.0021); // 아주 천천히 숨 쉬듯
+    // 화면에서의 이름표 높이는 BOOK_PX 사이로: 멀리 놓인 책도 폰에서 읽히고, 책 가까이 다가간 장면에서는 커다랗게 덮지 않게 (아래 끝은 그 자리 그대로)
+    _lp.setFromMatrixPosition(label.matrixWorld).applyMatrix4(cam.matrixWorldInverse);
+    if (!cam.isPerspectiveCamera || _lp.z > -0.05) return;
+    const px = (lh * innerHeight) / (-_lp.z * 2 * Math.tan((cam.fov * Math.PI) / 360)), k = Math.min(clamp(px, BOOK_PX[0], BOOK_PX[1]) / px, S.grow || 2);
+    if (Math.abs(label.scale.y - lh * k) > 1e-5) { label.scale.set(lw * k, lh * k, 1); label.updateMatrixWorld(); }
+  };
+  // 누르는 자리: 책 · 받침 윗부분 · 이름표를 다 덮는 보이지 않는 상자 (손가락으로 누르기 쉽게 둘레를 조금 넉넉히)
+  const lx = S.lx || 0, y0 = stand ? Hs - 0.22 : Hs, y1 = top + (S.lift || 0.05) + lh + 0.03, hw = Math.max(Wb, lw) / 2 + Math.abs(lx) / 2 + 0.05;
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, y1 - y0, 2 * zf + 0.08), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.set(lx / 2, (y0 + y1) / 2, 0); hit.visible = false; hit.castShadow = hit.receiveShadow = false; G.add(hit);
+  G.updateMatrixWorld(true);
+  const pages = [[-0.42, -0.4], [0.42, -0.4], [-0.42, 0.4], [0.42, 0.4], [-0.25, 0], [0.25, 0]].map(([u, w]) => new THREE.Vector3(u * W, 0.006 + T, w * Dp).applyMatrix4(MP)); // 펼친 쪽 위의 점 (책 좌표 · 점검용)
+  return (BOOKS[id] = { g: G, mesh, label, hit, solid: [mesh, label], dog: S.dog, pages });
+}
+function bookAt(x, y) { // 화면의 (x, y)가 지금 방의 방명록 책인가 (책 앞에 강아지가 있으면 강아지가 먼저)
+  const B = mode === 'room' && BOOKS[RP.id];
+  if (!B) return false;
+  ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, roomCam);
+  if (!ray.intersectObject(B.hit, false).length && !ray.intersectObject(B.label, false).length) return false; // 이름표는 폰에서 상자보다 커질 수 있다
+  const d = ray.intersectObjects(pinky.meshes, false)[0];
+  if (!d) return true;
+  const b = ray.intersectObjects(B.solid, false)[0];
+  return !!b && b.distance < d.distance;
+}
+function openGuestbook() { const B = BOOKS[RP.id]; if (B) window.dispatchEvent(new CustomEvent('gb:open', { detail: { dog: B.dog } })); }
+const gbShut = () => { const el = document.getElementById('gb'); return !el || el.hidden; };
+let bookHover = false, bookTouch = false; // bookTouch: 손가락으로 책을 눌러 방명록을 막 열었다 (뒤따르는 click을 막는다)
+function hoverBook(on) { if (on !== bookHover) { bookHover = on; canvas.style.cursor = on ? 'pointer' : ''; } } // 마우스를 책 위에 올리면 손가락 모양
+buildGuestBook('home'); // 핑키 방의 책은 처음부터 (다른 방에 가면 useRoom이 숨긴다 · HOME_KIDS에는 넣지 않는다)
 
 // ================================================================
 // 담이의 동네 놀이터 — 해 질 녘 모래밭과 마른 잔디 · 미끄럼틀 · 그네 · 정글짐 · 스프링 놀이기구 · 벤치 · 나무 · 낮은 울타리 · 멀리 아파트
@@ -5770,6 +5936,8 @@ function useRoom(id) {
   if (!R.built && R === ROOM_NAMSAN) buildNamsan();
   if (!R.built && R === ROOM_GWACHEON) buildGwacheon();
   if (!R.built && R === ROOM_UIWANG) buildUiwang();
+  if (!BOOKS[R.id]) buildGuestBook(R.id); // 방명록 책 (처음 들어갈 때 한 번)
+  BOOKS.home.g.visible = R === ROOM_HOME; // 핑키 방의 책 (다른 방의 책은 그 방 무리와 같이 보이고 숨는다)
   RP.ropeN0 = rope.frames().map((v) => v.clone()); if (R.ropeN0) rope.frames().forEach((v, i) => v.copy(R.ropeN0[i])); // 핑키 방의 로프는 놀이터에 다녀와도 그대로 (줄 단면 방향까지)
   RP = R;
   Object.assign(HOME, R.HOME); BOWL.copy(R.BOWL); Object.assign(EAT, R.EAT); Object.assign(SPOTS, R.SPOTS); Object.assign(CUSH, R.CUSH);
@@ -9452,7 +9620,7 @@ function goRoom(id) { // id: 강아지 (없으면 지금 고른 강아지) — �
 }
 function goSelect() {
   if (transitioning) return;
-  cancelActive(); resetTransient(pinky); snd('hush', 250); clearBubbles(); releaseHands(); closePicker(); touch.active = false; drag = null; idleT = Infinity; // 나가는 동안에는 씹는 소리도 로프 떨어지는 소리도 나지 않게
+  cancelActive(); resetTransient(pinky); snd('hush', 250); clearBubbles(); releaseHands(); closePicker(); touch.active = false; drag = null; idleT = Infinity; hoverBook(false); // 나가는 동안에는 씹는 소리도 로프 떨어지는 소리도 나지 않게
   fade(() => { mode = 'select'; clearBubbles(); hideHandsNow(); drag = null; $('#roomUI').hidden = true; $('#selectUI').hidden = false; });
 }
 $('#backBtn').addEventListener('click', goSelect);
@@ -9465,9 +9633,10 @@ let drag = null;
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('pointerdown', (e) => {
   if (!e.isPrimary || e.button !== 0 || transitioning) return;
-  canvas.setPointerCapture(e.pointerId);
+  canvas.setPointerCapture(e.pointerId); bookTouch = false;
   if (mode === 'room') {
-    const hit = pickPinky(e.clientX, e.clientY);
+    const book = bookAt(e.clientX, e.clientY); // 방명록 책: 손을 떼면 연다 (끌면 그냥 둘러보기 · 강아지는 만지지 않는다)
+    const hit = !book && pickPinky(e.clientX, e.clientY);
     if (hit) {
       Object.assign(touch, { active: true, x: e.clientX, y: e.clientY, moved: 0, heartT: 0.4, miss: 0 });
       setTouchHit(hit); touch.last.copy(touch.pt);
@@ -9476,13 +9645,14 @@ canvas.addEventListener('pointerdown', (e) => {
       startCommand('touch', CMDS.touch, keep); if (keep) setActiveBtn('cushion');
       return;
     }
+    if (book) { hoverBook(false); drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: 0, book: true }; return; }
   }
   drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: 0 };
 });
 canvas.addEventListener('pointermove', (e) => {
   if (!e.isPrimary) return;
   if (touch.active) { touch.x = e.clientX; touch.y = e.clientY; return; }
-  if (!drag) return;
+  if (!drag) { hoverBook(e.pointerType === 'mouse' && mode === 'room' && !transitioning && bookAt(e.clientX, e.clientY)); return; }
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
   drag.moved += Math.abs(dx) + Math.abs(dy);
   if (mode === 'room') {
@@ -9496,7 +9666,8 @@ canvas.addEventListener('pointerup', (e) => {
   if (!e.isPrimary) return;
   if (touch.active) { touch.active = false; drag = null; return; }
   if (!drag) return;
-  const dx = e.clientX - drag.x0, moved = drag.moved; drag = null;
+  const dx = e.clientX - drag.x0, moved = drag.moved, book = drag.book; drag = null;
+  if (book && moved <= 12 && mode === 'room' && !transitioning && !pickerFor && gbShut()) { if (e.pointerType === 'touch') bookTouch = true; openGuestbook(); return; } // 책을 톡 눌렀다 (조금 움직인 것까지)
   if (mode !== 'select') return;
   if (Math.abs(dx) > 40) { if (dx < 0) select(sel + 1, 1); else select(sel - 1, -1); return; }
   if (moved > 12) return;
@@ -9509,6 +9680,10 @@ canvas.addEventListener('pointerup', (e) => {
   else select(i);
 });
 canvas.addEventListener('pointercancel', () => { drag = null; touch.active = false; });
+canvas.addEventListener('pointerleave', () => hoverBook(false));
+// 손가락으로 책을 톡 눌러 방명록을 열었으면 그 손가락의 touchend를 막는다: 폰이 뒤이어 보내는 mousedown · click이 막 뜬 방명록 속 단추를 누르지 않게
+// (touchend가 pointerup보다 먼저 오는 브라우저도 있어, 아직 끌기 중이면 그 자리에서 판단한다)
+canvas.addEventListener('touchend', (e) => { if ((bookTouch || (drag && drag.book && drag.moved <= 12)) && e.cancelable) e.preventDefault(); bookTouch = false; }, { passive: false });
 window.addEventListener('keydown', (e) => {
   if (mode !== 'select') { if (e.key === 'Escape') { if (pickerFor) closePicker(true); else goSelect(); } return; }
   if (e.key === 'ArrowLeft') select(sel - 1, -1);
@@ -9600,5 +9775,6 @@ if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCom
   get pupu() { return PUPU; }, get NS() { return NS; }, magpieScene, magOff, magGo: () => startSpecial('magpie', magpieScene), pupuTall, pupuGuard, pupuInvite, pupuButterfly, bflyOff, poseFor, ROOM_NAMSAN, nsGround, nsInWater, nsWaterY, NS_SX, NS_SW, NS_SPOT, contact, toyOff, buildDog, COLORS };
 if (location.hostname === 'localhost') Object.assign(window.__dbg, { makeJaerong, updateDog, napPost, THREE }); // 재롱 모델 디버그
 if (location.hostname === 'localhost') Object.defineProperties(window.__dbg, Object.getOwnPropertyDescriptors({ get jaerong() { return JAERONG; }, get GW() { return GW; }, ROOM_GWACHEON, GW_MAT, GW_SIT, GW_SHU, GW_PEN, gwGround, gwZMin, jrMagpie, jrWatch, jrLake, jrSheep, jrCuddle, jrGreet, jrMat, jrRun, jrRelease, magStep, magFly, jrGo: () => startSpecial('magpie', jrMagpie), JR_TALK, jaerongTalk, momQuick, ballToWorld, aboveHead, headTop, mouthPt, noseTip, selDogs, DOGS, treat, jrTopLocal, shuNest, JR_FAR, nearSpot })); // 재롱 방 디버그 (게터는 그대로 옮긴다)
+if (location.hostname === 'localhost') Object.assign(window.__dbg, { BOOKS, BOOK_SPOTS, bookAt }); // 방명록 책 점검용
 if (location.hostname === 'localhost') Object.assign(window.__dbg, { makeAlpang, ALPANG_POSE, ALPANG_POSES, AP_RIB, AP_EYE, AP_SMILE, apUpdate }); // 알팡 모델 디버그
 if (location.hostname === 'localhost') Object.defineProperties(window.__dbg, Object.getOwnPropertyDescriptors({ get alpang() { return ALPANG; }, get UI() { return UI; }, ROOM_UIWANG, UI_NAV, UI_DECK, UI_SHOPS, UI_CANOPY, UI_ROCKS, UI_STASH, UI_PLANTER, UI_TABLE, AP_CALL, AP_TALK, alpangTalk, AP_CUSH, apOnCush, apGreet, apPose, apShop, apPrance, apRelease, apEnter, apKiss, apLean, apBox, apPaw, apOnCushion, apTreat, uiSurf, uiOnPath, AP_KISS, AP_LEAN, apStand, headTop, noseTip, rootW, camRight, toCamDir, jrPetPt, jrPetSide, momSays })); // 알팡 방 디버그 (게터는 그대로 옮긴다)
