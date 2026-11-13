@@ -946,6 +946,8 @@ function onSay(text) {
   if (has(s, '이제줄게')) return void voice('yip', { gain: -4, why: text });
   if (has(s, '밥남았지')) return void play('gasp_alert', { why: text });
   if (has(s, '찾았다', '주웠다', '횡재', '맛있다', '다먹었다', '배불러')) return void voice('content', { gain: -1, why: text });
+  if (has(s, '맛있는냄새')) { play('snort', { gain: -4, rate: 1.1, why: text }); later(0.3, () => voice('whine', { force: 1, vlo: 0, vhi: 2, gain: -6, rate: 1.1, why: text + ' (hopeful)' })); return; } // 싱크대 위에서: 코로 훅 → 기대에 찬 작은 낑?
+  if (has(s, '아무것도안했')) return void voice('content', { gain: -5, rate: 1.12, why: text + ' (innocent)' }); // …나 아무것도 안 했어 — 시치미 떼는 작은 음~
   if (has(s, '간식이다', '요거트다', '고구마다')) { play('gasp_alert', { why: text }); later(0.22, () => voice('whine', { vlo: 0, vhi: 2, gain: -3, rate: 1.12, why: text })); return; }
   if (has(s, '왈')) return void voice('yip', { why: text });
   if (has(s, '컹')) { voice('yip', { why: text }); if (has(s, '컹컹')) later(0.24, () => voice('yip', { force: 1, rate: 1.05, gain: -2, why: text })); return; } // 담이: 컹! · 컹컹! (잘 짖는다)
@@ -1044,6 +1046,9 @@ function alpangSay(s, text = s) {
   if (/^(척|폭|톡|짠|반짝|달그락|찰칵|쿡|손)+$/.test(s)) return true; // 소리는 main.js가 그 순간에 직접 낸다
   if (has(s, '괴도알팡')) { angBurst(1, { force: 1, gain: -3, why: text }); later(0.4, () => play('ap_sparkle', { gain: -8, why: text })); return true; } // 괴도 알팡 등장! — 신나서 앙! + 반짝
   if (has(s, '안행', '안앉아', '더러워진', '차갑단')) { play('ap_chit', { vlo: 0, vhi: 2, why: text }); later(0.45, () => play('ap_hing', { force: 1, gain: -6, why: text + ' (aegyo)' })); return true; } // 공주는 그런 거 안 행~ — 칫 → 히잉~
+  if (has(s, '엉덩이')) { play('ap_chit', { vlo: 0, vhi: 2, why: text }); later(0.4, () => play('ap_hing', { force: 1, gain: -5, why: text + ' (indignant)' })); return true; } // 숙녀의 엉덩이는 안 돼! — 칫 → 히잉~ (질색)
+  if (s.startsWith('어머,또')) { play('gasp_alert', { rate: 1.15, gain: -2, why: text }); later(0.3, () => play('ap_chit', { force: 1, vlo: 0, vhi: 2, gain: -3, why: text })); return true; } // 어머, 또?! — 헉 → 칫
+  if (has(s, '진짜')) return play('ap_hing', { gain: -2, why: text + ' (whiny)' }), true; // 엄마 진짜~! — 투정 섞인 히잉~
   if (s.startsWith('칫')) return play('ap_chit', { vlo: 0, vhi: 2, why: text }), true;
   if (s.startsWith('피')) return play('ap_chit', { variant: 2, why: text }), true; // 피~ 알았어~
   if (has(s, '줘잉', '만져줘', '히잉', '사줘', '안아줘')) return play('ap_hing', { why: text }), true; // 더 만져 줘잉~ · 엄마, 저거 사 줘~ · 공주 안아 줘~ ♥ — 애교 섞인 조름

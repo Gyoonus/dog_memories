@@ -2256,6 +2256,7 @@ function updateDog(d, dt, t, camPos) {
   const c = d.cur, g = d.tgt, k = 1 - Math.exp(-d.poseRate * dt);
   for (const key of POSE_KEYS) c[key] += (g[key] - c[key]) * k;
   for (let i = 0; i < 4; i++) { c.paws[i].lerp(g.paws[i], k); c.lean[i] += (g.lean[i] - c.lean[i]) * k; c.abd[i] += (g.abd[i] - c.abd[i]) * k; }
+  if (d.letGo) d.letGo(c); // 핑키: 싱크대에서 끊겨 내려설 때 잠깐 (목을 먼저 거두고 몸은 조금 버틴다) — 다른 때는 없다
 
   // 걷기 · 방향
   let moving = 0;
@@ -2375,7 +2376,7 @@ function updateDog(d, dt, t, camPos) {
     if (d.paddle > 0.001 && (!d.paddleFront || L.front)) { const po = d.paddleFront ? i * Math.PI : i * 1.7; _paw.y += Math.max(d.paddleFront ? 0 : -1, Math.sin(t * 8 + po)) * 0.035 * d.paddle; _paw.z += Math.cos(t * 8 + po) * 0.03 * d.paddle; } // paddleFront: 앞발만 번갈아 꾹꾹(자리 다지기)
     if (d.dig > 0.001 && L.front) { const ph = t * 15 + (L.sx > 0 ? 0 : Math.PI); _paw.y += Math.max(0, Math.sin(ph)) * 0.05 * d.dig; _paw.z -= Math.cos(ph) * 0.045 * d.dig; } // 담이: 땅 파기 — 앞발을 번갈아 빠르게 (들어 앞으로 뻗었다가 모래를 긁으며 뒤로)
     if (d.kick > 0.001 && !L.front) { const ph = t * 13 + (L.sx > 0 ? 0 : Math.PI); _paw.y += Math.max(0, Math.sin(ph)) * 0.045 * d.kick; _paw.z -= (0.55 + 0.45 * Math.cos(ph)) * 0.09 * d.kick; } // 푸푸: 볼일을 보고 뒷발로 풀을 슥슥 (번갈아 뒤로 차 낸다)
-    if (!d.J && L.front) L.hip.position.z = L.z0 + (_paw.z - c.paws[i].z) * 0.15; // 견갑골은 갈비 위에서 미끄러진다: 앞발이 나가면 어깨 관절도 조금 앞으로, 밀면 뒤로
+    if (!d.J && L.front) L.hip.position.z = L.z0 + (_paw.z - c.paws[i].z) * 0.15 + (d.scapZ || 0); // 견갑골은 갈비 위에서 미끄러진다: 앞발이 나가면 어깨 관절도 조금 앞으로, 밀면 뒤로 · scapZ: 핑키가 싱크대에 앞발을 올려 팔을 위로 뻗을 때만 견갑골이 목 쪽으로 더 올라간다 (다른 때는 0)
     _hipS.copy(L.hip.position).applyMatrix4(d.body.matrix);
     const lean = c.lean[i] + up * (L.front ? -1.2 : 0.9) + (d.J || L.front ? 0 : (stZ - 0.3) * 0.16 * d.gait); // 뒷발허리: 디딜 때는 비절이 발 뒤에, 밀어낼수록 서서 뒤꿈치가 들린다(비절이 펴진다)
     _dir.set(0, Math.cos(lean), -Math.sin(lean)); if (!d.J && c.roll) _dir.applyAxisAngle(_zAx, c.roll); // 누운 자세: 발목 기울기는 강아지 몸 기준(옆으로 굴러도 손목·비절이 제 방향으로 접힌다)
@@ -3744,11 +3745,12 @@ function bubble(text, anchor, cls = '', life = 1.7, dx = null) { // 글자만 (�
   if (pinky.alpang && cls === 'soft') cls = 'soft dm'; // 알팡이의 말: 한여름 밝은 잔디 · 파란 하늘 위에서도 또렷하게
   const el = document.createElement('div'); el.className = 'bubble ' + cls; el.textContent = text; el.style.opacity = 0; // 자리를 잡기 전(다음 프레임)까지는 보이지 않게 — 화면 구석에 한 번 번쩍이지 않도록
   bubbleLayer.appendChild(el);
-  bubbles.push({ el, anchor, age: 0, life, dx: dx ?? (Math.random() - 0.5) * 40 });
+  const b = { el, anchor, age: 0, life, dx: dx ?? (Math.random() - 0.5) * 40 }; bubbles.push(b); return b;
 }
 function say(text, anchor, cls = '', life = 1.7, dx = null) {
-  bubble(text, anchor, cls, life, dx);
+  const b = bubble(text, anchor, cls, life, dx);
   snd('onSay', pinky.pupu || pinky.jaerong || pinky.alpang ? pinky.talk(text) : text); // 말풍선 글자에 맞는 소리 (왈! → 짖는 소리 …) · 푸푸 · 재롱이는 바뀐 말 그대로 (월월! → 낮게 두 번 · 왕! → 쉰 목소리로 한 번)
+  return b;
 }
 // 소리는 덤이다: 소리 쪽에서 무슨 일이 나도 방은 멈추지 않는다
 function snd(fn, ...a) { try { return sound[fn](...a); } catch (e) { return null; } }
@@ -3761,11 +3763,11 @@ const heart = () => say('♥', headTop, 'heart', 1.4, (Math.random() - 0.5) * 90
 function stepBubbles(dt, cam) {
   for (let i = bubbles.length - 1; i >= 0; i--) {
     const b = bubbles[i]; b.age += dt;
-    _p.copy(b.anchor()); _p.y += b.age * 0.1; _p.project(cam);
+    _p.copy(b.anchor()); _p.y += b.age * (b.rise ?? 0.1); _p.project(cam); // rise: 말풍선이 떠오르는 빠르기 (m/초 — 깜짝 놀란 ! 는 머리 바로 위에 붙어 있다)
     if (!b.h) { b.h = b.el.offsetHeight || 1; b.w = b.el.offsetWidth || 1; }
     const x = clamp((_p.x * 0.5 + 0.5) * innerWidth + b.dx, b.w / 2 + 6, Math.max(b.w / 2 + 6, innerWidth - b.w / 2 - 6)), y = Math.max((-_p.y * 0.5 + 0.5) * innerHeight, b.h + 8); // 가까이서 볼 때도 화면 밖으로 잘리지 않게
     const o = b.age < 0.2 ? b.age / 0.2 : b.age > b.life - 0.45 ? Math.max(0, (b.life - b.age) / 0.45) : 1;
-    b.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+    b.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)` + (b.pop ? ` scale(${(b.age < 0.12 ? lerp(0.5, 1.45, b.age / 0.12) : lerp(1.45, 1, clamp((b.age - 0.12) / 0.2, 0, 1))).toFixed(3)})` : ''); // pop: 톡 커졌다가 제 크기로 (깜짝 놀란 !)
     b.el.style.opacity = _p.z > 1 ? 0 : o;
     if (b.age >= b.life) { b.el.remove(); bubbles.splice(i, 1); }
   }
@@ -3814,6 +3816,13 @@ function stepTimers() {
 }
 let active = null, idleT = 5;
 const actionsEl = $('#actions');
+// 핑키 방에만 있는 단추 하나(싱크대)는 여기서 끼워 넣는다 (단추 줄 자체는 index.html): 냄새 맡기 다음 · 다른 장소에서는 off로 숨는다.
+// 처음 들어가는 방이 핑키 방이라 useRoom이 단추를 다시 세지 않으니, 단추가 열하나가 된 것(many: 폰에서는 여섯 칸씩 두 줄)도 여기서 맞춘다
+{
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.cmd = 'sink'; b.innerHTML = '<span class="ic" aria-hidden="true">🚰</span>싱크대';
+  const s = actionsEl.querySelector('button[data-cmd="sniff"]'); if (s) s.after(b); else actionsEl.appendChild(b);
+  actionsEl.classList.toggle('many', actionsEl.querySelectorAll('button[data-cmd]:not([hidden])').length > 10);
+}
 function setActiveBtn(name) { [...actionsEl.querySelectorAll('button')].forEach((b) => b.classList.toggle('on', b.dataset.cmd === name)); }
 function cancelActive() { if (active) { active.cancelled = true; active.cleanups.forEach((f) => f()); active = null; setActiveBtn(null); } }
 function resetTransient(d) {
@@ -3962,6 +3971,116 @@ async function cushionNap(tok, sec = 16, cam = false) {
   hush('쭈욱…', headTop, 'soft', 1.5); await lids(0.25, 0.6); await wait(tok, 0.9);
   setPose(pinky, 'stand', 3); pinky.turnCap = 1.5; pinky.face = 'cam'; lids(1, 0.6).catch(() => {}); pinky.earPerk = 0; pinky.wagAmpT = 0.5; pinky.wagSpeedT = 10; await wait(tok, 1.2); pinky.turnCap = 0;
   cushGo = true; pinky.walkSpeed = 0.3; await walkTo(tok, C.ex, C.ez); cushGo = false; pinky.walkSpeed = 0.5;
+}
+
+// ================================================================
+// 핑키: 싱크대 — 주방 싱크대 앞으로 총총 가서 뒷발로 서서 앞발을 조리대 앞 끝에 척 올리고, 목을 쭉 빼서 싱크대 위로 킁킁킁
+// (코는 실룩실룩 · 고개를 싱크대 · 수도꼭지 쪽으로 짧게 휙휙 · 귀는 앞으로 섰다가 흔들리고 · 꼬리는 붕붕) → 맛있는 냄새…! (작게 낑) → 네 발로 내려와 엄마를 보며 시치미 — …나 아무것도 안 했어
+// 핑키 방에만 있는 단추 (혼자 노는 짓에는 넣지 않는다). 다른 단추 · 쓰다듬기 · 방 나가기로 끊으면 앞발을 조리대에서 떼고 뒤로 물러서며 바로 네 발로 선다
+// ================================================================
+// 서는 자리: 싱크대(2.86, 0.25) 앞. 조리대 윗면은 0.90 — 핑키 다리로 겨우 닿는 높이라 몸을 거의 곧추세우고(80°) 앞다리를 쭉 뻗어 앞발 발바닥을 조리대 앞 끝(2.56) 위에 걸친다.
+// 뒷발은 수납장 문에서 25cm 떨어져 디딘다 (몸통 자리 x = 뒷발 자리). x0: 일어서기 직전에 네 발로 서 있는 자리 (코가 수납장 문에 닿지 않는 곳) · stage: 주방 앞에 와서 몸을 싱크대 쪽으로 돌리는 곳
+// look: 싱크대 가운데 · 왼쪽 · 오른쪽 · 수도꼭지 (킁킁 고개를 휙휙 돌리는 곳)
+const SINK = { x: 2.3, z: 0.25, x0: 2.12, stage: { x: 1.74, z: 0.25 }, bowlR: 0.2, scap: 0.022,
+  look: { c: V3(2.86, 0.95, 0.25), l: V3(2.93, 1.03, 0.15), r: V3(2.93, 1.03, 0.35), tap: V3(3.06, 1.17, 0.25), edge: V3(2.62, 1.0, 0.25) } };
+// 팔을 위로 뻗으면 견갑골이 목 쪽으로 미끄러져 올라간다(SINK.scap, 몸 기준 2.2cm) — 그만큼 어깨가 높아져 몸을 조금 낮추고(bodyY) 뒷다리 무릎 · 비절을 굽힐 수 있다(곧은 막대처럼 서지 않게).
+// 허리는 살짝 젖혀(lumbar < 0) 엉덩이가 뒤로 빠지고, 뒷발은 엉덩이 바로 밑보다 조금 뒤에서 바닥을 디딘다 (조리대에 몸을 기댄 모습)
+POSES.sink = { bodyY: 0.47, bodyZ: 0.105, pitch: -1.4, roll: 0, yawOff: 0, gaze: 1, headPitch: -0.4, headTilt: 0, tail: 1.1, level: 1, free: 0, neck: 1.05, reach: 0.29, lumbar: -0.15, abd: [0.05, 0.05, 0.02, 0.02],
+  lean: [1.85, 1.85, 0.45, 0.45], paws: [P(0.08, 0.934, 0.269), P(-0.08, 0.934, 0.269), P(0.074, 0.03, 0.03), P(-0.074, 0.03, 0.03)] }; // 앞발목은 조리대 모서리 너머로 꺾여 걸친다
+// 엄마 눈: wide = 주방 모서리가 다 보이게 (다가가 일어서고 · 내려와 엄마를 볼 때) · close = 조리대 앞 끝 줄에서 핑키의 왼쪽 앞 · 조금 위 (다 올라선 다음: 얼굴 · 조리대 끝에 걸친 앞발 · 싱크대 위로 뺀 코 · 그 너머 수도꼭지 —
+// 등 뒤에서 보지 않아 곧추선 몸이 긴 기둥처럼 보이지 않는다 · 세로 폰은 뒷발까지) — [데스크톱, 세로 폰]
+const SINK_CAM = {
+  wide: [[V3(1.12, 1.18, 2.02), V3(2.28, 0.6, 0.38)], [V3(1.3, 1.36, 2.42), V3(2.25, 0.6, 0.32)]],
+  close: [[V3(2.48, 1.3, 1.38), V3(2.55, 0.93, 0.25)], [V3(2.6, 1.36, 1.38), V3(2.55, 0.78, 0.25)]],
+};
+const sinkCam = (k, rate = 1.4) => { const c = SINK_CAM[k][roomCam.aspect < 0.8 ? 1 : 0]; camTo(c[0], c[1], rate); };
+// 일어서기 · 내려오기: 몸 숫자는 네 발로 선 자세와 싱크대 자세 사이를 섞고, 몸통 자리도 x0 ↔ x로 옮긴다.
+// 앞발은 곧장 미끄러지지 않고 위로 들었다가(곡선) 조리대 끝에 위에서 내려놓는다(내려올 때는 뒤로 떼어 위로 들었다가 바닥으로). 뒷발은 두 번씩 번갈아 들어 디디며 옮긴다
+const SINK_STEP = [[[0.06, 0.4], [0.46, 0.8]], [[0.2, 0.55], [0.6, 0.94]]]; // 뒷발(왼 · 오른)마다 두 걸음의 [시작, 끝] (0..1)
+function sinkMove(k, up) {
+  const d = pinky, A = poseFor('stand', d), B = poseFor('sink', d), t = d.tgt, x0 = SINK.x0, x1 = SINK.x;
+  const e = ease(clamp(k / (up ? 0.92 : 0.85), 0, 1)), s = up ? e : 1 - e, rx = lerp(x0, x1, s); // s: 싱크대 자세 쪽 비율 · rx: 몸통 자리
+  for (const key of POSE_KEYS) t[key] = lerp(A[key], B[key], s);
+  const nk = up ? ss(0.55, 1, k) : 1 - ss(0, 0.35, k); t.neck = lerp(A.neck, B.neck, nk); t.reach = lerp(A.reach, B.reach, nk); t.gaze = 1; // 목은 다 올라선 다음에 빼고, 내려올 때는 먼저 거둔다
+  for (let i = 0; i < 4; i++) { t.lean[i] = lerp(A.lean[i], B.lean[i], s); t.abd[i] = lerp(A.abd[i], B.abd[i], s); }
+  const u = up ? ease(clamp(k / 0.9, 0, 1)) : ease(clamp(k / 0.8, 0, 1)), w0 = up ? 0 : 1; // 앞발 곡선의 진행 (0 = 바닥, 1 = 조리대 위)
+  for (let i = 0; i < 2; i++) {
+    const p0x = x0 + A.paws[i].z, p1x = x1 + B.paws[i].z, cx = up ? x0 + 0.24 : x1 - 0.02, cy = 1.0, q = Math.abs(w0 - u), q1 = 1 - q; // 바닥 → (곡선) → 조리대 끝
+    t.paws[i].set(lerp(A.paws[i].x, B.paws[i].x, q), q1 * q1 * A.paws[i].y + 2 * q * q1 * cy + q * q * B.paws[i].y, q1 * q1 * p0x + 2 * q * q1 * cx + q * q * p1x - rx);
+  }
+  for (let i = 2; i < 4; i++) {
+    const a = x0 + A.paws[i].z, b = x1 + B.paws[i].z, st = SINK_STEP[i - 2]; let f = 0, lift = 0;
+    for (const [s0, s1] of st) { const g = clamp((k - s0) / (s1 - s0), 0, 1); f += 0.5 * ease(g); lift = Math.max(lift, Math.sin(Math.PI * g)); }
+    const wx = up ? lerp(a, b, f) : lerp(b, a, f);
+    t.paws[i].set(A.paws[i].x, A.paws[i].y + 0.032 * lift, wx - rx);
+  }
+  t.name = 'sink'; d.x = rx; d.z = SINK.z; d.yaw = Math.PI / 2; d.scapZ = SINK.scap * s; // 견갑골도 몸이 서는 만큼 올라간다
+}
+// 끊겼을 때: 앞발을 조리대 끝에서 뒤로 떼고(모서리를 긁고 내려오지 않게) 네 발로 선다. 몸통 자리(root)는 그 자리에서 x0로 옮기되 몸 · 발은 그대로 두어(몸통 자리 기준 숫자를 그만큼 앞으로)
+// 보이는 모습은 한 프레임도 튀지 않고, 내려서는 동안 몸 가운데가 제대로 내려올 때와 같은 길로 물러난다 (머리가 수납장 문으로 쏠리지 않게)
+function sinkLetGo() {
+  const d = pinky, back = Math.max(0, d.x - SINK.x0), fx = Math.sin(d.yaw), fz = Math.cos(d.yaw);
+  if (back > 1e-4) { d.x -= fx * back; d.z -= fz * back; d.cur.bodyZ += back; for (const p of d.cur.paws) p.z += back; }
+  setPose(d, 'stand', 5.5); d.tgt.yawOff = 0;
+  // 0.45초 동안 (다음 일이 어떤 자세를 정해도): 조리대 위로 뺐던 목은 0.28초에 걸쳐 부드럽게 거두고(처음엔 빠르게, 끝은 천천히 — 움찔 튀지 않게), 몸은 그동안 버티며 천천히 숙인다
+  // (머리 · 귀가 조리대 모서리 · 수납장 문을 지나지 않게). 조리대에 걸친 앞발은 0.14초에 걸쳐 모서리에서 뒤 · 위로 떼고(한 프레임에 튀지 않게) 그동안 몸은 그 높이를 버틴다 — 그다음 바닥으로 (모서리를 긁고 내려오지 않게). 견갑골도 제자리로
+  const t0 = clock, n0 = d.cur.neck, r0 = d.cur.reach, p0 = d.cur.pitch, b0 = d.cur.bodyY, z0 = d.cur.bodyZ, up = p0 < -0.6, s0 = d.scapZ || 0, T = 0.45, TP = 0.14;
+  const lip = d.cur.paws.map((q, i) => (i < 2 && q.y > 0.45 ? q.clone() : null)), anyLip = lip[0] || lip[1]; // 조리대 위(또는 그 높이)에 있던 앞발 (몸통 자리를 옮긴 만큼 고친 자리)
+  d.letGo = (c) => {
+    const tt = clock - t0; if (tt >= T || pinky !== d) { d.letGo = null; d.scapZ = 0; return; }
+    const k = tt / T, e = 1 - (1 - clamp(tt / 0.28, 0, 1)) ** 2; c.neck = Math.min(c.neck, lerp(n0, 0.3, e)); c.reach = Math.min(c.reach, lerp(r0, 0, e));
+    if (up) c.pitch = Math.min(c.pitch, lerp(p0, -0.85, ease(k)));
+    d.scapZ = s0 * (1 - ease(k));
+    if (anyLip && tt < TP) { const u = ease(tt / TP); c.bodyY = Math.max(c.bodyY, b0 - 0.01 * u); c.bodyZ = Math.max(c.bodyZ, z0 - 0.02 * u); for (let i = 0; i < 2; i++) if (lip[i]) c.paws[i].set(lip[i].x, lip[i].y + 0.018 * u, lip[i].z - 0.075 * u); }
+  };
+}
+async function pinkySink(tok) {
+  const d = pinky, L = SINK.look, bowlOb = { x: BOWL.x, z: BOWL.z, r: SINK.bowlR };
+  tok.far = false; mark('sink');
+  OBST.push(bowlOb); // 밥그릇은 평소 장애물이 아니다: 이 길에서만 돌아서 간다
+  tok.cleanups.push(() => { const i = OBST.indexOf(bowlOb); if (i >= 0) OBST.splice(i, 1); d.sniff = 0; d.lookFn = null; d.turnCap = 0; if (d.tgt.name === 'sink') sinkLetGo(); });
+  // 1. 킁… 주방 쪽에서 무슨 냄새가 난다 — 코를 들고 그쪽을 본다
+  setPose(d, 'stand', 6); d.tgt.yawOff = 0; d.lookFn = () => L.c; d.sniff = 0.45; d.earPerk = 0.6; d.wagAmpT = 0.55; d.wagSpeedT = 12;
+  say('킁킁…?', noseTip, 'small', 1.3, 10); sinkCam('wide', 1.1); await wait(tok, 0.8);
+  // 2. 총총: 주방 앞으로 (밥그릇은 돌아서) → 몸을 싱크대 쪽으로 돌리고 → 수납장 문 앞까지 살금살금
+  d.lookFn = null; d.tgt.gaze = 0.5; d.tgt.headPitch = 0.2; d.sniff = 0.3; d.walkSpeed = 0.85; d.wagAmpT = 0.65; d.wagSpeedT = 14;
+  if (!(Math.abs(d.z - SINK.z) < 0.12 && d.x > SINK.stage.x - 0.1 && d.x < SINK.x0 + 0.05)) await walkTo(tok, SINK.stage.x, SINK.stage.z); // 이미 싱크대 앞 줄에 와 있으면 그대로
+  d.face = { x: 3.4, z: SINK.z }; d.sniff = 0; { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, Math.PI / 2)) < 0.12 || clock - t0 > 1.6); }
+  d.walkSpeed = 0.32; await walkTo(tok, SINK.x0, SINK.z); d.walkSpeed = 0.5; d.face = null;
+  { const y0 = d.yaw; await tween(tok, 0.25, (k) => { d.yaw = lerp(y0, Math.PI / 2 + Math.round((y0 - Math.PI / 2) / (Math.PI * 2)) * Math.PI * 2, ease(k)); }); }
+  // 3. 조리대 끝을 올려다보고 (몸을 살짝 낮춰 힘을 모았다가) 뒷발로 일어서서 앞발을 척
+  d.lookFn = () => L.edge; d.tgt.gaze = 1; d.earPerk = 0.8; d.wagAmpT = 0.7; d.wagSpeedT = 15; bubble('…!', headTop, 'small', 0.9, 0);
+  d.tgt.bodyY -= 0.02; d.tgt.pitch = 0.06; d.poseRate = 5; await wait(tok, 0.45);
+  d.poseRate = 30; let pat = false; // 일어서는 모습은 넓은 시점 그대로 보고, 다 올라서면 가까이 (얼굴 · 앞발 · 싱크대)
+  await tween(tok, 0.95, (k) => { sinkMove(k, true); if (!pat && k > 0.86) { pat = true; snd('sfx', 'pat', { pos: [2.57, 0.93, SINK.z], gain: -3, force: 1, why: 'paws on the counter' }); sinkCam('close', 1.6); } });
+  d.poseRate = 6; setPose(d, 'sink', 6); d.x = SINK.x; d.yaw = Math.PI / 2;
+  // 4. 킁킁킁 — 코를 실룩이며 싱크대 위로 고개를 휙휙 (가운데 · 왼쪽 · 오른쪽)
+  d.lookFn = () => L.c; d.sniff = 1; d.earPerk = 0.6; d.wagAmpT = 0.85; d.wagSpeedT = 18; // 귀는 앞으로 (늘어진 귓볼이 조리대 모서리에 걸치지 않을 만큼만)
+  say('킁킁킁…', noseTip, '', 1.5, -12); await wait(tok, 0.7);
+  d.earPerk = 0.35;
+  for (const p of [L.l, L.r, L.c]) { d.lookFn = () => p; await wait(tok, 0.42); }
+  // 5. 맛있는 냄새…! (귀를 쫑긋 · 꼬리 붕붕 · 입맛을 할짝)
+  d.sniff = 0.4; d.earPerk = 0.6; d.wagAmpT = 0.95; d.wagSpeedT = 21; d.tiltT = 0.14;
+  say('맛있는 냄새…!', headTop, 'soft', 1.9, 0); await wait(tok, 0.6);
+  d.lick = 1; await wait(tok, 0.55); d.lick = 0; d.tiltT = 0; await wait(tok, 0.45);
+  // 6. 수도꼭지 쪽으로 목을 더 빼서 킁킁 (발끝으로 조금 더 선다)
+  d.lookFn = () => L.tap; d.sniff = 1; d.earPerk = 0.5; Object.assign(d.tgt, { neck: 1.06, reach: 0.31, bodyY: POSES.sink.bodyY + 0.006 }); d.poseRate = 3.5;
+  bubble('킁킁', noseTip, 'small', 1.1, 14); await wait(tok, 1.1);
+  d.lookFn = () => L.c; Object.assign(d.tgt, { neck: POSES.sink.neck, reach: POSES.sink.reach, bodyY: POSES.sink.bodyY }); await wait(tok, 0.45);
+  // 7. 네 발로 내려온다 (앞발을 떼고 뒷발은 두 걸음 물러난다) — 인식표가 짤랑
+  d.sniff = 0; d.lookFn = null; d.earPerk = 0.2; d.wagAmpT = 0.5; d.wagSpeedT = 10; sinkCam('wide', 1.6); d.poseRate = 30; let land = false;
+  await tween(tok, 0.8, (k) => { sinkMove(k, false); if (!land && k > 0.8) { land = true; snd('sfx', 'tag_jingle', { gain: 1, force: 1, why: 'lands back on four paws' }); } });
+  setPose(d, 'stand', 7); d.tgt.yawOff = 0; d.x = SINK.x0; d.yaw = Math.PI / 2; d.tgt.bodyY -= 0.012; await wait(tok, 0.15); d.tgt.bodyY += 0.012;
+  // 8. 엄마를 휙 돌아본다 — 조리대를 한 번 슬쩍 보고 — 귀를 뒤로 눕히고 눈을 동그랗게, 꼬리는 살랑살랑: …나 아무것도 안 했어
+  d.turnCap = 3.2; d.face = 'cam'; d.tgt.yawOff = 0; d.earPerk = -0.45; d.eyeOpen = 1.08; d.wagAmpT = 0.3; d.wagSpeedT = 6;
+  { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, camYaw())) < 0.25 || clock - t0 > 1.4); } d.turnCap = 0;
+  d.lookFn = () => L.edge; await wait(tok, 0.5); d.lookFn = null; await wait(tok, 0.25);
+  d.tiltT = 0.28; say('…나 아무것도 안 했어', headTop, 'soft', 2.3, 0); await wait(tok, 2.2);
+  // 9. 얼른 엄마 곁으로 (총총) — 꼬리를 흔들며 마주 본다
+  d.tiltT = 0; d.eyeOpen = 1; d.earPerk = 0; camHome(); d.walkSpeed = 0.7; d.wagAmpT = 0.6; d.wagSpeedT = 12;
+  await walkTo(tok, HOME.x, HOME.z); d.walkSpeed = 0.5; d.face = 'cam'; d.wagAmpT = 0.45; d.wagSpeedT = 9;
+  const i = OBST.indexOf(bowlOb); if (i >= 0) OBST.splice(i, 1);
+  await wait(tok, 0.6);
 }
 
 const napKeep = () => pinky.napEnd > clock + 3 && Math.hypot(pinky.x - CUSH.x, pinky.z - CUSH.z) < 0.5;
@@ -4178,6 +4297,7 @@ const CMDS = {
     await wait(tok, 0.8);
   },
   async touch(tok) {
+    if (pinky.alpang && touch.rump) return apRump(tok); // 알팡이: 엉덩이를 만지면 — ! 숙녀의 엉덩이는 안 돼!
     const keep = napKeep(); // 방석 버튼으로 재우는 중(가서 눕는 동안 포함)에 쓰다듬으면: 방석을 보던 시점 그대로, 끝나면 이어서 잔다
     if (!keep) { const [p, a] = kneelAt(0.78, 0.95, 0.22); camTo(p, a, 2.2); }
     happy(true); if (['side', 'belly'].includes(pinky.tgt.name)) pinky.paddle = 0.5;
@@ -4186,7 +4306,8 @@ const CMDS = {
     else if (pinky.tgt.name === 'stand' && Math.hypot(pinky.x - CUSH.x, pinky.z - CUSH.z) < 0.6) setPose(pinky, 'stand', 4); // 방석에서 빙글 돌거나 꾹꾹 하던 중이면 몸을 바로 하고 선다
     say('좋아…', headTop, 'soft', 1.6);
     handR.want = { pos: () => touch.pt.clone().addScaledVector(touch.n, 0.02), up: () => touch.n, curl: 0.12, rate: 16, shoulder: [0.34, -0.15, 0.05] };
-    await until(tok, () => !touch.active);
+    await until(tok, () => !touch.active || (pinky.alpang && touch.rumpD > AP_RUMP.rub && apRumpReady()));
+    if (pinky.alpang && touch.active) return apRump(tok); // 알팡이: 쓰다듬던 손이 엉덩이로 미끄러지면
     handR.want = null; pinky.paddle = 0; if (pinky.pupu) pinky.smile = 1; // 푸푸: 웃는상 그대로
     await wait(tok, 0.6); happy(false); if (curled) { pinky.eyeOpen = 0.3; pinky.wagAmpT = 0.1; } else pinky.tiltT = 0.3; say('더 해줘…', headTop, 'soft', 1.8);
     if (curled) { pinky.tgt.headPitch = POSES.curl.headPitch; await tween(tok, 2.0, (k) => { pinky.sigh = Math.sin(Math.PI * k) ** 2; pinky.eyeOpen = lerp(0.3, 0.1, k); }); pinky.sigh = 0; } // 손이 떠나면 크게 한숨 쉬고 다시 눈을 감는다
@@ -4207,6 +4328,7 @@ const CMDS = {
   async kiss(tok) { if (pinky.alpang) await apKiss(tok); }, // 알팡이(의왕 아울렛)에만 있는 버튼: 뽀뽀하기 · 만져줘(치대기) · 에르메스 상자
   async lean(tok) { if (pinky.alpang) await apLean(tok); },
   async box(tok) { if (pinky.alpang) await apBox(tok); },
+  async sink(tok) { if (RP === ROOM_HOME && pinky === PINKY) await pinkySink(tok); }, // 핑키(푸맘네 집)에만 있는 단추: 싱크대
 };
 // ---------- 담이: 지렁이 댄스 — 벌러덩 드러누워 등을 바닥에 비비며 몸을 좌우로 꿈틀꿈틀, 다 하고 나면 부르르 털고 일어난다
 async function wormDance(tok, solo = false) {
@@ -5108,10 +5230,14 @@ const DROP = { // 뼈다귀 모양 과자 · 사료 한 알 · 고구마 조각 
   kibble: { h: 0.014, make() { const m = new THREE.Mesh(DROP_GEO.kibble, DROP_MAT.kibble); m.castShadow = true; m.scale.set(1, 0.7, 1); return m; } },
   goguma: { h: 0.007, make() { const m = new THREE.Mesh(DROP_GEO.goguma, DROP_MAT.goguma); m.castShadow = true; return m; } },
 };
+// 알팡이 방(밝은 나무 테라스 · 잔디): 떨어진 조각이 갈색 바닥에 묻히지 않게 1.5배 크고 밝은 버터 쿠키 빛으로 (알팡이가 알아보고 칫 하는 것이 보이게)
+const AP_CRUMB = { k: 1.5, mat: new Map() };
+const apCrumbMat = (m) => { let q = AP_CRUMB.mat.get(m); if (!q) { q = m.clone(); q.color.lerp(new THREE.Color(0xfff1d0), 0.5); AP_CRUMB.mat.set(m, q); } return q; };
 function dropTreat(x, z, kind = 'bit', from = null, vel = null) {
   const k = DROP[kind], m = k.make(); m.rotation.set(0, Math.random() * 3, 0);
+  const big = pinky.alpang ? AP_CRUMB.k : 1; if (big !== 1) { m.scale.multiplyScalar(big); m.traverse((o) => { if (o.isMesh) o.material = apCrumbMat(o.material); }); }
   const q = { x, z }; collide(q); // 핑키가 설 수 있는 곳에만
-  const d = { m, kind, x: q.x, z: q.z, h: k.h, t: clock, v: null };
+  const d = { m, kind, x: q.x, z: q.z, h: k.h * big, t: clock, v: null };
   if (from) { m.position.copy(from); d.v = vel || V3((q.x - from.x) / 0.5, 1.2, (q.z - from.z) / 0.5); } else m.position.set(q.x, k.h, q.z);
   roomScene.add(m); drops.push(d); return d;
 }
@@ -5144,6 +5270,7 @@ function hideTreat(toss = true) { // 엄마가 흘린 간식 한 조각이 러�
 const NOSE_R0 = 0.29;
 const FOUND_LINES = ['찾았다!', '헤헤, 주웠다', '맛있다!', '횡재했다!'];
 async function findTreat(tok, dr) {
+  if (pinky.alpang) return apSnub(tok, dr); // 알팡이(공주님)는 바닥에 떨어진 건 먹지 않는다: 멀찍이 킁킁 → 칫 → 엄마가 치운다
   const NOSE_REACH = pinky.pupu ? NOSE_R0 * pinky.scale : NOSE_R0; // 푸푸는 몸이 1.25배라 코끝도 그만큼 멀리 닿는다
   if (!dr || dr.taken || dr.v) return false;
   dr.taken = true; tok.cleanups.push(() => { snd('cancelPhrase', 'found'); if (drops.includes(dr)) { if (dr.m.parent === roomScene) dr.taken = false; else { dr.m.parent && dr.m.parent.remove(dr.m); drops.splice(drops.indexOf(dr), 1); } } });
@@ -5466,12 +5593,16 @@ function pickPinky(x, y) {
 function setTouchHit(hit) {
   touch.pt.copy(hit.point);
   touch.n.copy(hit.face.normal).applyNormalMatrix(_nm.getNormalMatrix(hit.object.matrixWorld)).normalize();
+  touch.rump = !!(pinky.alpang && apRumpHit(hit)); // 알팡이: 손이 엉덩이 쪽(엉덩이 · 허벅지 뒤 · 꼬리)에 닿았는가 (다른 강아지는 늘 false)
 }
 function stepTouch(dt) {
   if (!touch.active) return;
   const hit = pickPinky(touch.x, touch.y);
   if (hit) { touch.miss = 0; setTouchHit(hit); touch.moved += touch.pt.distanceTo(touch.last); touch.last.copy(touch.pt); }
   else if (++touch.miss > 45) { touch.active = false; return; }
+  const pm = Math.hypot(touch.x - (touch.px ?? touch.x), touch.y - (touch.py ?? touch.y)); touch.px = touch.x; touch.py = touch.y;
+  if (touch.rump) { touch.rumpD = (touch.rumpD || 0) + pm; touch.offT = 0; } else if ((touch.offT = (touch.offT || 0) + dt) > 0.25) touch.rumpD = 0; // 알팡이: 손가락이 엉덩이 위를 쓸고 지나간 거리(px) — 가만히 댄 손 밑으로 몸이 돌아 엉덩이가 온 것은 세지 않고, 엉덩이 가장자리를 잠깐 벗어난 것은 봐준다 (다른 강아지는 늘 0 — 그대로)
+  if (touch.rump) return; // 엉덩이를 만지는 동안에는 하트가 뜨지 않는다
   touch.heartT -= dt;
   if (touch.moved > 0.12 || touch.heartT <= 0) { touch.moved = 0; touch.heartT = 1.1; heart(); }
 }
@@ -5889,7 +6020,7 @@ const ROOM_PARK = {
   WIN: V3(0.6, 0.9, -9), ROPE: { x: -0.95, z: -0.55, yaw: -0.5 },
   entry: [[1.0, -0.9, 1.9, -1.7], [-1.0, -0.7, -1.8, -1.2], [0.3, -1.6, 0.4, -2.6]],
   wander: [-1.5, -1.0, 3.0, 2.2],
-  off: { feed: true, cushion: true, paw: true, high5: true, splash: true, poop: true, mat: true, run: true, kiss: true, lean: true, box: true }, actW: { nap: 0, bowl: 0, left: 0, rest: 0.35, window: 0.7 }, noBowl: true, // 놀이터에서는 잠잘 틈 없이 논다 (손 · 하이파이브 · 물장구 · 똥츄는 푸푸만 · 돗자리 · 달려오기는 재롱이만 · 뽀뽀하기 · 만져줘 · 에르메스 상자는 알팡이만)
+  off: { sink: true, feed: true, cushion: true, paw: true, high5: true, splash: true, poop: true, mat: true, run: true, kiss: true, lean: true, box: true }, actW: { nap: 0, bowl: 0, left: 0, rest: 0.35, window: 0.7 }, noBowl: true, // 놀이터에서는 잠잘 틈 없이 논다 (손 · 하이파이브 · 물장구 · 똥츄는 푸푸만 · 돗자리 · 달려오기는 재롱이만 · 뽀뽀하기 · 만져줘 · 에르메스 상자는 알팡이만)
   lines: { gifts: ['미끄럼틀 냄새!', '누가 여기 왔었네?', '킁킁, 친구 냄새~'], table: ['벤치 밑에 뭐 있다!', '과자 냄새 났는데!', '여긴 없네~'], window: ['저기 비둘기다!', '바람 좋다~', '친구 오나?'], tableSniff: '뭐 떨어진 거 없나~', mid: ['오리야 안녕!', '여기도 친구 냄새!', '킁킁, 과자 냄새~'] },
   sniffMid: { x: PARK.riders[0][0] - 0.55, z: PARK.riders[0][1] + 0.3, fx: PARK.riders[0][0], fz: PARK.riders[0][1] }, // 냄새 맡기 가운데 들르는 곳: 오리 스프링 놀이기구 옆 (미끄럼틀 끝 → 오리 → 벤치, 멀리 돌지 않게)
   zoom: [[1.4, -0.9], [0.78, 0.18], [-0.48, 0.18], [-1.1, -0.9], [-0.48, -1.98], [0.78, -1.98]], // 우다다: 모래밭 가운데 빈 곳을 크게 도는 길
@@ -6918,7 +7049,7 @@ const ROOM_NAMSAN = {
   WIN: V3(1.7, 0.05, 0.0), ROPE: { x: -1.0, z: -2.6, yaw: 0 },
   entry: [[0.8, -0.75, 1.35, -1.35], [-0.9, -0.6, -1.7, -1.1], [0.15, -1.6, 0.4, -2.6]],
   wander: [-1.2, -0.7, 1.5, 1.7],
-  off: { play: true, feed: true, cushion: true, worm: true, zoom: true, dig: true, mat: true, run: true, kiss: true, lean: true, box: true }, actW: { nap: 0, bowl: 0, left: 0 }, noBowl: true,
+  off: { sink: true, play: true, feed: true, cushion: true, worm: true, zoom: true, dig: true, mat: true, run: true, kiss: true, lean: true, box: true }, actW: { nap: 0, bowl: 0, left: 0 }, noBowl: true,
   lines: { gifts: ['개구리 냄새다!', '바위 밑에 누구 있어?', '물 냄새 좋다~'], table: ['벤치 밑엔 아무것도 없네~', '새 친구 냄새다!', '누가 과자 먹었지?'], window: ['물소리 좋다~', '바람 시원하다!', '어! 물고기다!'], tableSniff: '여긴 없네~', mid: ['붓꽃 냄새 좋다~', '다람쥐 지나갔다!', '음~ 풀 냄새 좋다'] }, // 푸푸: 냄새 맡고 신나서 한마디 (좋다 · 시원하다 → 소리: 낮은 음~)
   sniffMid: { x: 0.8, z: 1.05, fx: 1.12, fz: 1.25 }, // 냄새 맡기 가운데 들르는 곳: 물가의 붓꽃
   acts: (cd, d) => ({ water: (1.0 + 0.9 * d.play) * cd('water', 70), guard: 0.45 * cd('guard', 120), invite: (0.35 + 0.5 * d.play) * cd('invite', 90), bfly: 0.6 * cd('bfly', 100) }), // 혼자 놀 때도 가끔 냇물에 들어가 물을 마시고 첨벙 · 가끔 길가에 앉아 산과 엄마를 바라본다 · 엄마 앞에서 엎드려 뻗기(놀자!) · 나비 쫓기
@@ -7852,7 +7983,7 @@ const ROOM_GWACHEON = {
   WIN: V3(0.4, 0.1, -9), ROPE: { x: -1.0, z: -2.6, yaw: 0 },
   entry: [[1.2, -1.7, 1.9, -2.5], [-1.15, -1.45, -1.9, -2.0], [0.45, -2.5, 0.5, -3.4]],
   wander: [-1.7, -2.4, 3.6, 3.0],
-  off: { feed: true, cushion: true, paw: true, high5: true, splash: true, poop: true, worm: true, zoom: true, dig: true, kiss: true, lean: true, box: true }, actW: { nap: 0, bowl: 0, left: 0, window: 0, attend: 0.7 }, noBowl: true, // 잔디밭에는 밥그릇 · 방석이 없다 (손 · 하이파이브 · 물장구 · 똥츄는 푸푸만, 지렁이 댄스 · 우다다 · 땅 파기는 담이만, 뽀뽀하기 · 만져줘 · 에르메스 상자는 알팡이만) — 호수 구경은 재롱이 몫(lake)으로
+  off: { sink: true, feed: true, cushion: true, paw: true, high5: true, splash: true, poop: true, worm: true, zoom: true, dig: true, kiss: true, lean: true, box: true }, actW: { nap: 0, bowl: 0, left: 0, window: 0, attend: 0.7 }, noBowl: true, // 잔디밭에는 밥그릇 · 방석이 없다 (손 · 하이파이브 · 물장구 · 똥츄는 푸푸만, 지렁이 댄스 · 우다다 · 땅 파기는 담이만, 뽀뽀하기 · 만져줘 · 에르메스 상자는 알팡이만) — 호수 구경은 재롱이 몫(lake)으로
   lines: { gifts: ['…누가 김밥 먹었네.', '흥, 과자 부스러기.', '…돗자리 냄새.'], table: ['…물 냄새.', '흥, 오리 냄새.', '…바람 냄새 좋네.'], window: ['…호수 예쁘다.'], tableSniff: '…없네.', mid: ['…봄 냄새.', '흥, 양 냄새.', '…풀 냄새 좋네.'] },
   sniffMid: { x: -0.85, z: -3.0, fx: -0.95, fz: -3.9 }, // 냄새 맡기 가운데 들르는 곳: 물가 갈대 앞
   acts: (cd, d) => ({ watch: (0.6 + 1.3 * d.attach) * cd('watch', 75), lake: 0.9 * cd('lake', 80), sheep: 0.45 * cd('sheep', 140), cuddle: (0.4 + 0.9 * d.rest) * cd('cuddle', 100) }), // 혼자 있을 때: 조금 떨어져서 언니 바라보기 · 호수 구경 · 양 구경 · 슈슈 끌어안고 쉬기
@@ -8893,8 +9024,8 @@ const ROOM_UIWANG = {
   WIN: V3(UI_SHOPS[0].x, 3.0, UI_SHOPS[0].z), ROPE: { x: 99, z: 99, yaw: 0 },
   entry: [[1.45, -2.35, 2.0, -3.0], [-1.25, -1.6, -1.6, -2.4], [0.4, -2.2, 0.2, -3.2]], // 꽃밭 앞 · 잔디밭에서 킁킁하다가 엄마를 알아본다
   wander: [-1.6, -2.6, 3.4, 4.6],
-  off: { feed: true, cushion: true, high5: true, splash: true, poop: true, worm: true, zoom: true, dig: true, mat: true, run: true }, actW: { nap: 0, bowl: 0, left: 0, window: 0, rest: 0, attend: 0.8 }, noBowl: true, // 밥그릇 · 도넛 방석은 없다 (공주님은 맨바닥에 엎드려 쉬지 않는다) · 손은 공주님 버전으로
-  lines: { gifts: ['어머, 신상 냄새~', '킁킁, 쇼핑백 냄새~', '빵 냄새 난다~'], table: ['수국 냄새~ 공주 향수 같아~', '흐응~ 꽃 냄새 좋아~', '나비 왔다 갔나~'], window: ['…저거 공주 거 같은데~'], tableSniff: '뭐 떨어진 거 없나~', mid: ['풀 냄새~', '어머, 누가 커피 흘렸네~', '여기도 신상 냄새~'] },
+  off: { sink: true, feed: true, cushion: true, high5: true, splash: true, poop: true, worm: true, zoom: true, dig: true, mat: true, run: true }, actW: { nap: 0, bowl: 0, left: 0, window: 0, rest: 0, attend: 0.8 }, noBowl: true, // 밥그릇 · 도넛 방석은 없다 (공주님은 맨바닥에 엎드려 쉬지 않는다) · 손은 공주님 버전으로
+  lines: { gifts: ['어머, 신상 냄새~', '킁킁, 쇼핑백 냄새~', '빵 냄새 난다~'], table: ['수국 냄새~ 공주 향수 같아~', '흐응~ 꽃 냄새 좋아~', '나비 왔다 갔나~'], window: ['…저거 공주 거 같은데~'], tableSniff: '흐응~ 꽃 냄새만 나네~', mid: ['풀 냄새~', '어머, 누가 커피 흘렸네~', '여기도 신상 냄새~'] },
   sniffMid: { x: -0.4, z: -3.6, fx: -0.9, fz: -4.4 }, // 냄새 맡기 가운데 들르는 곳: 산책길 옆 잔디
   acts: (cd, d) => ({ pose: (0.55 + 0.9 * d.attach) * cd('pose', 70), shop: 0.85 * cd('shop', 90), prance: (0.5 + 1.1 * d.play) * cd('prance', 60) }), // 혼자 있을 때: 공주님 포즈 · 매장 구경 · 사뿐사뿐 산책
   roamActs: (tok) => ({ pose: () => apPose(tok), shop: () => apShop(tok), prance: () => apPrance(tok) }),
@@ -9104,7 +9235,7 @@ const AP_TALK = {
   '응…?': '응~?', '잘 잤다…': '공주 잘 잤다~', '재밌었다…': '재밌었어~', '…같이 할래?': '같이 할래~?', '…또 줘?': '또 줄 거지~?',
   '…이번만이야': '이번만이야~', '후우… 알았어': '피~ 알았어~', '안 들려~': '피~ 안 들려~', '또 던져!': '또 던져 줘잉~', '또 하자!': '또 하자~',
   '…이따 주겠지': '…이따 주겠지~', '달다…': '달콤해~', '다 먹었다!': '다 먹었어~', '뒹굴': '뒹굴~', '뒹굴뒹굴': '뒹굴뒹굴~',
-  '찾았다!': '찾았다~ 공주 코 최고~', '헤헤, 주웠다': '어머, 주웠다~', '맛있다!': '맛있어~', '횡재했다!': '어머, 횡재~', '하나만 더…?': '하나만 더~?', '더 없나…': '더 없나~', '배불러…': '공주 배불러~',
+  '맛있다!': '맛있어~', '하나만 더…?': '하나만 더~?', '더 없나…': '더 없나~', '배불러…': '공주 배불러~', // 주워 먹는 말(찾았다! · 주웠다 · 횡재)은 없다: 공주님은 바닥에 떨어진 건 안 먹는다 (apSnub)
   '간식 주면 공 줄게': '간식 주면 공 줄게~', '간식 주면 줄게!': '간식 주면 줄게~', '간식 주면… 마저 갈게': '간식 주면 갈게~', '간식이랑 바꿀래?': '간식이랑 바꿀래~?', '내 꺼야!': '이건 공주 거야~!', '내 꺼야 ♪': '공주 거야~ ♪',
   '이제 줄게!': '이제 줄게~', '자, 여기!': '자, 여기~', '왈!': '앙!', '흥!': '칫!', '밥 줘…': '공주 밥~', '밥그릇 비었네…': '비었네~', '이따 먹어야지': '이따 먹을래~', '음… 엄마…': `음… ${AP_CALL}…`,
   '후우…': '흐응…', '쭈욱…': '쭈욱~', '하암…': '하암~',
@@ -9195,6 +9326,90 @@ async function apRefuse(tok, line, s = apSide()) {
   say(line, headTop, 'soft', 2.3);
   await wait(tok, 0.45); d.wagAmpT = 0.25; d.wagSpeedT = 6;
   await wait(tok, 1.5);
+}
+// ---------- 공주님은 길바닥에 떨어진 건 안 주워 먹는다: 떨어진 간식 조각을 알아보고 → 조금 떨어진 데 서서 목만 살짝 빼고 킁킁 → 턱을 치켜들고 홱 — 칫, 공주는 바닥에 떨어진 건 안 먹어~
+// → 엄마가 집어서 치운다 (알았어, 치울게~ · 조각은 들려 올라가며 작아져 사라진다) → 흐응~. 바닥 간식을 먹는 길(떠돌다 줍기 · 냄새 맡기 · 킁킁 뒤에 줍기)은 모두 findTreat를 지나므로 거기서 이리로 온다.
+// 알팡이가 먹는 것은 엄마 손의 크로와상 · 접시 위의 치즈케이크뿐 (공주님은 맨바닥에 앉지 않듯 맨바닥의 것도 먹지 않는다 · 코를 바닥에 대지 않고 선 채로)
+const AP_SNUB = { gap: 0.42, line: '칫, 공주는 바닥에 떨어진 건 안 먹어~', mom: '알았어, 치울게~' };
+async function apSnub(tok, dr) {
+  const d = pinky; if (!dr || dr.taken || dr.v) return false;
+  dr.taken = true; let gone = false; mark('ap:snub');
+  tok.cleanups.push(() => { apChin(0); d.smile = AP_SMILE0; d.tgt.yawOff = 0; d.sniff = 0; for (const q of gone ? drops.filter((q) => q.taken) : [dr]) { if (!drops.includes(q)) continue; if (gone) { q.m.parent && q.m.parent.remove(q.m); drops.splice(drops.indexOf(q), 1); } else q.taken = false; } }); // 치우기 시작했으면 끊겨도 치운 것으로
+  const at = () => V3(dr.x, dr.h, dr.z);
+  // 1. 어머? 저게 뭐지 — 조각 쪽을 본다
+  setPose(d, 'stand', 6); d.lookFn = at; d.tgt.gaze = 1; d.earPerk = 0.6; d.wagAmpT = 0.4; d.wagSpeedT = 8; bubble('…?', headTop, 'small', 0.9, 0); await wait(tok, 0.6);
+  // 2. 사뿐사뿐 다가가되 바로 앞까지는 안 간다 (한 걸음 떨어진 데서 선다)
+  let dx = dr.x - d.x, dz = dr.z - d.z; const L = Math.hypot(dx, dz) || 1e-3;
+  if (L > AP_SNUB.gap + 0.1) { const q = { x: dr.x - (dx / L) * AP_SNUB.gap, z: dr.z - (dz / L) * AP_SNUB.gap }; collide(q); d.walkSpeed = 0.42; await walkTo(tok, q.x, q.z); d.walkSpeed = 0.5; }
+  else if (L < AP_SNUB.gap - 0.08) { // 발밑 가까이 떨어졌으면 몸을 돌리고 두어 걸음 물러난다 (어머, 가까워)
+    d.face = { x: dr.x, z: dr.z }; { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, Math.atan2(dr.x - d.x, dr.z - d.z))) < 0.3 || clock - t0 > 1.0); }
+    const p0 = { x: d.x, z: d.z }, q = { x: dr.x - (dx / L) * AP_SNUB.gap, z: dr.z - (dz / L) * AP_SNUB.gap }; collide(q); d.shuffle = 0.5;
+    await tween(tok, 0.7, (k) => { const e = ease(k); d.x = lerp(p0.x, q.x, e); d.z = lerp(p0.z, q.z, e); }); d.shuffle = 0;
+  }
+  d.face = { x: dr.x, z: dr.z }; { const t0 = clock; await until(tok, () => Math.abs(angDiff(d.yaw, Math.atan2(dr.x - d.x, dr.z - d.z))) < 0.15 || clock - t0 > 1.2); }
+  // 3. 선 채로 목만 살짝 빼서 멀찍이 킁킁 (코를 바닥에 대지 않는다)
+  Object.assign(d.tgt, { neck: 0.32, reach: 0.04 }); d.sniff = 0.8; d.earPerk = 0.3; say('킁킁', noseTip, 'small', 1.1, 12); await wait(tok, 1.1);
+  d.sniff = 0; Object.assign(d.tgt, { neck: poseFor('stand', d).neck, reach: 0 }); bubble('…', headTop, 'small', 0.8, 0); await wait(tok, 0.5);
+  // 4. 턱을 치켜들고 조각 반대쪽으로 고개를 홱 — 칫!
+  dx = dr.x - d.x; dz = dr.z - d.z; const s = dx * camRight().x + dz * camRight().z > 0 ? -1 : 1;
+  d.face = 'cam'; await apRefuse(tok, AP_SNUB.line, s);
+  // 5. 엄마가 집어 치운다 (바닥에 떨어져 있던 다른 조각도 같이 — 공주님은 어차피 안 먹는다)
+  const all = [dr, ...drops.filter((q) => q !== dr && !q.v && !q.taken)]; for (const q of all) q.taken = true;
+  bubble(AP_SNUB.mom, momSays, 'soft', 1.6, 0); gone = true; await wait(tok, 0.35);
+  const s0 = all.map((q) => q.m.scale.clone()); await tween(tok, 0.55, (k) => { all.forEach((q, i) => { q.m.position.y = q.h + 0.08 * ease(k); q.m.scale.copy(s0[i]).multiplyScalar(Math.max(0.01, 1 - ease(k))); }); });
+  for (const q of all) { q.m.parent && q.m.parent.remove(q.m); if (drops.includes(q)) drops.splice(drops.indexOf(q), 1); }
+  // 6. 흐응~ (그제야 엄마를 본다)
+  d.lookFn = null; d.tgt.yawOff = 0; apChin(0.45); d.eyeOpen = 1; d.smile = 1; d.wagAmpT = 0.6; d.wagSpeedT = 11; bubble('흐응~', headTop, 'small', 1.3, 0); await wait(tok, 1.3);
+  apChin(0); d.smile = AP_SMILE0; d.wagAmpT = 0.4; d.wagSpeedT = 8;
+  return false;
+}
+// ---------- 숙녀의 엉덩이는 안 돼!: 엄마가 손으로 직접 쓰다듬다가 엉덩이 쪽(엉덩이 · 골반 · 허벅지 뒤 · 꼬리 뿌리 · 꼬리)을 만지면 — 진짜 알팡이도 똥꼬 · 엉덩이 쪽은 질색했다
+// ! (귀가 쫑긋 · 눈이 동그래져 엄마를 홱 돌아본다 · 꼬리는 엉덩이를 덮게 착 내린다) → 엉덩이를 홱 돌려 엄마를 마주 선다(맨바닥에 앉지 않는다 · 방석 위였으면 방석 위에서)
+// → 턱을 들고 숙녀의 엉덩이는 안 돼! → 고개를 홱 칫! → 금방 괜찮아진다 (머리 · 볼 · 가슴 · 등 앞쪽 · 가운데는 늘 그대로 좋아한다)
+// 또 만지면 말이 조금씩 세진다 (어머, 또?! · 엄마 진짜~!) — 25초 조용하면 처음부터. 토라져 있는 동안(그리고 시작한 지 5.5초 안에 다시 엉덩이)은 손길을 받지 않아 말풍선이 쌓이지 않는다
+// 쓰다듬기 단추의 손길(jrPetPt)은 귀 · 볼과 등 앞쪽 · 가운데만 쓸어 준다
+const AP_RUMP = { z: -0.1, rub: 10, cool: 5.5, reset: 25, tail: -3.0, hx: 0.055, hz: 0.02, // rub: 쓰다듬던 손가락이 엉덩이 위를 이만큼(px) 쓸면 · tail: 꼬리를 엉덩이 위로 착 내려 덮는 각 · hx · hz: 뒷발을 모으고 조금 앞으로 (엉덩이를 살짝 낮춰 감싼다)
+  lines: [['숙녀의 엉덩이는 안 돼!', '칫!'], ['어머, 또?!', '숙녀의 엉덩이는 안 돼!'], [`${AP_CALL} 진짜~!`, '숙녀의 엉덩이는 안 된다니까~']] };
+function apRumpHit(hit) { // 손이 닿은 곳이 엉덩이 쪽인가: 꼬리 · 뒷다리 허벅지(무릎 위) · 몸통에서 허리 뒤(몸 기준 z < -0.1: 골반 · 엉덩이)
+  const d = pinky; if (!d.alpang || !hit) return false;
+  for (let q = hit.object; q && q !== d.root; q = q.parent) {
+    if (q === d.tail) return true;
+    for (const L of d.legs) { if (q === L.knee) return false; if (!L.front && q === L.hip) return true; }
+    if (q === d.head || q === d.hp) return false;
+  }
+  return d.body.worldToLocal(_rumpP.copy(hit.point)).z < AP_RUMP.z;
+}
+const _rumpP = V3(); // apRumpHit: 손이 닿은 자리를 몸 기준으로 (프레임마다 새로 만들지 않게)
+const apRumpReady = () => !(UI && UI.rump && clock - UI.rump.at < AP_RUMP.cool); // 방금 토라졌으면 한동안은 다시 토라지지 않는다
+const apTouchOK = (hit) => !(active && active.rumpBusy) && !(apRumpHit(hit) && !apRumpReady()); // ! 하고 돌아서서 숙녀의 엉덩이는 안 돼! 를 말하는 동안(2.4초) · 방금 토라진 뒤의 엉덩이: 손길을 받지 않는다 (그 뒤 칫! 하는 동안에도 머리 · 등은 다시 쓰다듬을 수 있다)
+async function apRump(tok) {
+  const d = pinky, R = UI.rump || (UI.rump = { n: -1, at: -99 });
+  const lv = clock - R.at < AP_RUMP.reset ? (R.n + 1 < AP_RUMP.lines.length ? R.n + 1 : 1 + (R.n % 2)) : 0; R.n = lv; R.at = clock; mark('ap:rump:' + lv);
+  const C = UI.cush, onC = !!(C && C.on && C.down && apOnCush(d.x, d.z)), was = d.tgt.name, P = touch.pt.clone(), N = touch.n.clone();
+  tok.rumpBusy = true;
+  tok.cleanups.push(() => { tok.rumpBusy = false; d.shuffle = 0; d.turnCap = 0; apChin(0); d.smile = AP_SMILE0; d.tgt.yawOff = 0; if (d.tgt.name === 'stand' && d.tgt.tail === AP_RUMP.tail) setPose(d, 'stand', 5); }); // 꼬리를 내리고 웅크린 채 끊겼으면 반듯한 선 자세로 (다음 일이 자세를 정하면 그대로)
+  // 1. ! — 엉덩이에 닿은 손 · 귀가 쫑긋 · 눈이 동그래져 엄마를 홱 돌아본다 · 꼬리는 엉덩이를 덮게 착 내리고(꼬리 끝은 뒷다리 사이로) 엉덩이를 살짝 낮춰 뒷발을 모은다
+  handR.want = { pos: () => P.clone().addScaledVector(N, 0.02), up: () => N.clone(), curl: 0.12, rate: 16, shoulder: [0.34, -0.15, 0.05] };
+  touch.active = false; drag = null; const [cp, ca] = kneelAt(0.92 * phoneK(), 0.88, 0.28); camTo(cp, ca, 3.4); // 엄마는 쪼그려 앉은 채 얼른 다가가 본다 (돌아서는 얼굴이 크게 보이게)
+  setPose(d, 'stand', 9); d.tgt.yawOff = 0; d.tgt.tail = AP_RUMP.tail; d.tgt.tailCurl = 0; d.tgt.pitch = -0.08; d.tgt.bodyY -= 0.008;
+  for (const i of [2, 3]) { d.tgt.paws[i].x = Math.sign(d.tgt.paws[i].x) * AP_RUMP.hx; d.tgt.paws[i].z += AP_RUMP.hz; }
+  Object.assign(d, { earPerk: 1, eyeOpen: 1.18, smile: 0, wagAmpT: 0.02, wagSpeedT: 3, face: null, lookFn: () => roomCam.position.clone() });
+  const ex = say('!', headTop, '', 1.1, 0); if (ex) { ex.rise = 0.015; ex.pop = true; ex.el.style.fontSize = '46px'; ex.el.style.color = '#ff6b78'; } // 깜짝 놀란 ! — 머리 바로 위에 크고 빨갛게 톡
+  await wait(tok, 0.2); handR.want = null; // 손은 얼른 물러난다
+  // 2. 엉덩이를 홱 돌려 엄마를 똑바로 마주 본다 (손에서 한 발 비켜 선다 · 방석 위에서는 그 자리에서)
+  const p0 = { x: d.x, z: d.z }, vx = d.x - P.x, vz = d.z - P.z, vl = Math.hypot(vx, vz) || 1, step = onC ? 0 : 0.07, q = { x: d.x + (vx / vl) * step, z: d.z + (vz / vl) * step }; collide(q);
+  const y0 = d.yaw, y1 = y0 + angDiff(y0, Math.atan2(cp.x - q.x, cp.z - q.z)); // 엄마가 다가가 앉는 자리 쪽으로 끝까지 돈다
+  d.shuffle = 0.7; await tween(tok, 0.45, (k) => { const e = ease(k); d.yaw = lerp(y0, y1, e); d.x = lerp(p0.x, q.x, e); d.z = lerp(p0.z, q.z, e); }); d.shuffle = 0; d.face = 'cam';
+  // 3. 턱을 들고 — 숙녀의 엉덩이는 안 돼! (어머, 또?! · 엄마 진짜~!) — 꼬리는 그대로 착
+  const [l1, l2] = AP_RUMP.lines[lv];
+  d.lookFn = null; d.tgt.gaze = 1; apChin(0.75); d.eyeOpen = 0.92; d.earPerk = 0.25; say(l1, headTop, 'soft', 2.0, 0); await wait(tok, 1.75);
+  tok.rumpBusy = false; // 할 말은 했다: 이제 머리 · 등을 쓰다듬으면 금방 풀린다 (엉덩이는 아직 안 된다 — apRumpReady)
+  // 4. 고개를 홱 — 칫! (한마디 더 · 꼬리는 아직 엉덩이를 덮은 채)
+  const s = apSide(); d.lookFn = apAway(s, 0.72); apChin(1); d.tgt.yawOff = s * 0.3; d.wagAmpT = 0.02; d.wagSpeedT = 9; say(l2, headTop, l2.length > 4 ? 'soft' : 'small', 1.8, -s * 30); await wait(tok, 1.5);
+  // 5. 금방 괜찮아진다: 엄마를 다시 보고 · 반듯하게 서서 꼬리도 다시 위로 살랑 (방석 위에 앉아 · 엎드려 있었으면 다시 그렇게)
+  setPose(d, 'stand', 4); d.lookFn = null; d.tgt.yawOff = 0; apChin(0.3); d.eyeOpen = 1; d.earPerk = 0; d.smile = AP_SMILE0; d.wagAmpT = 0.4; d.wagSpeedT = 8;
+  if (onC && was === 'sit') sitFront(5); else if (onC && was === 'down') setPose(d, 'down', 4);
+  await wait(tok, 0.6); apChin(0); await wait(tok, 0.4); camHome();
 }
 // ---------- 손: 엄마가 손바닥을 내밀며 "손!" — 공주는 그런 거 안 행~ (코를 들고 홱) · 조금 뒤에 또 내밀면 …딱 한 번만이야~ 공주 손은 비싸. 하고 사뿐히 한 번
 async function apPaw(tok) {
@@ -9636,9 +9851,10 @@ canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId); bookTouch = false;
   if (mode === 'room') {
     const book = bookAt(e.clientX, e.clientY); // 방명록 책: 손을 떼면 연다 (끌면 그냥 둘러보기 · 강아지는 만지지 않는다)
-    const hit = !book && pickPinky(e.clientX, e.clientY);
+    let hit = !book && pickPinky(e.clientX, e.clientY);
+    if (hit && pinky.alpang && !apTouchOK(hit)) hit = null; // 알팡이가 엉덩이 때문에 토라져 있는 동안: 손길은 받지 않는다 (화면 끌기로)
     if (hit) {
-      Object.assign(touch, { active: true, x: e.clientX, y: e.clientY, moved: 0, heartT: 0.4, miss: 0 });
+      Object.assign(touch, { active: true, x: e.clientX, y: e.clientY, px: e.clientX, py: e.clientY, moved: 0, heartT: 0.4, miss: 0, rumpD: 0, offT: 0 });
       setTouchHit(hit); touch.last.copy(touch.pt);
       $('#hint').classList.add('gone');
       const keep = napKeep(); if (!keep) pinky.napEnd = 0;
@@ -9776,5 +9992,6 @@ if (location.hostname === 'localhost') window.__dbg = { pinky, setPose, startCom
 if (location.hostname === 'localhost') Object.assign(window.__dbg, { makeJaerong, updateDog, napPost, THREE }); // 재롱 모델 디버그
 if (location.hostname === 'localhost') Object.defineProperties(window.__dbg, Object.getOwnPropertyDescriptors({ get jaerong() { return JAERONG; }, get GW() { return GW; }, ROOM_GWACHEON, GW_MAT, GW_SIT, GW_SHU, GW_PEN, gwGround, gwZMin, jrMagpie, jrWatch, jrLake, jrSheep, jrCuddle, jrGreet, jrMat, jrRun, jrRelease, magStep, magFly, jrGo: () => startSpecial('magpie', jrMagpie), JR_TALK, jaerongTalk, momQuick, ballToWorld, aboveHead, headTop, mouthPt, noseTip, selDogs, DOGS, treat, jrTopLocal, shuNest, JR_FAR, nearSpot })); // 재롱 방 디버그 (게터는 그대로 옮긴다)
 if (location.hostname === 'localhost') Object.assign(window.__dbg, { BOOKS, BOOK_SPOTS, bookAt }); // 방명록 책 점검용
+if (location.hostname === 'localhost') Object.assign(window.__dbg, { SINK, SINK_CAM, pinkySink, sinkMove, sinkLetGo, BOWL, EAT, touch, pickPinky, PINKY }); // 싱크대 · 만지기 점검용
 if (location.hostname === 'localhost') Object.assign(window.__dbg, { makeAlpang, ALPANG_POSE, ALPANG_POSES, AP_RIB, AP_EYE, AP_SMILE, apUpdate }); // 알팡 모델 디버그
-if (location.hostname === 'localhost') Object.defineProperties(window.__dbg, Object.getOwnPropertyDescriptors({ get alpang() { return ALPANG; }, get UI() { return UI; }, ROOM_UIWANG, UI_NAV, UI_DECK, UI_SHOPS, UI_CANOPY, UI_ROCKS, UI_STASH, UI_PLANTER, UI_TABLE, AP_CALL, AP_TALK, alpangTalk, AP_CUSH, apOnCush, apGreet, apPose, apShop, apPrance, apRelease, apEnter, apKiss, apLean, apBox, apPaw, apOnCushion, apTreat, uiSurf, uiOnPath, AP_KISS, AP_LEAN, apStand, headTop, noseTip, rootW, camRight, toCamDir, jrPetPt, jrPetSide, momSays })); // 알팡 방 디버그 (게터는 그대로 옮긴다)
+if (location.hostname === 'localhost') Object.defineProperties(window.__dbg, Object.getOwnPropertyDescriptors({ get alpang() { return ALPANG; }, get UI() { return UI; }, ROOM_UIWANG, UI_NAV, UI_DECK, UI_SHOPS, UI_CANOPY, UI_ROCKS, UI_STASH, UI_PLANTER, UI_TABLE, AP_CALL, AP_TALK, alpangTalk, AP_CUSH, apOnCush, apGreet, apPose, apShop, apPrance, apRelease, apEnter, apKiss, apLean, apBox, apPaw, apOnCushion, apTreat, uiSurf, uiOnPath, AP_KISS, AP_LEAN, apStand, headTop, noseTip, rootW, camRight, toCamDir, jrPetPt, jrPetSide, momSays, apSnub, AP_SNUB, apRump, apRumpHit, AP_RUMP, apRumpReady })); // 알팡 방 디버그 (게터는 그대로 옮긴다)
