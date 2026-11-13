@@ -26,7 +26,7 @@ function setup() {
   const panel = $('#gbPanel'), back = $('.gb-back', root), scroll = $('#gbScroll');
   const scr = { setup: $('#gbSetup'), login: $('#gbLogin'), wait: $('#gbWait'), book: $('#gbBook') };
   const meBox = $('#gbMe'), meName = $('#gbMeName');
-  const namesEl = $('#gbNames'), pass = $('#gbPass'), loginErr = $('#gbLoginErr'), enterBtn = $('#gbEnter');
+  const namesEl = $('#gbNames'), pass = $('#gbPass'), peek = $('#gbPeek'), loginErr = $('#gbLoginErr'), enterBtn = $('#gbEnter');
   const waitMsg = $('#gbWaitMsg'), retryBtn = $('#gbRetry');
   const toEl = $('#gbTo'), text = $('#gbText'), count = $('#gbCount'), sendBtn = $('#gbSend'), sendMsg = $('#gbSendMsg');
   const filterEl = $('#gbFilter'), list = $('#gbList'), empty = $('#gbEmpty'), more = $('#gbMore'), listMsg = $('#gbListMsg');
@@ -75,6 +75,20 @@ function setup() {
   }
   const god = () => h('span', { class: 'gb-god', title: '관리자', 'aria-label': '관리자' }, '신');
   const chars = (s) => [...String(s || '').replace(/\r\n?/g, '\n').trim()].length;
+  // 보내기 전에: 데이터베이스가 받지 못하는 글자(NUL, 짝 없는 서로게이트)는 빼거나 U+FFFD로 바꾼다
+  function sendable(s) {
+    s = String(s || '').replace(/\u0000/g, '');
+    if (typeof s.toWellFormed === 'function') return s.toWellFormed();
+    let out = '';
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i);
+      if (c >= 0xd800 && c <= 0xdbff) {
+        const d = s.charCodeAt(i + 1);
+        if (d >= 0xdc00 && d <= 0xdfff) { out += s[i] + s[i + 1]; i++; } else out += '\ufffd';
+      } else out += c >= 0xdc00 && c <= 0xdfff ? '\ufffd' : s[i];
+    }
+    return out;
+  }
   function show(name) {
     for (const [k, el] of Object.entries(scr)) el.hidden = k !== name;
     meBox.hidden = !(name === 'book' && S.me);
@@ -124,6 +138,7 @@ function setup() {
     S.open = false;
     root.hidden = true;
     clearInterval(S.clock);
+    pass.value = ''; showPass(false);
     if (window.visualViewport) { visualViewport.removeEventListener('resize', fitViewport); visualViewport.removeEventListener('scroll', fitViewport); }
     for (const id of ['selectUI', 'roomUI']) { const el = document.getElementById(id); if (el) el.inert = false; }
     for (const b of document.querySelectorAll('.gb-open')) b.setAttribute('aria-expanded', 'false');
@@ -155,7 +170,7 @@ function setup() {
   function toLogin(msg = '') {
     S.me = null; S.token = null; S.notes = []; S.editing = S.confirming = null;
     if (!S.pick) { const last = store.get(NAME_KEY); if (MEMBERS.some((m) => m.name === last)) S.pick = last; }
-    paintNames(); pass.value = ''; loginErr.textContent = msg; loginErr.classList.toggle('soft', !!msg);
+    paintNames(); pass.value = ''; showPass(false); loginErr.textContent = msg; loginErr.classList.toggle('soft', !!msg);
     enterBtn.disabled = false; enterBtn.textContent = '들어가기';
     show('login');
     const sel = namesEl.querySelector('[aria-checked="true"]');
@@ -180,7 +195,7 @@ function setup() {
     S.busy = false; enterBtn.disabled = false; enterBtn.textContent = '들어가기';
     if (!S.open) return;
     if (r.ok && r.token) {
-      pass.value = '';
+      pass.value = ''; showPass(false);
       S.token = r.token; S.me = { name: r.name, admin: !!r.admin };
       store.set(TOKEN_KEY, r.token);
       enterBook(); return;
@@ -191,6 +206,21 @@ function setup() {
     loginErr.textContent = failText(r);
   });
   pass.addEventListener('input', () => { const v = pass.value.replace(/\D/g, '').slice(0, 8); if (v !== pass.value) pass.value = v; });
+  // 비밀번호 보기 · 숨기기 (8자리를 잘못 누르기 쉬우니 확인할 수 있게). 닫거나 들어가거나 나가면 다시 숨긴다
+  function showPass(on) {
+    pass.type = on ? 'text' : 'password';
+    peek.textContent = on ? '숨기기' : '보기';
+    peek.setAttribute('aria-label', on ? '비밀번호 숨기기' : '비밀번호 보기');
+  }
+  peek.addEventListener('mousedown', (e) => e.preventDefault()); // 칸에서 초점이 빠지지 않게 (폰 자판이 내려갔다 올라오지 않게)
+  peek.addEventListener('click', () => {
+    const n = pass.value.length, had = document.activeElement === pass;
+    const a = had ? pass.selectionStart : n, z = had ? pass.selectionEnd : n; // 쓰던 자리 (칸 밖에서 눌렀으면 맨 끝)
+    showPass(pass.type === 'password');
+    void pass.offsetWidth; // type을 바꾸면 커서가 맨 앞으로 가므로, 화면을 먼저 다시 잡고 나서 자리를 되돌린다
+    pass.focus({ preventScroll: true });
+    try { pass.setSelectionRange(a == null ? n : a, z == null ? n : z); } catch (e) { /* 그만 */ }
+  });
   retryBtn.addEventListener('click', () => start());
 
   // ---------------- 방명록 ----------------
@@ -305,7 +335,7 @@ function setup() {
       e.preventDefault();
       if (save.disabled || S.busy) return;
       S.busy = true; save.disabled = true; save.textContent = '저장 중…';
-      const r = await rpc('gb_edit', { p_token: S.token, p_id: n.id, p_body: ta.value });
+      const r = await rpc('gb_edit', { p_token: S.token, p_id: n.id, p_body: sendable(ta.value) });
       S.busy = false; save.textContent = '저장'; paint();
       if (r.ok && r.note) { Object.assign(n, r.note); S.editing = null; fillCard(li, n); focusAct(li, 'edit'); return; }
       if (r.error === 'auth') { authLost(); return; }
@@ -343,7 +373,7 @@ function setup() {
     const n = chars(text.value);
     if (!n) { setSend('err', '내용을 써 주세요.'); return; }
     S.busy = true; sendBtn.disabled = true; sendBtn.textContent = '남기는 중…';
-    const r = await rpc('gb_post', { p_token: S.token, p_dog: S.target, p_body: text.value });
+    const r = await rpc('gb_post', { p_token: S.token, p_dog: S.target, p_body: sendable(text.value) });
     S.busy = false; sendBtn.textContent = '남기기';
     if (r.ok && r.note) {
       text.value = ''; paintCount();

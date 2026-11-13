@@ -7,6 +7,20 @@
 -- ----------------------------------------------------------------
 create extension if not exists pgcrypto with schema extensions;
 
+-- pgcrypto가 이미 다른 칸(schema)에 깔려 있으면 여기서 멈추고 고치는 법을 알려 줘요 (새 프로젝트에서는 그냥 지나가요)
+do $$
+declare v_schema text;
+begin
+  select n.nspname into v_schema
+    from pg_catalog.pg_extension e join pg_catalog.pg_namespace n on n.oid = e.extnamespace
+   where e.extname = 'pgcrypto';
+  if v_schema is distinct from 'extensions' then
+    raise exception 'pgcrypto is in schema "%" instead of "extensions"', coalesce(v_schema, '(none)')
+      using hint = 'Run: alter extension pgcrypto set schema extensions;  then run this file again. (pgcrypto를 extensions 칸으로 옮긴 뒤 이 파일을 다시 실행해 주세요)';
+  end if;
+end
+$$;
+
 create schema if not exists gb_private;
 revoke all on schema gb_private from public, anon, authenticated;
 
@@ -383,3 +397,8 @@ grant execute on function public.gb_delete(text, bigint)             to anon, au
 
 -- Data API가 새 함수를 바로 알아보게
 notify pgrst, 'reload schema';
+
+-- 참고: 누가 비밀번호를 8번 틀려 15분 동안 잠겼는데 바로 풀고 싶으면 SQL Editor에서 (이름만 바꿔서)
+--   update gb_private.members set locked_until = null where name = '규시기';
+-- 지운 글 되살리기 (글 번호를 알 때)
+--   update gb_private.notes set deleted_at = null, deleted_by = null where id = 123;

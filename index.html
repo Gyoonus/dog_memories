@@ -101,7 +101,10 @@
         <p class="gb-label" id="gbWhoLbl">누구세요?</p>
         <div class="gb-names" id="gbNames" role="radiogroup" aria-labelledby="gbWhoLbl"></div>
         <label class="gb-label" for="gbPass">비밀번호 <small>숫자 8자리</small></label>
-        <input id="gbPass" class="gb-input gb-pass" type="password" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="8" enterkeyhint="go" />
+        <div class="gb-passwrap">
+          <input id="gbPass" class="gb-input gb-pass" type="password" inputmode="numeric" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="8" enterkeyhint="go" />
+          <button type="button" class="gb-peek" id="gbPeek" aria-controls="gbPass" aria-label="비밀번호 보기">보기</button>
+        </div>
         <p class="gb-msg err" id="gbLoginErr" role="alert"></p>
         <button type="submit" class="gb-btn primary" id="gbEnter">들어가기</button>
       </form>

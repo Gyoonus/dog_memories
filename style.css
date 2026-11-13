@@ -188,7 +188,7 @@ h1 {
 .room-head .room-gb + .snd { margin-left: -6px; }
 @media (max-width: 560px) {
   /* 폰: 고르기 화면은 아이콘 위에 작은 글씨, 방 머리줄은 아이콘만 */
-  .sel-gb { flex-direction: column; gap: 2px; width: 50px; padding: 0; font-size: 11px; }
+  .sel-gb { flex-direction: column; gap: 2px; width: 50px; padding: 0; font-size: 12px; }
   .sel-gb .gb-ic { font-size: 17px; }
   .sel-head { max-width: min(30rem, calc(100% - 58px)); }
   .room-gb { width: 44px; padding: 0; }
@@ -210,7 +210,7 @@ h1 {
 }
 .gb-head { display: flex; align-items: center; gap: 10px; padding: 18px 16px 14px 24px; border-bottom: 1px solid var(--line); }
 .gb-titles { flex: 1; min-width: 0; }
-.gb-eyebrow { margin: 0 0 3px; font-size: 11.5px; letter-spacing: .2em; color: var(--blush); }
+.gb-eyebrow { margin: 0 0 3px; font-size: 12px; letter-spacing: .2em; color: var(--blush); }
 .gb-head h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 27px; line-height: 1.15; }
 .gb-me { display: flex; align-items: center; gap: 4px; font-size: 14px; white-space: nowrap; }
 .gb-me-name { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
@@ -229,7 +229,7 @@ h1 {
 .gb-lead { margin: 0; font-family: var(--display); font-size: 21px; font-weight: 700; line-height: 1.35; }
 .gb-soft { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .gb-label { margin: 6px 0 0; font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
-.gb-label small { font-weight: 400; margin-left: 4px; opacity: .8; }
+.gb-label small { font-size: 12.5px; font-weight: 400; margin-left: 4px; color: #d9c6b0; letter-spacing: .02em; }
 .gb-btn {
   appearance: none; min-height: 46px; padding: 0 22px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 15px;
   border: 1px solid var(--line); background: rgba(248, 237, 221, .07); white-space: nowrap; transition: transform .1s, background .2s;
@@ -266,7 +266,15 @@ h1 {
   width: 100%; border-radius: 16px; border: 1px solid rgba(248, 237, 221, .2); background: rgba(10, 6, 4, .35);
   color: var(--cream); font: inherit; font-size: 16px; padding: 12px 14px;
 }
-.gb-pass { height: 54px; text-align: center; font-size: 22px; letter-spacing: .45em; padding-left: calc(14px + .45em); }
+.gb-passwrap { position: relative; }
+.gb-pass { height: 54px; text-align: center; font-size: 22px; letter-spacing: .38em; padding: 0 66px 0 calc(66px + .38em); } /* 오른쪽 66px는 보기 단추 자리 */
+.gb-pass[type="text"] { font-variant-numeric: tabular-nums; }
+.gb-peek {
+  appearance: none; position: absolute; right: 6px; top: 50%; transform: translateY(-50%); min-width: 52px; height: 42px; padding: 0 8px;
+  border: 1px solid var(--line); border-radius: 12px; background: rgba(248, 237, 221, .07); color: var(--cream); cursor: pointer;
+  font-size: 14px; font-weight: 700; white-space: nowrap;
+}
+.gb-peek:hover { background: rgba(248, 237, 221, .13); }
 .gb-login .gb-btn.primary { margin-top: 2px; min-height: 50px; font-size: 16px; }
 
 /* 쓰기 */
@@ -283,7 +291,7 @@ h1 {
   min-height: 112px; resize: vertical; line-height: 1.6; background: #fbf4e7; color: var(--ink); border-color: rgba(42, 25, 13, .15);
   box-shadow: inset 0 2px 6px rgba(42, 25, 13, .08);
 }
-.gb-text-in::placeholder { color: #a68d77; }
+.gb-text-in::placeholder { color: #8a705a; }
 .gb-row { display: flex; align-items: center; gap: 10px; }
 .gb-row .gb-msg { flex: 1; min-width: 0; }
 .gb-grow { flex: 1; }
@@ -305,7 +313,7 @@ h1 {
 .gb-author { font-family: var(--display); font-weight: 700; font-size: 17px; }
 .gb-to { font-size: 12.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(240, 162, 173, .3); color: #7d3442; }
 .gb-to.all { background: rgba(243, 180, 102, .32); color: #6e4512; }
-.gb-time { margin-left: auto; font-size: 12.5px; color: #8b6f57; white-space: nowrap; }
+.gb-time { margin-left: auto; font-size: 13px; color: #6f553f; white-space: nowrap; }
 .gb-text { margin: 8px 0 4px; font-size: 15.5px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; word-break: keep-all; }
 .gb-note-act, .gb-confirm { display: flex; justify-content: flex-end; align-items: center; gap: 2px; margin-right: -8px; }
 .gb-confirm { gap: 6px; margin: 6px -4px 6px 0; padding: 6px 6px 6px 12px; border-radius: 14px; background: rgba(181, 82, 63, .1); }
@@ -322,7 +330,7 @@ h1 {
 .gb-panel .gb-note button:focus-visible, .gb-panel .gb-note textarea:focus-visible { outline-color: #b0661f; }
 .gb-editform { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 6px; }
 .gb-editform .gb-row { gap: 4px; }
-.gb-editform .gb-count { color: #8b6f57; }
+.gb-editform .gb-count { color: #6f553f; }
 .gb-note > .gb-msg.err { color: #a53a26; margin: 0 0 8px; }
 .gb-empty { margin: 8px 0 0; padding: 26px 16px; text-align: center; border-radius: 18px; border: 1px dashed rgba(248, 237, 221, .2); color: var(--muted); font-family: var(--display); font-size: 16px; line-height: 1.6; }
 .gb-listmsg { text-align: center; padding: 10px 0; }
@@ -341,11 +349,19 @@ h1 {
   }
   .gb-head { padding: 12px 10px 10px 16px; gap: 6px; }
   .gb-head h2 { font-size: 24px; }
-  .gb-eyebrow { font-size: 11px; }
   .gb-scroll { padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 48px); }
   .gb-compose { padding: 12px 12px 10px; }
-  .gb-chip { padding: 0 12px; }
+  /* 누구에게 · 보기 칩은 한 줄에 고르게 (알팡이 혼자 다음 줄로 내려가지 않게) */
+  .gb-chips { display: grid; gap: 5px; }
+  #gbTo { grid-template-columns: minmax(0, 1.55fr) repeat(5, minmax(0, 1fr)); }
+  #gbFilter { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .gb-chip { padding: 0 4px; min-width: 0; }
+  /* 쓰기 칸은 비어 있을 때 낮게 두고, 누르면 넓어진다 (글을 읽으러 온 사람이 덜 내려가게) */
+  .gb-text-in:placeholder-shown:not(:focus) { min-height: 0; height: 66px; resize: none; }
+  /* 폰의 비밀번호 점(●)은 넓어서 글씨를 조금 줄인다 (8개가 칸 안에 다 보이게) */
+  .gb-pass { font-size: 20px; letter-spacing: .2em; padding-left: calc(66px + .2em); }
   .gb-note { padding: 13px 14px 8px; }
   .gb-text { font-size: 15px; }
 }
-@media (max-width: 380px) { .gb-chip { padding: 0 10px; font-size: 13.5px; } .gb-me { font-size: 13px; } }
+@media (max-width: 380px) { .gb-chip { font-size: 13.5px; } .gb-me { font-size: 13px; } }
+@media (max-width: 340px) { #gbTo { grid-template-columns: repeat(3, minmax(0, 1fr)); } .gb-pass { font-size: 17px; letter-spacing: .1em; padding-left: calc(66px + .1em); } } /* 아주 좁은 폰: 칩은 3칸씩 두 줄 */
