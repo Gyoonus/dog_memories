@@ -3,8 +3,8 @@
 // 키보드로는 방 머리줄의 숨은 단추(#gbKey)로 연다 (어느 방인지는 #roomUI 제목에서 읽는다). 열려 있는 동안 키 · 포인터는 3D 쪽으로 보내지 않는다.
 // 남이 쓴 글은 textContent로만 그린다 (innerHTML을 쓰지 않는다). Math.random · requestAnimationFrame도 쓰지 않는다 (점검 스크립트의 씨앗 흐름을 건드리지 않게).
 
-const GB_URL = ''; // Supabase 프로젝트 주소 (예: https://abcd1234.supabase.co)
-const GB_KEY = ''; // publishable key (sb_publishable_...) 또는 예전 anon key (eyJ...)
+const GB_URL = 'https://xqultctkqnwsowsayyiw.supabase.co'; // Supabase 프로젝트 주소 (예: https://abcd1234.supabase.co)
+const GB_KEY = 'sb_publishable_t8ULF8CDx0VCLqrbA77Zvg_1JOb4N-D'; // publishable key (sb_publishable_...) 또는 예전 anon key (eyJ...)
 
 const cfg = (typeof window !== 'undefined' && window.GB_CONFIG) || {};
 const API = String(cfg.url != null ? cfg.url : GB_URL).trim().replace(/\/+$/, '');
