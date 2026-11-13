@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" />
-  <link rel="stylesheet" href="style.css?v=26" />
+  <link rel="stylesheet" href="style.css?v=27" />
 </head>
 <body>
 <div id="stage"><canvas id="c" aria-label="강아지와 추억의 장소 3D 화면"></canvas></div>
@@ -29,6 +29,7 @@
     </div>
     <div class="chips" id="chips" role="tablist" aria-label="강아지 목록"></div>
   </div>
+  <button id="gbBtnSel" class="gb-open sel-gb glass" type="button" aria-haspopup="dialog" aria-controls="gb" aria-expanded="false" aria-label="방명록"><span class="gb-ic" aria-hidden="true">📖</span><span class="gb-lb" aria-hidden="true">방명록</span></button>
   <button id="sndBtnSel" class="snd sel-snd glass" type="button" aria-pressed="true" aria-label="소리" title="소리 끄기">🔊</button>
   <button class="arrow left glass" id="prevBtn" type="button" aria-label="이전 강아지">‹</button>
   <button class="arrow right glass" id="nextBtn" type="button" aria-label="다음 강아지">›</button>
@@ -39,6 +40,7 @@
   <header class="room-head">
     <button id="backBtn" class="back glass" type="button">‹ 친구들</button>
     <div class="title"><span class="name">핑키</span><span class="place">푸맘네 집 · 이태원동</span></div>
+    <button id="gbBtnRoom" class="gb-open room-gb glass" type="button" aria-haspopup="dialog" aria-controls="gb" aria-expanded="false" aria-label="방명록"><span class="gb-ic" aria-hidden="true">📖</span><span class="gb-lb" aria-hidden="true">방명록</span></button>
     <button id="sndBtn" class="snd glass" type="button" aria-pressed="true" aria-label="소리" title="소리 끄기">🔊</button>
   </header>
   <div class="room-bottom">
@@ -71,11 +73,69 @@
   <div id="picker" class="picker glass" role="menu" hidden></div>
 </section>
 
+<!-- 방명록 (guestbook.js) -->
+<div id="gb" class="gb" hidden>
+  <div class="gb-back"></div>
+  <section class="gb-panel" id="gbPanel" role="dialog" aria-modal="true" aria-labelledby="gbTitle" tabindex="-1">
+    <header class="gb-head">
+      <div class="gb-titles">
+        <p class="gb-eyebrow">다섯 강아지에게</p>
+        <h2 id="gbTitle">방명록</h2>
+      </div>
+      <div class="gb-me" id="gbMe" hidden>
+        <span class="gb-me-name" id="gbMeName"></span>
+        <button type="button" class="gb-link" id="gbOut">나가기</button>
+      </div>
+      <button type="button" class="gb-x" data-gb-close aria-label="방명록 닫기">✕</button>
+    </header>
+    <div class="gb-scroll" id="gbScroll">
+      <div class="gb-screen gb-setup" id="gbSetup" hidden>
+        <p class="gb-big" aria-hidden="true">🕯️</p>
+        <p class="gb-lead">방명록은 준비 중이에요</p>
+        <p class="gb-soft">곧 열릴 거예요. 조금만 기다려 주세요.</p>
+        <button type="button" class="gb-btn" data-gb-close>닫기</button>
+      </div>
+      <form class="gb-screen gb-login" id="gbLogin" hidden autocomplete="off" novalidate>
+        <p class="gb-lead">추억을 남겨 주세요</p>
+        <p class="gb-soft">식구만 들어올 수 있어요</p>
+        <p class="gb-label" id="gbWhoLbl">누구세요?</p>
+        <div class="gb-names" id="gbNames" role="radiogroup" aria-labelledby="gbWhoLbl"></div>
+        <label class="gb-label" for="gbPass">비밀번호 <small>숫자 8자리</small></label>
+        <input id="gbPass" class="gb-input gb-pass" type="password" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="8" enterkeyhint="go" />
+        <p class="gb-msg err" id="gbLoginErr" role="alert"></p>
+        <button type="submit" class="gb-btn primary" id="gbEnter">들어가기</button>
+      </form>
+      <div class="gb-screen gb-wait" id="gbWait" hidden>
+        <p class="gb-soft" id="gbWaitMsg" role="status">방명록을 여는 중…</p>
+        <button type="button" class="gb-btn" id="gbRetry" hidden>다시 해 보기</button>
+      </div>
+      <div class="gb-screen gb-book" id="gbBook" hidden>
+        <form class="gb-compose" novalidate>
+          <p class="gb-label" id="gbToLbl">누구에게</p>
+          <div class="gb-chips" id="gbTo" role="radiogroup" aria-labelledby="gbToLbl"></div>
+          <textarea id="gbText" class="gb-input gb-text-in" rows="4" maxlength="2000" placeholder="따뜻한 한마디를 남겨 주세요" aria-label="남길 글"></textarea>
+          <div class="gb-row">
+            <span class="gb-count" id="gbCount">0/500</span>
+            <p class="gb-msg" id="gbSendMsg" role="status"></p>
+            <button type="submit" class="gb-btn primary" id="gbSend" disabled>남기기</button>
+          </div>
+        </form>
+        <div class="gb-chips gb-filter" id="gbFilter" role="group" aria-label="강아지별로 보기"></div>
+        <ol class="gb-list" id="gbList"></ol>
+        <p class="gb-soft gb-listmsg" id="gbListMsg" role="status" hidden></p>
+        <p class="gb-empty" id="gbEmpty" hidden></p>
+        <button type="button" class="gb-btn gb-more" id="gbMore" hidden>더 보기</button>
+      </div>
+    </div>
+  </section>
+</div>
+
 <div id="toast" class="glass" role="status"></div>
 <div id="fade"></div>
 <div id="boot">불을 켜는 중…</div>
 
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
-<script type="module" src="main.js?v=26"></script>
+<script type="module" src="main.js?v=27"></script>
+<script type="module" src="guestbook.js?v=27"></script>
 </body>
 </html>
