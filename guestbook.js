@@ -402,6 +402,12 @@ function setup() {
   // 끝의 ♥ · 🐾 묶음이 혼자 다음 줄로 떨어지지 않게: 그 앞 빈칸(과 ♥ 🐾 사이 빈칸)만 줄바꿈 없는 빈칸(U+00A0)으로 (글은 textContent로만 넣는다)
   const keepTail = (s) => String(s).replace(/[ \t]*((?:♥|🐾)(?:[ \t]*(?:♥|🐾))*)[ \t]*$/u,
     (m, run, at) => (at > 0 && /^[ \t]/.test(m) ? '\u00A0' : '') + run.replace(/[ \t]+/g, '\u00A0'));
+  // 답장 맨 앞에 '재롱이가 보내는 답장이야.' 같은 머리 줄이 따로 오면 뺀다 (위에 '재롱이의 답장'이 이미 있다). 그 줄 뒤에 글이 없으면 그대로 둔다
+  const dropLead = (s) => {
+    s = String(s);
+    const m = s.match(/^\s*[[(「『<]?\s*(?:핑키|재롱이?)\s*(?:가|이가|의)?\s*(?:보내는|쓰는|쓴|남기는)?\s*답장(?:\s*편지)?(?:이야|이에요|입니다|이다)?\s*[\])」』>]?\s*[.!…~:：]*[ \t]*\n+/u);
+    return m && s.slice(m[0].length).trim() ? s.slice(m[0].length) : s;
+  };
   function soonText(iso) { // '오후 7:12' · '내일 오전 7:12' · '11월 14일 오전 7:12'
     const t = parse(iso), now = new Date();
     if (t.toDateString() === now.toDateString()) return clockText(t);
@@ -416,11 +422,12 @@ function setup() {
     const done = !!(r && r.state === 'done' && typeof r.body === 'string' && r.body.trim());
     if (S.acked === n.id && !done) out.push(h('p', { class: 'gb-ack in-note', role: 'status', 'data-reply': 'ack' }, paw(), ' ', R.ackEdit));
     if (done) {
-      out.push(h('div', { class: `gb-reply${isLetter(r.body) ? ' letter' : ''}`, role: 'group', 'aria-label': R.who, 'data-reply': 'reply', 'data-dog': n.dog },
+      const body = dropLead(r.body);
+      out.push(h('div', { class: `gb-reply${isLetter(body) ? ' letter' : ''}`, role: 'group', 'aria-label': R.who, 'data-reply': 'reply', 'data-dog': n.dog },
         h('div', { class: 'gb-reply-top' },
           h('span', { class: 'gb-reply-who' }, paw(), ` ${R.who}`),
           r.at ? h('time', { class: 'gb-time gb-reply-time', datetime: r.at, title: fullDate(r.at), 'data-t': r.at }, when(r.at)) : null),
-        h('p', { class: 'gb-reply-text' }, keepTail(r.body))));
+        h('p', { class: 'gb-reply-text' }, keepTail(body))));
     } else if (a && (a.state === 'wait' || a.state === 'done')) {
       // 관리자만: '답장 오후 7:12에 보여요' · '답장 준비 중' (+ 많이 힘들어 보이는 글이면 '마음을 살펴 주세요')
       const ahead = !r && parse(a.reveal_at).getTime() > Date.now();
