@@ -205,8 +205,8 @@ h1 {
 }
 .gb-head { display: flex; align-items: center; gap: 10px; padding: 18px 16px 14px 24px; border-bottom: 1px solid var(--line); }
 .gb-titles { flex: 1; min-width: 0; }
-.gb-eyebrow { margin: 0 0 3px; font-size: 12px; letter-spacing: .2em; color: var(--blush); }
-.gb-head h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 27px; line-height: 1.15; }
+.gb-eyebrow { margin: 0 0 3px; font-size: 12px; letter-spacing: .2em; color: var(--blush); word-break: keep-all; }
+.gb-head h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 27px; line-height: 1.15; word-break: keep-all; } /* 좁으면 '핑키 / 방명록'처럼 낱말 사이에서만 줄을 바꾼다 */
 .gb-me { display: flex; align-items: center; gap: 4px; font-size: 14px; white-space: nowrap; }
 .gb-me-name { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
 .gb-x {
@@ -248,15 +248,20 @@ h1 {
 
 /* 들어가기 */
 .gb-login { max-width: 25rem; margin: 0 auto; width: 100%; }
-.gb-names { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gb-names { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } /* 식구 다섯 + 이모 · 삼촌: 3칸씩 두 줄 */
 .gb-name {
-  appearance: none; min-height: 54px; border-radius: 18px; cursor: pointer; padding: 6px 10px;
+  appearance: none; min-height: 54px; border-radius: 18px; cursor: pointer; padding: 6px 6px;
   border: 1px solid var(--line); background: rgba(248, 237, 221, .05); font-size: 16px; font-weight: 700;
-  transition: background .2s, border-color .2s;
+  white-space: nowrap; transition: background .2s, border-color .2s;
 }
 .gb-name-s { font-weight: 400; color: var(--ember); font-size: 14px; }
 .gb-name:hover { background: rgba(248, 237, 221, .09); }
+.gb-name.guest:not([aria-checked="true"]) { border-style: dashed; border-color: rgba(248, 237, 221, .32); } /* 명단 밖의 칩: 이름을 써서 들어온다 */
 .gb-name[aria-checked="true"] { border-color: var(--ember); background: rgba(243, 180, 102, .17); box-shadow: inset 0 0 0 1px var(--ember); }
+.gb-guest { display: flex; flex-direction: column; gap: 8px; }
+.gb-guest-in { height: 50px; font-size: 17px; }
+.gb-guest-in::placeholder { color: rgba(248, 237, 221, .5); }
+.gb-hint { margin: -2px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
 .gb-input {
   width: 100%; border-radius: 16px; border: 1px solid rgba(248, 237, 221, .2); background: rgba(10, 6, 4, .35);
   color: var(--cream); font: inherit; font-size: 16px; padding: 12px 14px;
@@ -319,6 +324,24 @@ h1 {
 .gb-empty { margin: 8px 0 0; padding: 26px 16px; text-align: center; border-radius: 18px; border: 1px dashed rgba(248, 237, 221, .2); color: var(--muted); font-family: var(--display); font-size: 16px; line-height: 1.6; }
 .gb-listmsg { text-align: center; padding: 10px 0; }
 .gb-more { align-self: center; margin-top: 12px; }
+
+/* 강아지 답장 (핑키 · 재롱이 방명록만): 글 밑에 강아지가 쓴 쪽지. 가족에게 쓴 긴 편지는 조금 넉넉한 작은 편지지 */
+.gb-reply {
+  margin: 4px 0 10px; padding: 10px 14px 11px; border-radius: 14px; color: var(--ink);
+  background: linear-gradient(180deg, #fdeeea 0%, #f9e2dc 100%); border: 1px solid rgba(160, 72, 56, .16);
+}
+.gb-reply[data-dog="jaerong"] { background: linear-gradient(180deg, #eaf5ee 0%, #ddefe4 100%); border-color: rgba(47, 110, 82, .18); } /* 재롱이: 민트색 그릇 */
+.gb-reply-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.gb-reply-who { font-family: var(--display); font-size: 14.5px; font-weight: 700; color: #8a3a2c; }
+.gb-reply[data-dog="jaerong"] .gb-reply-who { color: #2b6247; }
+.gb-reply-time { font-size: 12.5px; }
+.gb-reply-text { margin: 5px 0 0; font-size: 15px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; word-break: keep-all; }
+.gb-reply.letter { padding: 13px 16px 15px; border-radius: 16px; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .45); }
+.gb-reply.letter .gb-reply-text { margin-top: 8px; font-size: 15.5px; line-height: 1.85; letter-spacing: .005em; }
+.gb-reply-admin { margin: 0 0 8px; font-size: 13px; line-height: 1.45; color: #6f553f; word-break: keep-all; overflow-wrap: anywhere; }
+.gb-ack { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--blush); word-break: keep-all; overflow-wrap: anywhere; }
+.gb-note > .gb-ack { margin: 0 0 8px; color: #8a3a2c; }
+.gb-paw { font-size: .95em; }
 @keyframes gb-in { from { opacity: 0; transform: translateY(10px) scale(.985); } }
 @keyframes gb-fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .gb-back, .gb-panel { animation: none; } }
@@ -341,6 +364,11 @@ h1 {
   .gb-pass { font-size: 20px; letter-spacing: .2em; padding-left: calc(66px + .2em); }
   .gb-note { padding: 13px 14px 8px; }
   .gb-text { font-size: 15px; }
+  .gb-reply { padding: 9px 12px 10px; }
+  .gb-reply.letter { padding: 12px 13px 13px; }
+  .gb-reply.letter .gb-reply-text { font-size: 15px; line-height: 1.8; }
 }
+@media (max-width: 340px) { .gb-reply, .gb-reply.letter { margin-left: -4px; margin-right: -4px; padding-left: 11px; padding-right: 11px; } } /* 아주 좁은 폰: 편지 글줄을 조금 더 넓게 */
 @media (max-width: 380px) { .gb-me { font-size: 13px; } }
 @media (max-width: 340px) { .gb-pass { font-size: 17px; letter-spacing: .1em; padding-left: calc(66px + .1em); } } /* 아주 좁은 폰: 비밀번호 점이 칸 안에 다 보이게 */
+@media (max-width: 340px) { .gb-names { grid-template-columns: 1fr 1fr; } } /* 아주 좁은 폰: 이름 칩은 2칸씩 세 줄 */

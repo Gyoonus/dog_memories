@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" />
-  <link rel="stylesheet" href="style.css?v=27" />
+  <link rel="stylesheet" href="style.css?v=29" />
 </head>
 <body>
 <div id="stage"><canvas id="c" aria-label="강아지와 추억의 장소 3D 화면"></canvas></div>
@@ -97,12 +97,17 @@
       </div>
       <form class="gb-screen gb-login" id="gbLogin" hidden autocomplete="off" novalidate>
         <p class="gb-lead" id="gbLoginLead">추억을 남겨 주세요</p>
-        <p class="gb-soft">식구만 들어올 수 있어요</p>
+        <p class="gb-soft">식구와 이모 · 삼촌만 들어올 수 있어요</p>
         <p class="gb-label" id="gbWhoLbl">누구세요?</p>
         <div class="gb-names" id="gbNames" role="radiogroup" aria-labelledby="gbWhoLbl"></div>
-        <label class="gb-label" for="gbPass">비밀번호 <small>숫자 8자리</small></label>
+        <div class="gb-guest" id="gbGuestBox" hidden>
+          <label class="gb-label" for="gbGuest">이름</label>
+          <input id="gbGuest" class="gb-input gb-guest-in" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="20" placeholder="예: 영희 이모" enterkeyhint="next" aria-describedby="gbGuestHint" />
+          <p class="gb-hint" id="gbGuestHint">이름 뒤에 '이모'나 '삼촌'을 붙여 주세요</p>
+        </div>
+        <label class="gb-label" for="gbPass">비밀번호 <small id="gbPassHint">숫자 8자리</small></label>
         <div class="gb-passwrap">
-          <input id="gbPass" class="gb-input gb-pass" type="password" inputmode="numeric" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="8" enterkeyhint="go" />
+          <input id="gbPass" class="gb-input gb-pass" type="password" inputmode="numeric" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="12" enterkeyhint="go" />
           <button type="button" class="gb-peek" id="gbPeek" aria-controls="gbPass" aria-label="비밀번호 보기">보기</button>
         </div>
         <p class="gb-msg err" id="gbLoginErr" role="alert"></p>
@@ -135,7 +140,7 @@
 <div id="boot">불을 켜는 중…</div>
 
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
-<script type="module" src="main.js?v=28"></script>
-<script type="module" src="guestbook.js?v=27"></script>
+<script type="module" src="main.js?v=29"></script>
+<script type="module" src="guestbook.js?v=29"></script>
 </body>
 </html>
